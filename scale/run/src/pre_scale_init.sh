@@ -190,7 +190,13 @@ if (( INIT_LOC_ENS == 1 )); then
 
 fi
 
+UV_RAND_TF=".true."
+if [ "$MEM" == "mean" ] ; then
+  UV_RAND_TF=".false."
+fi
+
 #===============================================================================
+
 
 cat $TMPDAT/conf/config.nml.scale_init | \
     sed -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME = \"$TMPOUT/${STIME}/log/${IO_LOG_DIR}/${MEM}_LOG\"," \
@@ -221,6 +227,7 @@ if (( INIT_LOC_ENS == 1 )); then
 cat $TMPDIR/tmp.init.conf | \
     sed -e "/!--BBL_CX--/a BBL_CX = ${BBL_CX}," \
         -e "/!--BBL_CY--/a BBL_CY = ${BBL_CY}," \
+        -e "/!--UV_RAND--/a UV_RAND = ${UV_RAND_TF}," \
         -e "/!--BBL_THETA--/a BBL_THETA = ${BBL_THETA}," \
     > $TMPDIR/init.conf
 fi

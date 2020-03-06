@@ -5,29 +5,25 @@ USER=honda
 SYS=ofp
 
 OBSTYPE="RADAR"
+#OBSTYPE="H08"
 #OBSTYPE="LT"
 #OBSTYPE="FP" # Flash point
 #OBSTYPE="CONV"
-OBSTYPE="ALL"
+#OBSTYPE="ALL"
 
 # Generate new obs format file
 OBSSIM_OBSOUT=".false." # anal/gues
 #OBSSIM_OBSOUT=".true." # fcst
 
 TYPE=fcst
-#TYPE=anal
+#TYPE=hist
+TYPE=anal
 #TYPE=gues
 
 
-EXP=2000m_SN14_NODA_1002_FIR2km
-#
-EXP=2000m_SN14_DA_1002_FIR2km
 
-
-#EXP=2000m_WK1982_LT_SN14_NATURE
-#EXP=2000m_WK1982_LT_SN14_NATURE_1MIN
-#EXP=2000m_LT_SN14_0710_DA_TH02_RTPS0.95_0802
-
+EXP=2000m_DA_0302_CTH2_NOGROSS
+EXP=2000m_DA_0302
 
 . config/${EXP}/config.main.$SYS
 . config/${EXP}/config.fcst
@@ -35,22 +31,17 @@ EXP=2000m_SN14_DA_1002_FIR2km
 OBSSIM_RADAR_LON=180
 OBSSIM_RADAR_LAT=180
 
-tstart='2001-01-01 1:00:30'
-#tstart='2001-01-01 1:20:00'
-tstart='2001-01-01 1:00:30'
-#tstart='2001-01-01 1:01:30'
-
-tstart='2001-01-01 1:01:00'
-tend='2001-01-01 1:11:00'
 
 
-tstart='2001-01-01 1:15:00'
-tend='2001-01-01 1:20:00'
 
-#tstart='2001-01-01 1:10:30'
+tstart='2001-01-01 1:20:00'
+tstart='2001-01-01 1:05:00'
+#tstart='2001-01-01 1:10:00'
+#tstart='2001-01-01 1:15:00'
+tend=$tstart
 #tend='2001-01-01 1:20:00'
 
-if [ "$TYPE" == "fcst" ] ; then
+if [ "$TYPE" == "fcst" ] || [ "$TYPE" == "hist" ]; then
   tstart='2001-01-01 1:00:00'
 
   FCSTLEN=1800 
@@ -58,21 +49,27 @@ if [ "$TYPE" == "fcst" ] ; then
   TS=1
   TE=121
 
-  tstart='2001-01-01 1:00:00'
-  tstart='2001-01-01 0:00:00'
-  tstart='2001-01-01 1:10:00'
 
-  FCSTLEN=3600 
+  tstart='2001-01-01 1:10:00'
+  tstart='2001-01-01 1:20:00'
+  #tstart='2001-01-01 1:30:00'
+  tstart='2001-01-01 1:05:00'
+  tstart='2001-01-01 1:00:00'
+
+
+
+  tend=$tstart
   TS=1
+  FCSTLEN=3600 
   TE=13
 
-#  tstart='2001-01-01 1:10:00'
-##  tstart='2001-01-01 1:20:00'
+  FCSTLEN=1800 
+  TE=7
+  TE=11 # DEBUG
 
-#  tstart='2001-01-01 1:11:00'
-#  FCSTLEN=1200 
-#  TS=1
-#  TE=41
+  if [ "$TYPE" == "hist" ] ; then
+    TE=2
+  fi
 
 elif [ "$TYPE" == "anal" ] || [ "$TYPE" == "gues" ] ; then
   FCSTOUT=30
@@ -88,25 +85,33 @@ MEM_NP=${SCALE_NP}
 MEM=mean
 
 SMEM=0 # 
+#SMEM=252 # 
 EMEM=${SMEM} # mean
-EMEM=20
 
-SMEM=1
-EMEM=10
-SMEM=11
-EMEM=20
-SMEM=21
-EMEM=30
-SMEM=31
-EMEM=40
-SMEM=41
-EMEM=50
-SMEM=51
-EMEM=60
-SMEM=61
-EMEM=70
-SMEM=71
-EMEM=80
+#SMEM=0
+#EMEM=9
+#SMEM=10
+#EMEM=20
+
+#--SMEM--
+#--EMEM--
+
+#
+LETKF_RUN="$(pwd)"
+
+#WDIR="/scratch/$(id -ng)/${USER}/obssim"
+#WDIR=${TMPL}
+WDIR=${LETKF_RUN}/../tmp_obssim_${EXP}_${SMEM}_${EMEM}
+OBSSIM_BIN="${LETKF_RUN}/../obs/obssim"
+RUNSH=$WDIR/OBSSIM.sh
+RUNCONF_COMMON=$WDIR/OBSSIM.conf_common
+SCALE_CONF=${LETKF_RUN}/config/${EXP}/config.nml.scale
+TOPO=${OUTDIR}/const/topo
+
+
+
+#tend=$(date -ud "${FCSTLEN} second $tstart" '+%Y-%m-%d %H:%M:%S')
+
 
 #
 MEM_L=`seq ${SMEM} ${EMEM}`
@@ -123,16 +128,20 @@ RUNCONF_COMMON=$WDIR/OBSSIM.conf_common
 SCALE_CONF=${LETKF_RUN}/config/${EXP}/config.nml.scale
 TOPO=${OUTDIR}/const/topo
 
+# -- RTTOV_DIR --
+DIR_RTTOV=/work/hp150019/share/honda/RTTOV12.3
+RTTOV_COEF=${DIR_RTTOV}/rtcoef_rttov12/rttov7pred54L/rtcoef_himawari_8_ahi.dat
+RTTOV_SCCOEF=${DIR_RTTOV}/rtcoef_rttov12/cldaer_ir/sccldcoef_himawari_8_ahi.dat
 
 
-tend=$(date -ud "${FCSTLEN} second $tstart" '+%Y-%m-%d %H:%M:%S')
+#tend=$(date -ud "${FCSTLEN} second $tstart" '+%Y-%m-%d %H:%M:%S')
 
-if [ "$TYPE" == "fcst" ] ; then
+if [ "$TYPE" == "fcst" ] || [ "$TYPE" == "hist" ] ; then
   OBSSIM_IN_TYPE="history"
   ctint=$(( FCSTLEN * 2 )) # obssim interval  # initial time loop
 elif [ "$TYPE" == "anal" ] || [ "$TYPE" == "gues" ] ; then
   OBSSIM_IN_TYPE="restart"
-  ctint=$FCSTOUT # analysis interval (Do not modify!)
+  ctint=$LCYCLE # analysis interval (Do not modify!)
 #  FCSTLEN=30 #
 fi
 
@@ -182,6 +191,10 @@ cat << EOF >> $RUNCONF_COMMON
 &PARAM_OBS_ERROR
  OBSERR_RADAR_REF = 5.0D0,
  OBSERR_RADAR_VR = 3.0D0,
+/
+
+&PARAM_LETKF_H08
+ H08_RTTOV_COEF_PATH = "./"
 /
 
 EOF
@@ -241,7 +254,10 @@ export OMP_STACKSIZE=128m
 
 EOF
 
-
+echo ""
+echo $MEM_L
+echo $tstart
+echo $tend
 
 #-- copy init file
 
@@ -308,6 +324,13 @@ while (($(date -ud "$ctime" '+%s') <= $(date -ud "$tend" '+%s'))); do # -- time
     OBSSIM_2D_VARS_LIST="4001" 
 #    OHEAD="conv3d" 
     OHEAD="all3d" 
+  elif [ "$OBSTYPE" = 'H08' ]; then
+    ONAME=${ORG_DIR}/Him8_${HTIME}_${MEM}.dat
+    OBSSIM_NUM_3D_VARS="0"
+    OBSSIM_3D_VARS_LIST="1"
+    OBSSIM_NUM_2D_VARS="10"
+    OBSSIM_2D_VARS_LIST="8800, 8800, 8800, 8800, 8800, 8800, 8800, 8800, 8800, 8800" 
+    OHEAD="Him8" 
   fi
   ONAME_OBS=${ORG_DIR}/${OHEAD}_i${HTIME}_${MEM}_${OBSSIM_RADAR_LON}_${OBSSIM_RADAR_LAT}
 
@@ -336,6 +359,9 @@ while (($(date -ud "$ctime" '+%s') <= $(date -ud "$tend" '+%s'))); do # -- time
 
 #  echo $DAT_DIR
 #  wait
+
+  cp $RTTOV_COEF ${WDIR}
+  cp $RTTOV_SCCOEF ${WDIR}
 
   # copy common parts of obssim.conf 
   RUNCONF=${WDIR}/OBSSIM_$(printf %03d $VCODE_CNT).conf
@@ -388,7 +414,6 @@ EOF
 #  TNODE_CNT=$(expr ${TNODE_CNT} + ${MEM_NP})   
   TNODE_CNT=$(( TNODE_CNT + MEM_NP / PPN  ))   
   VCODE_CNT=$(expr ${VCODE_CNT} + 1)   
-
 
   done # -- MEM
 

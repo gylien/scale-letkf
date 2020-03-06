@@ -427,10 +427,10 @@ SUBROUTINE obsope_cal(obs, obsda_return)
             ALLOCATE(plev_obs_H08(nprof_H08*nch))
             ALLOCATE(qc_H08(nprof_H08*nch))
 
-            CALL Trans_XtoY_H08(nprof_H08,ri_H08,rj_H08,&
-                                lon_H08,lat_H08,v3dg,v2dg,&
-                                yobs_H08,plev_obs_H08,&
-                                qc_H08,yobs_H08_clr=yobs_H08_clr)
+!            CALL Trans_XtoY_H08(nprof_H08,ri_H08,rj_H08,&
+!                                lon_H08,lat_H08,v3dg,v2dg,&
+!                                yobs_H08,plev_obs_H08,&
+!                                qc_H08,yobs_H08_clr=yobs_H08_clr)
 
 ! Clear sky yobs(>0)
 ! Cloudy sky yobs(<0)
@@ -851,10 +851,10 @@ SUBROUTINE obsmake_cal(obs)
           ALLOCATE(plev_obs_H08(nprof_H08*nch))
           ALLOCATE(qc_H08(nprof_H08*nch))
 
-          CALL Trans_XtoY_H08(nprof_H08,ri_H08,rj_H08,&
-                              lon_H08,lat_H08,v3dg,v2dg,&
-                              yobs_H08,plev_obs_H08,&
-                              qc_H08)
+!          CALL Trans_XtoY_H08(nprof_H08,ri_H08,rj_H08,&
+!                              lon_H08,lat_H08,v3dg,v2dg,&
+!                              yobs_H08,plev_obs_H08,&
+!                              qc_H08)
 
           DO n = 1, nprof_H08
             ns = idx_H08(n)
@@ -988,6 +988,18 @@ subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, stggrd)
 
   integer :: ig, jg
 
+#ifdef H08
+! -- for Himawari-8 obs --
+  real(r_size) :: yobs_H08(nlon,nlat,NIRB_HIM8),yobs_H08_clr(nlon,nlat,NIRB_HIM8)
+  real(r_size) :: plev_obs_H08(nlon,nlat,NIRB_HIM8)
+  integer :: qc_H08(nlon,nlat,NIRB_HIM8)
+  real(r_size) :: zangle_H08(nlon,nlat)
+  integer :: ch
+
+  logical :: USE_HIM8 = .false. ! initialize
+
+#endif
+
 !-------------------------------------------------------------------------------
 
   write (6,'(A,I6.6,A,I6.6)') 'MYRANK ', myrank, ' is processing subdomain id #', proc2mem(2,1,myrank+1)
@@ -1083,7 +1095,9 @@ subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, stggrd)
             case (id_fp2d_obs)
               call Trans_XtoY_LT(OBSSIM_2D_VARS_LIST(iv2dsim), ri, rj, rk, &
                                  v3dgh, v2dgh, tmpobs, tmpqc)
-
+            case (id_H08IR_obs)
+              USE_HIM8 = .true.
+              cycle
             case default
               call Trans_XtoY(OBSSIM_2D_VARS_LIST(iv2dsim), ri, rj, rk, &
                               lon, lat, v3dgh, v2dgh, tmpobs, tmpqc, stggrd)
@@ -1103,8 +1117,22 @@ subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, stggrd)
 
   end do ! [ j = 1, nlat ]
 
-!-------------------------------------------------------------------------------
+#ifdef H08
+  if (USE_HIM8) then
+    call Trans_XtoY_H08_allg(v3dgh,v2dgh,yobs_H08,yobs_H08_clr,&
+                             qc_H08)
+    ch = 0
+    do iv2dsim = 1, OBSSIM_NUM_2D_VARS
+      if(OBSSIM_2D_VARS_LIST(iv2dsim) /= id_H08IR_obs .or. ch > NIRB_HIM8)cycle
 
+      ch = ch + 1
+      v2dgsim(:,:,iv2dsim) = real(yobs_H08(:,:,ch), r_sngl)
+    enddo ! [iv2dsim = 1, OBSSIM_NUM_2D_VARS]
+  endif
+#endif
+
+!-------------------------------------------------------------------------------
+  return
 end subroutine obssim_cal
 
 

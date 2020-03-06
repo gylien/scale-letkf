@@ -1,1 +1,1 @@
-config/2000m_SN14_DA_1002_FIR2km_FP3D/config.main.K
+config/2000m_DA_0302_CTH2_NOGROSS/config.main.K

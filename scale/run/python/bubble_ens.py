@@ -25,8 +25,10 @@ def main(INFO, of):
        mem = str(i+1).zfill(4)
        if rand_amp[i] > INFO["MAX_PT"]:
           rand_amp[i] = INFO["MAX_PT"]
+          print("MAX")
        elif rand_amp[i] < INFO["MIN_PT"]:
           rand_amp[i] = INFO["MIN_PT"]
+          print("MIN")
 
        f.write(mem + ", " + str(rand_x[i]) + "d0, " + str(rand_y[i]) + "d0, " +
                str(rand_amp[i]) + "d0 \n")
@@ -45,19 +47,29 @@ PX = 8
 PY = 8
 
 ENS = 80
+ENS = 320
 CX = 2.e3 * IMAX * PX * 0.5
 CY = 2.e3 * IMAX * PX * 0.5
 SIGMA_LOC = 20.e3
 SIGMA_PT = 1.0
 # Similar to Aksoy et al. (2009MWR)
-MEAN_PT = 4.0
+#MEAN_PT = 4.0
+MEAN_PT = 3.0
 MAX_PT = 6.5
+MIN_PT = 1.5
+
+MEAN_PT = 3.0
+SIGMA_PT = 0.5
+MAX_PT = 4.5
 MIN_PT = 1.5
 
 INFO = {"ENS":ENS, "CX":CX, "CY":CY, "SIGMA_LOC":SIGMA_LOC, "SIGMA_PT":SIGMA_PT,
         "MEAN_PT":MEAN_PT, "MAX_PT":MAX_PT, "MIN_PT":MIN_PT}
 
 of = "init_loc_ens.txt"
+of = "init_loc_ens320.txt"
+of = "init_loc_ens320_0221.txt"
+of = "init_loc_ens320_3K.txt"
 main(INFO, of)
 
 

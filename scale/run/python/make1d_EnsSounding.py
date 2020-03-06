@@ -8,14 +8,22 @@ def ens_pert(mems, SOUNDING):
    amp = 2.0 # m/s Coffer et al. 2017MWR
    rand2d = np.zeros((kmax,2, mems)) # U & V
 
+#   for k in range(kmax):
+#      rand = np.random.uniform(amp*(-1),amp,mems)
+#      rand -= np.average(rand) # ensure the mean is 0
+#      alp = np.random.uniform(0, 2*np.pi, mems)
+#      
+#      rand2d[k,0,:] = rand[:] * np.cos(alp[:])
+#      rand2d[k,1,:] = rand[:] * np.sin(alp[:])
+
    for k in range(kmax):
      for i in range(2):
        rand = np.random.uniform(amp*(-1),amp,mems)
        rand -= np.average(rand) # ensure the mean is 0
-       #print(rand2d.shape, rand.shape)
-       #sys.exit()
        rand2d[k,i,:] = rand[:]
-   return(rand2d)
+
+
+   return( rand2d )
 
 def write_txt(outfile, SOUNDING, rand2d=None, m=None):
    print("Write ", outfile)
@@ -32,7 +40,9 @@ def write_txt(outfile, SOUNDING, rand2d=None, m=None):
            urand = 0.0
            vrand = 0.0
 
-         line = str(SOUNDING["z"][k]) + " " + str(SOUNDING["pt"][k]) + " " + str(SOUNDING["qv"][k]) + " " + str(SOUNDING["u"][k] + urand) + " " + str(SOUNDING["v"][k] + vrand) + "\n"
+         #line = str(SOUNDING["z"][k]) + " " + str(SOUNDING["pt"][k]) + " " + str(SOUNDING["qv"][k]) + " " + str(SOUNDING["u"][k] + urand) + " " + str(SOUNDING["v"][k] + vrand) + "\n"
+         # Resulting profiles give wind perturbation only
+         line = str(SOUNDING["z"][k]) + " " + str(SOUNDING["pt"][k]) + " " + str(SOUNDING["qv"][k]) + " " + str(urand) + " " + str(vrand) + "\n"
          f.write(line)
 
 def read_txt(infile):
@@ -96,7 +106,8 @@ def hodograph(top, mems):
      SOUNDING = read_txt(input)
      plt.plot(SOUNDING['u'],SOUNDING['v'], color=lc, lw=lw)
 
-
+  print("DEBUG")
+  print(SOUNDING)
 
   xmin = -22
   xmax = xmin * (-1)
@@ -135,6 +146,9 @@ def main(top, mems):
 
   SOUNDING = read_txt(input)
   rand2d = ens_pert(mems, SOUNDING)
+#  print( rand2d.shape )
+#  print( "TEST" )
+#  sys.exit()
 
   for m in range(mems):
     mem = str(m+1).zfill(4)
@@ -143,12 +157,17 @@ def main(top, mems):
     write_txt(outfile, SOUNDING, rand2d=rand2d, m = m)
 
 
-top = "/work/hp150019/f22013/SCALE-LETKF/scale-LT/OUTPUT/input/WK"
-mems = 80
+top = "/work/hp150019/f22013/SCALE-LETKF/scale-LT/OUTPUT/input/WK320_0123"
+#top = "/work/hp150019/f22013/SCALE-LETKF/scale-LT/OUTPUT/input/WK320_0122"
+top = "/work/hp150019/f22013/SCALE-LETKF/scale-LT/OUTPUT/input/WK320"
+#top = "/work/hp150019/f22013/SCALE-LETKF/scale-LT/OUTPUT/input/WK"
+#mems = 80
+#mems = 1
+mems = 320
 
 main(top, mems)
 
-sys.exit()
 
-hodograph(top, mems)
+# Hodograph is not available because only "wind perturbation" will be used
+#hodograph(top, mems)
 

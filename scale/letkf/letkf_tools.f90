@@ -1392,11 +1392,10 @@ subroutine obs_local_cal(ri, rj, rlev, rz, nvar, iob, ic, ndist, nrloc, nrdiag)
 
   else if (obtyp == 25) then ! obtypelist(obtyp) == 'LTNING'
 
-    nd_v = 0.0d0
-!    nd_v = ABS(obs(obset)%lev(obidx) - rz) / vert_loc_ctype(ic)             ! for LTNING, use z-coordinate for vertical localization
-!    if (obs(obset)%elm(obidx) == id_fp2d_obs .or. obs(obset)%elm(obidx) == id_lt2d_obs .or. obs(obset)%elm(obidx) == id_ltp2d_obs) then
-!      nd_v = 0.0d0
-!    endif
+    nd_v = ABS(obs(obset)%lev(obidx) - rz) / vert_loc_ctype(ic)             ! for LTNING, use z-coordinate for vertical localization
+    if (obs(obset)%elm(obidx) == id_fp2d_obs .or. obs(obset)%elm(obidx) == id_lt2d_obs .or. obs(obset)%elm(obidx) == id_ltp2d_obs) then
+      nd_v = 0.0d0
+    endif
 
   else
     nd_v = ABS(obs(obset)%lev(obidx) - rz) / vert_loc_ctype(ic)    ! z level only 10/24/2018 by TH

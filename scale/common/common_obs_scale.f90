@@ -1616,10 +1616,10 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,use_key)
       ALLOCATE(qc_H08(nprof_H08*nch))
 
 
-      CALL Trans_XtoY_H08(nprof_H08,ri_H08,rj_H08,&
-                          lon_H08,lat_H08,v3dgh,v2dgh,&
-                          yobs_H08,plev_obs_H08,&
-                          qc_H08,stggrd=1,yobs_H08_clr=yobs_H08_clr)
+!      CALL Trans_XtoY_H08(nprof_H08,ri_H08,rj_H08,&
+!                          lon_H08,lat_H08,v3dgh,v2dgh,&
+!                          yobs_H08,plev_obs_H08,&
+!                          qc_H08,stggrd=1,yobs_H08_clr=yobs_H08_clr)
 
       ! yobs here should be positive!!
       yobs_H08 = abs(yobs_H08)
@@ -2641,200 +2641,244 @@ END SUBROUTINE wgt_ave2d
 !   Himawari-8 obs subroutines by T. Honda (10/29/2015)
 !-----------------------------------------------------------------------
 #ifdef H08
-!
-SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd,yobs_H08_clr)
-  use scale_mapproj, only: &
-      MPRJ_rotcoef
-  use scale_H08_fwd
+SUBROUTINE Trans_XtoY_H08_allg(v3d,v2d,yobs,yobs_clr,qc,stggrd)
+  use scale_H08_fwd12
   use scale_grid_index, only: &
-    KHALO
-
+      KHALO, IHALO, JHALO, &
+      KS, KE, KA, KMAX
+!  use scale_atmos_grid_cartesC, only: &
+!      CZ  => ATMOS_GRID_CARTESC_CZ, &
+!      FZ  => ATMOS_GRID_CARTESC_FZ, &
+!      CX => ATMOS_GRID_CARTESC_CX, &
+!      CY => ATMOS_GRID_CARTESC_CY, &
+!      DX, DY
+  use scale_const, only: &
+      CONST_D2R
+!  use scale_atmos_phy_rd_profile, only: &
+!      ATMOS_PHY_RD_PROFILE_read, &
+!      ATMOS_PHY_RD_PROFILE_setup_zgrid
   IMPLICIT NONE
-  INTEGER :: n, np, k, ch
-  INTEGER,INTENT(IN) :: nprof ! Num of Brightness Temp "Loc" observed by Himawari-8
-                              ! NOTE: multiple channels (obs) on each grid point !!
-  REAL(r_size),INTENT(IN) :: ri(nprof),rj(nprof)
-  REAL(r_size),INTENT(IN) :: lon(nprof),lat(nprof)
+  INTEGER :: np, ch
+  REAL(r_size),PARAMETER :: HIM8_LON = 140.7d0
+
   REAL(r_size),INTENT(IN) :: v3d(nlevh,nlonh,nlath,nv3dd)
   REAL(r_size),INTENT(IN) :: v2d(nlonh,nlath,nv2dd)
   INTEGER,INTENT(IN),OPTIONAL :: stggrd
-  REAL(RP) :: rotc(2)
+  REAL(RP) :: rotc(1,1,2)
 
   INTEGER :: stggrd_ = 0
 
 ! -- 2D (nlevh,nbtobs) or 1D (nbtobs) profiles for RTTOV --  
-  REAL(r_size) :: prs2d(nlevh,nprof)
-  REAL(r_size) :: tk2d(nlevh,nprof)
-  REAL(r_size) :: qv2d(nlevh,nprof)
-  REAL(r_size) :: qliq2d(nlevh,nprof)
-  REAL(r_size) :: qice2d(nlevh,nprof)
+  REAL(r_size) :: prs2d(nlev,nlon*nlat)
+  REAL(r_size) :: tk2d(nlev,nlon*nlat)
+  REAL(r_size) :: qv2d(nlev,nlon*nlat)
+  REAL(r_size) :: qliq2d(nlev,nlon*nlat)
+  REAL(r_size) :: qice2d(nlev,nlon*nlat)
 
-  REAL(r_size) :: tsfc1d(nprof)
-  REAL(r_size) :: qsfc1d(nprof)
-  REAL(r_size) :: psfc1d(nprof)
-  REAL(r_size) :: usfc1d(nprof)
-  REAL(r_size) :: vsfc1d(nprof)
-  REAL(r_size) :: lon1d(nprof)
-  REAL(r_size) :: lat1d(nprof)
-  REAL(r_size) :: topo1d(nprof)
-  REAL(r_size) :: lsmask1d(nprof)
+  REAL(r_size) :: tsfc1d(nlon*nlat)
+  REAL(r_size) :: qsfc1d(nlon*nlat)
+  REAL(r_size) :: psfc1d(nlon*nlat)
+  REAL(r_size) :: usfc1d(nlon*nlat)
+  REAL(r_size) :: vsfc1d(nlon*nlat)
+  REAL(r_size) :: lon1d(nlon*nlat)
+  REAL(r_size) :: lat1d(nlon*nlat)
+  REAL(r_size) :: topo1d(nlon*nlat)
+  REAL(r_size) :: lsmask1d(nlon*nlat)
+  REAL(r_size) :: zenith1d(nlon*nlat) ! predictor for bias correction
 
 ! -- brightness temp from RTTOV
-  REAL(r_size) :: btall_out(nch,nprof) ! NOTE: RTTOV always calculates all (10) channels!!
-  REAL(r_size) :: btclr_out(nch,nprof) ! NOTE: RTTOV always calculates all (10) channels!!
-! -- transmittance from RTTOV
-  REAL(r_size) :: trans_out(nlev,nch,nprof)
- 
-  REAL(r_size) :: max_weight(nch,nprof)
-  REAL(r_size) :: tmp_weight
+  REAL(r_size) :: btall_out(NIRB_HIM8,nlon*nlat) ! NOTE: RTTOV always calculates all (10) channels!!
+  REAL(r_size) :: btclr_out(NIRB_HIM8,nlon*nlat) ! NOTE: RTTOV always calculates all (10) channels!!
+! -- cloud top height
+  REAL(r_size) :: ctop_out1d(nlon*nlat)
 
-  REAL(r_size),INTENT(OUT) :: yobs(nprof*nch)
-  REAL(r_size),OPTIONAL,INTENT(OUT) :: yobs_H08_clr(nprof*nch)
-  INTEGER,INTENT(OUT) :: qc(nprof*nch)
-  REAL(r_size),INTENT(OUT) :: plev_obs(nch*nprof)
-
-  REAL(r_size) :: rdp ! delta p
-  INTEGER :: slev, elev
+  REAL(r_size),INTENT(OUT) :: yobs(nlon,nlat,NIRB_HIM8)
+  REAL(r_size),INTENT(OUT) :: yobs_clr(nlon,nlat,NIRB_HIM8)
+!  REAL(r_size),INTENT(OUT) :: mwgt_plev2d(nlon,nlat,NIRB_HIM8)
+  INTEGER,INTENT(OUT) :: qc(nlon,nlat,NIRB_HIM8)
+  REAL(r_size) :: mwgt_plev1d(NIRB_HIM8,nlon*nlat)
 
   REAL(r_size) :: utmp, vtmp ! U10m & V10m tmp for rotation
+  real(r_size) :: lon_tmp(1,1),lat_tmp(1,1)
+  REAL(r_size),PARAMETER :: btmax = 400.0d0
+  REAL(r_size),PARAMETER :: btmin = 100.0d0
+
+  real(r_size) :: blon, blat ! lat/lon at the domain center
+  integer :: k
+
+!  real(RP), parameter:: RD_TOA  = 50.0_RP !< top of atmosphere [km]
+!
+!  integer, parameter :: MSTRN_ngas     =  7 !< # of gas species ! MSTRNX
+!  integer, parameter :: MSTRN_ncfc     = 28 !< # of CFC species ! MSTRNX
+!
+!  integer, parameter :: ngas = MSTRN_ngas
+!  integer, parameter :: ncfc = MSTRN_ncfc
+!  integer, parameter :: RD_naero      = N_HYD + N_AE ! # of cloud/aerosol species
+!
+!  integer :: RD_KMAX ! # of computational cells: z for radiation scheme
+!  real(RP) :: RD_zh          (KMAX + H08_RTTOV_KADD + 1)   ! altitude    at the interface [km]
+!  real(RP) :: RD_z           (KMAX + H08_RTTOV_KADD)   ! altitude    at the center [km]
+!  real(RP) :: RD_rhodz       (KMAX + H08_RTTOV_KADD)   ! density * delta z [kg/m2]
+!  real(RP) :: RD_pres        (KMAX + H08_RTTOV_KADD)   ! pressure    at the center [hPa]
+!  real(RP) :: RD_presh       (KMAX + H08_RTTOV_KADD + 1)   ! pressure    at the interface [hPa]
+!  real(RP) :: RD_temp        (KMAX + H08_RTTOV_KADD)   ! temperature at the center [K]
+!  real(RP) :: RD_temph       (KMAX + H08_RTTOV_KADD + 1)   ! temperature at the interface [K]
+!  real(RP) :: RD_gas         (KMAX + H08_RTTOV_KADD,ngas) ! gas species   volume mixing ratio [ppmv]
+!  real(RP) :: RD_cfc         (KMAX + H08_RTTOV_KADD,ncfc) ! CFCs          volume mixing ratio [ppmv]
+!  real(RP) :: RD_aerosol_conc(KMAX + H08_RTTOV_KADD,RD_naero) ! cloud/aerosol volume mixing ratio [ppmv]
+!  real(RP) :: RD_aerosol_radi(KMAX + H08_RTTOV_KADD,RD_naero) ! cloud/aerosol effective radius [cm]
+!  real(RP) :: RD_cldfrac     (KMAX + H08_RTTOV_KADD)   ! cloud fraction (0-1)
+
+  integer :: i, j
+  real(r_size) :: ri, rj
+
+  !
+  ! Extrapolate input profiles by using climatology (MIPAS)
+  ! Based on "scalelib/src/atmos-physics/scale_atmos_phy_rd_mstrnx.F90"
+  !
+
+!  ! Get basepoint lat/lon
+!  call ij2phys(real(nlong/2+IHALO, kind=r_size),&
+!               real(nlatg/2+JHALO, kind=r_size),&
+!               blon, blat)
+!
+!  RD_KMAX = KMAX + H08_RTTOV_KADD
+!
+!  !--- setup vartical grid for radiation (larger TOA than Model domain)
+!  call ATMOS_PHY_RD_PROFILE_setup_zgrid( KA, KS, KE, RD_KMAX, H08_RTTOV_KADD, & ! [IN]
+!                                         RD_TOA, CZ, FZ, & ! [IN]
+!                                         RD_zh(:), RD_z(:)         ) ! [INOUT]
 
   if (present(stggrd)) stggrd_ = stggrd
 
-  yobs = undef
-  qc = iqc_good
-
-  lon1d(:) = lon(:)
-  lat1d(:) = lat(:)
-
 ! -- make profile arrays for RTTOV --
-  DO np = 1, nprof ! -- make profiles
+  do j = 1, nlat
+  do i = 1, nlon
+    np = (j - 1) * nlon + i
 
-    CALL itpl_2d(v2d(:,:,iv2dd_skint),ri(np),rj(np),tsfc1d(np)) ! T2 is better??
-!    CALL itpl_2d(v2d(:,:,iv2dd_t2m),ri(np),rj(np),tsfc1d(np))
-    CALL itpl_2d(v2d(:,:,iv2dd_q2m),ri(np),rj(np),qsfc1d(np))
-    CALL itpl_2d(v2d(:,:,iv2dd_topo),ri(np),rj(np),topo1d(np))
-    CALL itpl_2d(v2d(:,:,iv2dd_lsmask),ri(np),rj(np),lsmask1d(np))
-    CALL itpl_2d(v2d(:,:,iv2dd_ps),ri(np),rj(np),psfc1d(np))
-!    call prsadj(yobs,rk-topo,t,q)
-!    if (abs(rk-topo) > PS_ADJUST_THRES) then
-!      write (6,'(A,F6.1)') 'warning: PS observation height adjustment exceeds the threshold. dz=', abs(rk-topo)
-!      qc = iqc_ps_ter
-!    end if
+!    ri = real(i + IHALO, r_size)
+!    rj = real(j + JHALO, r_size)
+!    call MAPPROJECTION_xy2lonlat((ri-1.0_r_size) * DX + CX(1), &
+!                                 (rj-1.0_r_size) * DY + CY(1),&
+!                                 lon1d(np), lat1d(np))
+!    CALL zenith_geosat(HIM8_LON,lon1d(np),lat1d(np),zenith1d(np))
 
-    if (stggrd_ == 1) then
-      CALL itpl_2d(v2d(:,:,iv2dd_u10m),ri(np)-0.5,rj(np),utmp)  !###### should modity itpl_3d to prevent '1.0' problem....??
-      CALL itpl_2d(v2d(:,:,iv2dd_v10m),ri(np),rj(np)-0.5,vtmp)  !######
-    else
-      CALL itpl_2d(v2d(:,:,iv2dd_u10m),ri(np),rj(np),utmp)
-      CALL itpl_2d(v2d(:,:,iv2dd_v10m),ri(np),rj(np),vtmp)
-    end if
-    call MPRJ_rotcoef(rotc,lon(np)*deg2rad,lat(np)*deg2rad)
-    usfc1d(np) = utmp * rotc(1) - vtmp * rotc(2)
-    vsfc1d(np) = utmp * rotc(2) + vtmp * rotc(1)
+    lon1d(np) = 0.0_r_size !lon1d(np) * rad2deg
+    lat1d(np) = 0.0_r_size ! lat1d(np) * rad2deg
+    zenith1d(np) = 0.0_r_size
 
-    CALL itpl_2d_column(v3d(:,:,:,iv3dd_p),ri(np),rj(np),prs2d(:,np))
-    CALL itpl_2d_column(v3d(:,:,:,iv3dd_t),ri(np),rj(np),tk2d(:,np))
-    CALL itpl_2d_column(v3d(:,:,:,iv3dd_q),ri(np),rj(np),qv2d(:,np))
-    CALL itpl_2d_column(v3d(:,:,:,iv3dd_qc),ri(np),rj(np),qliq2d(:,np))
-    CALL itpl_2d_column((v3d(:,:,:,iv3dd_qi) &
-                       + v3d(:,:,:,iv3dd_qs) &
-                       + v3d(:,:,:,iv3dd_qg)),ri(np),rj(np),qice2d(:,np))
+    tsfc1d(np) = v2d(i+IHALO,j+JHALO,iv2dd_skint)
+    qsfc1d(np) = v2d(i+IHALO,j+JHALO,iv2dd_q2m)
+    topo1d(np) = v2d(i+IHALO,j+JHALO,iv2dd_topo)
+    lsmask1d(np) = v2d(i+IHALO,j+JHALO,iv2dd_lsmask)
+    psfc1d(np) = v2d(i+IHALO,j+JHALO,iv2dd_ps)
 
-  ENDDO ! -- make profiles
+    if (RADAR_IDEAL ) then
+      tsfc1d(np) = v3d(KHALO+1,i+IHALO,j+JHALO,iv3dd_t)
+      qsfc1d(np) = v3d(KHALO+1,i+IHALO,j+JHALO,iv3dd_q)
+      topo1d(np) = 0.0_r_size
+      lsmask1d(np) = 0.0_r_size
+      psfc1d(np) = v3d(KHALO+1,i+IHALO,j+JHALO,iv3dd_p)
 
+    endif
+
+    ! assume not staggerd grid
+    utmp = v2d(i+IHALO,j+JHALO,iv2dd_u10m)
+    vtmp = v2d(i+IHALO,j+JHALO,iv2dd_v10m)
+    usfc1d(np) = utmp !* rotc(1,1,1) - vtmp * rotc(1,1,2)
+    vsfc1d(np) = vtmp !* rotc(1,1,2) + vtmp * rotc(1,1,1)
+
+    do k = 1, KMAX
+      prs2d(k,np) = v3d(KHALO+KMAX-k+1,i+IHALO,j+JHALO,iv3dd_p)
+      tk2d(k,np) = v3d(KHALO+KMAX-k+1,i+IHALO,j+JHALO,iv3dd_t)
+      qv2d(k,np) = v3d(KHALO+KMAX-k+1,i+IHALO,j+JHALO,iv3dd_q)
+      qliq2d(k,np) = v3d(KHALO+KMAX-k+1,i+IHALO,j+JHALO,iv3dd_qc)
+      qice2d(k,np) = v3d(KHALO+KMAX-k+1,i+IHALO,j+JHALO,iv3dd_qi) &
+                   + v3d(KHALO+KMAX-k+1,i+IHALO,j+JHALO,iv3dd_qs) &
+                   + v3d(KHALO+KMAX-k+1,i+IHALO,j+JHALO,iv3dd_qg)
+
+    enddo
+
+
+  enddo ! i
+  enddo ! j
 
 !
-! -- NOTE: The channel number for RTTOV is always 10, because it should be the same
+! -- NOTE: The channel number for RTTOV is always 10, because it should be the
+! same
 !          with that in Himawari-8 RTTOV coef files.
 !
-!        : Satellite zenith angles are computed within SCALE_RTTOV_fwd using (lon,lat).
+!        : Satellite zenith angles are computed within SCALE_RTTOV_fwd using
+!        (lon,lat).
 !
 
-  slev = 1 + KHALO
-  elev = nlevh - KHALO
+write(6,'(a)') "DEBUG before RTTOV"
 
-  CALL SCALE_RTTOV_fwd(nch, & ! num of channels
-                       nlev,& ! num of levels
-                       nprof,& ! num of profs
-                       prs2d(elev:slev:-1,1:nprof),& ! (Pa)
-                       tk2d(elev:slev:-1,1:nprof),& ! (K)
-                       qv2d(elev:slev:-1,1:nprof),& ! (kg/kg)
-                       qliq2d(elev:slev:-1,1:nprof),& ! (kg/kg)
-                       qice2d(elev:slev:-1,1:nprof),& ! (kg/kg)
-                       tsfc1d(1:nprof),& ! (K)
-                       qsfc1d(1:nprof),& ! (kg/kg)
-                       psfc1d(1:nprof),& ! (Pa)
-                       usfc1d(1:nprof),& ! (m/s)
-                       vsfc1d(1:nprof),& ! (m/s)
-                       topo1d(1:nprof),& ! (m)
-                       lon1d(1:nprof),& ! (deg)
-                       lat1d(1:nprof),& ! (deg)
-                       lsmask1d(1:nprof),& ! (0-1)
-                       btall_out(1:nch,1:nprof),& ! (K)
-                       btclr_out(1:nch,1:nprof),& ! (K)
-                       trans_out(nlev:1:-1,1:nch,1:nprof))
+  CALL SCALE_RTTOV_fwd12(NIRB_HIM8, & ! num of channels
+                       KMAX,& ! num of levels
+                       nlon*nlat,& ! num of profs
+                       prs2d(:,:),& ! (Pa)
+                       tk2d(:,:),& ! (K)
+                       qv2d(:,:),& ! (kg/kg)
+                       qliq2d(:,:),& ! (kg/kg)
+                       qice2d(:,:),& ! (kg/kg)
+                       tsfc1d(:),& ! (K)
+                       qsfc1d(:),& ! (kg/kg)
+                       psfc1d(:),& ! (Pa)
+                       usfc1d(:),& ! (m/s)
+                       vsfc1d(:),& ! (m/s)
+                       topo1d(:),& ! (m)
+                       lon1d(:),& ! (deg)
+                       lat1d(:),& ! (deg)
+                       lsmask1d(:),& ! (0-1)
+                       zenith1d(:), & ! (deg) 
+!                       RD_presh(:), & ! (hPa) 
+!                       RD_temph(:), & ! (K) 
+                       btall_out(:,:),& ! (K)
+                       btclr_out(:,:),& ! (K)
+                       mwgt_plev1d(:,:),& ! (Pa)
+                       ctop_out1d(:))
+
+write(6,'(a)') "DEBUG after RTTOV"
+
 !
-! -- Compute max weight level using trans_out 
-! -- (Transmittance from each user pressure level to Top Of the Atmosphere)
 ! -- btall_out is substituted into yobs
-
-  n = 0
-  DO np = 1, nprof
-  DO ch = 1, nch
-    n = n + 1
-
-    rdp = 1.0d0 / (prs2d(slev+1,np) - prs2d(slev,np))
-    max_weight(ch,np) = abs((trans_out(2,ch,np) - trans_out(1,ch,np)) * rdp )
-
-
-    plev_obs(n) = (prs2d(slev+1,np) + prs2d(slev,np)) * 0.5d0 ! (Pa)
-
-    DO k = 2, nlev-1
-
-      rdp = 1.0d0 / abs(prs2d(slev+k,np) - prs2d(slev+k-1,np))
-      tmp_weight = (trans_out(k+1,ch,np) - trans_out(k,ch,np)) * rdp 
-      if(tmp_weight > max_weight(ch,np))then
-        max_weight(ch,np) = tmp_weight
-        plev_obs(n) = (prs2d(slev+k,np) + prs2d(slev+k-1,np)) * 0.5d0 ! (Pa)
-      endif
-    ENDDO
-
-    yobs(n) = btall_out(ch,np)
 !
-! ## comment out by T.Honda (02/09/2016)
-! -- tentative QC here --
-!    IF(plev_obs(n) >= H08_LIMIT_LEV)THEN
-!      qc(n) = iqc_good
-!    ELSE
-!      qc(n) = iqc_obs_bad
-!    ENDIF
 
-    SELECT CASE(H08_CH_USE(ch))
-    CASE(1)
-      qc(n) = iqc_good
-    CASE DEFAULT
-      qc(n) = iqc_obs_bad
-    END SELECT
+  do j = 1, nlat
+  do i = 1, nlon
+    np = (j - 1) * nlon + i
 
-    IF(H08_REJECT_LAND .and. (lsmask1d(np) > 0.5d0))THEN
-      qc(n) = iqc_obs_bad
-    ENDIF
+    do ch = 1, NIRB_HIM8
+      qc(i,j,ch) = iqc_good
+      yobs(i,j,ch) = btall_out(ch,np)
+      yobs_clr(i,j,ch) = btclr_out(ch,np)
+!      mwgt_plev2d(i,j,ch) = mwgt_plev1d(ch,np)
+!
+!      if(H08_VLOCAL_CTOP)then
+!        if((ctop_out1d(np) > 0.0d0) .and. (ctop_out1d(np) < mwgt_plev1d(ch,np)) .and. &
+!           (mwgt_plev1d(ch,np)>H08_LIMIT_LEV)) then
+!          mwgt_plev1d(ch,np) = (ctop_out1d(np) + mwgt_plev1d(ch,np))*0.5d0
+!        endif
+!      endif
 
-    IF(abs(btall_out(ch,np) - btclr_out(ch,np)) > H08_CLDSKY_THRS)THEN
-! Cloudy sky
-      yobs(n) = yobs(n) * (-1.0d0)
-    ELSE
-! Clear sky
-      yobs(n) = yobs(n) * 1.0d0
-    ENDIF
-   
-    yobs_H08_clr(n) = btclr_out(ch,np)
+      ! QC
+      if(H08_REJECT_LAND .and. (lsmask1d(np) > 0.5d0))then
+        qc(i,j,ch) = iqc_obs_bad
+      endif
 
-  ENDDO ! ch
-  ENDDO ! np
+      if(yobs(i,j,ch) > btmax .or. yobs(i,j,ch) < btmin .or. yobs(i,j,ch) /= yobs(i,j,ch))then
+        qc(i,j,np) = iqc_obs_bad
+      endif
 
-  RETURN
-END SUBROUTINE Trans_XtoY_H08
+    enddo ! ch
+
+  enddo ! i
+  enddo ! j
+
+  return
+END SUBROUTINE Trans_XtoY_H08_allg
+
 #endif
 
 SUBROUTINE get_nobs_H08(cfile,nn)
@@ -3189,7 +3233,7 @@ subroutine read_obs_radar_grd(cfile,obs)
     obs%dat(n) = real(z3d(i,j,k), kind=r_size) + err
     obs%err(n) = real(abs(err), kind=r_size)
 
-    if (z3d(i,j,k) ==  real(MIN_RADAR_REF_DBZ, kind=r_sngl)) then
+    if (z3d(i,j,k) <  real(RADAR_REF_THRES_DBZ, kind=r_sngl)) then
       ! Thinning for clear sky reflectivity (Aksoy et al. 2009MWR)
       if (mod(i,OBSSIM_RADAR_CLR_THIN) /= 0 .or. &
           mod(j,OBSSIM_RADAR_CLR_THIN) /= 0 .or. &
@@ -3238,6 +3282,14 @@ subroutine read_obs_radar_grd(cfile,obs)
       obs%lev(n) = -1.0d10 * obs%lev(n)
     endif
 
+    if (mod(i,OBSSIM_RADAR_VR_THIN) /= 0 .or. &
+        mod(j,OBSSIM_RADAR_VR_THIN) /= 0 .or. &
+        mod(k,OBSSIM_RADAR_VR_ZTHIN) /= 0 ) then
+
+      obs%lon(n) = -1.0d10 * abs( obs%lon(n) )
+      obs%lat(n) = -1.0d10 * abs( obs%lat(n) )
+      obs%lev(n) = -1.0d10 * abs( obs%lev(n) )
+    endif
   enddo
   enddo
   enddo

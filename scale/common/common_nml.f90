@@ -14,11 +14,12 @@ MODULE common_nml
   public
 
   !----
-  integer, parameter :: nv3d = 17    ! number of 3D state variables (in SCALE restart files)
+  integer, parameter :: nv3d = 22    ! number of 3D state variables (in SCALE restart files)
   integer, parameter :: nv2d = 0     ! number of 2D state variables (in SCALE restart files)
   integer, parameter :: nid_obs = 18 ! number of variable types
   integer, parameter :: nobtype = 25 ! number of observation report types
   integer, parameter :: nch = 10     ! H08 Num of Himawari-8 (IR) channels
+  integer, parameter :: NIRB_HIM8 = 10     ! H08 Num of Himawari-8 (IR) bands
 
   integer, parameter :: nobsfilemax = 10
   integer, parameter :: filelenmax = 256
@@ -94,6 +95,7 @@ MODULE common_nml
   logical :: POSITIVE_DEFINITE_Q = .false.
   logical :: POSITIVE_DEFINITE_QHYD = .false.
   logical :: POSITIVE_DEFINITE_QHYD_QCRG = .true. ! Modify qcharge if qhyd is zero
+  logical :: N_LOG_TRANS = .false. ! Log transformation for Nx
   real(r_size) :: TC_SEARCH_DIS = 200.0d3 ! (m) ! tentative! Should be modify !!
 
   real(r_size) :: PS_ADJUST_THRES = 100.d0
@@ -242,6 +244,27 @@ MODULE common_nml
   INTEGER :: NRADARTYPE = 1  !Currently PAWR (1) and LIDAR (2) ... not used?
 
   !---PARAM_LETKF_H08
+  character(filelenmax) :: H08_RTTOV_COEF_PATH = '.'
+  real(r_size) :: H08_RTTOV_MINQ_CTOP = 0.10d0 ! Threshold of water/ice contents for diagnosing the cloud top (g m-3)
+
+  logical :: H08_RTTOV_PROF_SHIFT = .false. ! true: shift the climatological profile above the model top 
+                                            !       (equivalent to extrapolate
+                                            !       by using the climatological
+                                            !       lapse rate)
+                                            ! false: relax the original (model)
+                                            ! profiles above [H08_RTTOV_RLX_HGT]
+                                            ! m back to the climatological
+                                            ! profile 
+  integer :: H08_RTTOV_KADD = 0
+  integer :: H08_RTTOV_CFRAC =  1 ! cloud fraction diagnosis 
+                                  ! 0: using H08_RTTOV_CFRAC_CNST following
+                                  ! Honda et al. (2017a,b)
+                                  ! 1: SCALE method as of 11/15/2017 with a
+                                  ! minor modification (excluding qr)
+                                  ! 2: Tompkins and Janiskova (2004QJRMS) method
+                                  ! (as in Okamoto 2017QJRMS)
+
+
   logical :: H08_REJECT_LAND = .false. ! true: reject Himawari-8 radiance over the land
   logical :: H08_RTTOV_CLD = .true. ! true: all-sky, false: CSR in RTTOV fwd model
   real(r_size) :: H08_RTTOV_MINQ = 0.10d0 ! Threshold of water/ice contents for diagnosing cloud fraction (g m-3)
@@ -307,6 +330,8 @@ MODULE common_nml
   integer               :: OBSSIM_RADAR_CLR_ZTHIN = 1
   integer               :: OBSSIM_RADAR_RAIN_THIN = 1
   integer               :: OBSSIM_RADAR_RAIN_ZTHIN = 1
+  integer               :: OBSSIM_RADAR_VR_THIN = -1
+  integer               :: OBSSIM_RADAR_VR_ZTHIN = -1
   real(r_size)          :: OBSSIM_RADAR_RANGE = 60.0d3
   character(filelenmax) :: OBSSIM_OBSOUT_FNAME = ''
 
@@ -430,6 +455,7 @@ subroutine read_nml_letkf
     POSITIVE_DEFINITE_Q, &
     POSITIVE_DEFINITE_QHYD, &
     POSITIVE_DEFINITE_QHYD_QCRG, &
+    N_LOG_TRANS, &
     TC_SEARCH_DIS, &
     PS_ADJUST_THRES, &
     NOBS_OUT, &
@@ -743,6 +769,7 @@ subroutine read_nml_letkf_h08
     H08_RTTOV_CFRAC_CNST, &
     H08_LIMIT_LEV, &
     H08_BT_MIN, &
+    H08_RTTOV_COEF_PATH, &
     H08_CH_USE
 
   rewind(IO_FID_CONF)
@@ -830,6 +857,8 @@ subroutine read_nml_obssim
     OBSSIM_RADAR_CLR_THIN, &
     OBSSIM_RADAR_RAIN_THIN, &
     OBSSIM_RADAR_CLR_ZTHIN, &
+    OBSSIM_RADAR_VR_THIN, &
+    OBSSIM_RADAR_VR_ZTHIN, &
     OBSSIM_RADAR_RAIN_ZTHIN, &
     OBSSIM_RADAR_RANGE, &
     OBSSIM_OBSOUT_FNAME
@@ -851,6 +880,14 @@ subroutine read_nml_obssim
       OBSSIM_GRADS_OUT_NAME = trim(OBSSIM_HISTORY_IN_BASENAME) // '.grd'
     end if
   end if
+
+  if ( OBSSIM_RADAR_VR_THIN < 0 ) then
+    OBSSIM_RADAR_VR_THIN = OBSSIM_RADAR_RAIN_THIN
+  endif
+
+  if ( OBSSIM_RADAR_VR_ZTHIN < 0 ) then
+    OBSSIM_RADAR_VR_ZTHIN = OBSSIM_RADAR_RAIN_ZTHIN
+  endif
 
   write(OBSSIM_RADAR_LONc,'(i3.3)')int(OBSSIM_RADAR_LON / 1000.0d0)
   write(OBSSIM_RADAR_LATc,'(i3.3)')int(OBSSIM_RADAR_LAT / 1000.0d0)

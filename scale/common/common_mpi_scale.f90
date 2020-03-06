@@ -1766,7 +1766,7 @@ subroutine write_grd_mpi(filename, nv3dgrd, nv2dgrd, step, v3d, v2d, obsout)
   logical, intent(in), optional :: obsout 
 
   logical :: obsout_
-  real(r_sngl) :: bufs4(nlong,nlatg)
+!  real(r_sngl) :: bufs4(nlong,nlatg)
   real(r_sngl) :: bufr4(nlong,nlatg)
   integer :: iunit, iolen
   integer :: k, n, irec, ierr
@@ -1827,9 +1827,9 @@ subroutine write_grd_mpi(filename, nv3dgrd, nv2dgrd, step, v3d, v2d, obsout)
 
     do k = 1, nlev
 
-      bufs4(:,:) = 0.0
-      bufs4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(v3d(k,:,:,n), r_sngl)
-      call MPI_REDUCE(bufs4, bufr4, nlong*nlatg, MPI_REAL, MPI_SUM, 0, MPI_COMM_d, ierr)
+      bufr4(:,:) = 0.0
+      bufr4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(v3d(k,:,:,n), r_sngl)
+      call MPI_ALLREDUCE(MPI_IN_PLACE, bufr4, nlong*nlatg, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr)
 
       if (myrank_d == 0) then
         irec = irec + 1
@@ -1860,9 +1860,9 @@ subroutine write_grd_mpi(filename, nv3dgrd, nv2dgrd, step, v3d, v2d, obsout)
 
  
   do n = 1, nv2dgrd
-    bufs4(:,:) = 0.0
-    bufs4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(v2d(:,:,n), r_sngl)
-    call MPI_REDUCE(bufs4, bufr4, nlong*nlatg, MPI_REAL, MPI_SUM, 0, MPI_COMM_d, ierr)
+    bufr4(:,:) = 0.0
+    bufr4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(v2d(:,:,n), r_sngl)
+    call MPI_ALLREDUCE(MPI_IN_PLACE, bufr4, nlong*nlatg, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr) 
 
     if (myrank_d == 0) then
       irec = irec + 1
