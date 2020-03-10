@@ -16,9 +16,9 @@ FUNCTION: int read_toshiba_mpr
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
-#include <inttypes.h>
 #include <limits.h>
 #include <endian.h>
+#include <zlib.h>
 #include "read_toshiba_mpr.h"
 
 int16_t char2int16(void *input)
@@ -63,17 +63,18 @@ int32_t char2int32(void *input)
 }
 
 int read_toshiba_mpr(char *in_file,
-    int opt_verbose,
-    mppawr_header *hd,
-    float az[ELDIM][AZDIM],
-    float el[ELDIM][AZDIM],
-    float rtdat[ELDIM][AZDIM][RDIM])
+                     int opt_verbose,
+                     mppawr_header *hd,
+                     float az[ELDIM][AZDIM],
+                     float el[ELDIM][AZDIM],
+                     float rtdat[ELDIM][AZDIM][RDIM])
 {
   const size_t bufsize = AZDIM * (ELDIM * (RDIM * 2 + LEN_BUFELHD) + LEN_BUFPBHD) + LEN_BUFRDHD; // max size
   size_t bsize; // actual data size
   int ierr;
   unsigned char *buf;
   FILE *fp;
+  char *is_gzip;
 
   buf = malloc(bufsize);
   if(buf == NULL){
@@ -90,12 +91,49 @@ int read_toshiba_mpr(char *in_file,
     return -9;
   }
 
+  is_gzip = strstr(in_file, ".gz\0");
+  if(is_gzip != NULL) bsize = ungzip_toshiba_mpr(bufsize, bsize, buf);
+
   ierr = decode_toshiba_mpr(bsize, buf, opt_verbose, hd, az, el, rtdat);
   if(ierr != 0) return ierr;
 
   free(buf);
 
   return 0;
+}
+
+size_t ungzip_toshiba_mpr(size_t outbufsize, size_t bufsize, unsigned char *buf){
+  unsigned char *outbuf;
+  size_t datsize;
+  z_stream strm;
+  int ret;
+
+  outbuf = (unsigned char*)malloc(outbufsize);
+  if(outbuf == NULL){
+    printf("malloc failed in ungzip_toshiba_mpr\n");
+    datsize = 0;
+  } else {
+    strm.zalloc = Z_NULL;
+    strm.zfree = Z_NULL;
+    strm.opaque = Z_NULL;
+    ret = inflateInit2(&strm, 47);
+
+    strm.next_in = buf;
+    strm.avail_in = bufsize;
+    strm.next_out = outbuf;
+    strm.avail_out = outbufsize;
+    ret = inflate(&strm, Z_NO_FLUSH);
+
+    datsize = outbufsize - strm.avail_out;
+
+    memcpy(buf, outbuf, datsize);
+    printf("maxbuf: %d, inbuf: %d, outbuf: %d\n",
+           outbufsize, bufsize, datsize);
+
+    ret = inflateEnd(&strm);
+    free(outbuf);
+  }
+  return datsize;
 }
 
 int decode_toshiba_mpr(size_t bufsize, unsigned char *buf,
