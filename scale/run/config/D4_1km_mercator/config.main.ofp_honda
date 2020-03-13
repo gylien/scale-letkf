@@ -16,20 +16,15 @@ RSCGRP="debug-flat"
 DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
 
 
-OUTPUT="/work/hp150019/c24140/scale-letkf-rt/r0051_nest"
-OUTPUT="/work/hp150019/f22013/SCALE-LETKF/scale-5.3.2/OUTPUT/DEBUG"
 
 
-EXP4=D4_1km_NP64_merc_REF_same_bdymem
-EXP4=D4_1km_NP64_merc_REF_diff_bdymem
 EXP4=D4_1km_NP64_merc_verify
 
 EXP3=exp_d3
 EXP2=exp_d2
 
-OUTDIR="${OUTPUT}/${EXP4}"
-#INDIR="/work/hp150019/share/SCALE-LETKF-rt/result/ope/d4_1km_mer"
-#INDIR="/work/hp150019/share/SCALE-LETKF-rt/result/ope/d4_1km"
+OUTPUT="/work/hp150019/f22013/SCALE-LETKF/scale-5.3.2/OUTPUT/DEBUG" # Specify individual directory
+OUTDIR="${OUTPUT}/${EXP4}" 
 INDIR="/work/hp150019/share/honda/SCALE-LETKF/TEST_INPUT/d4_1km"
 
 #===============================================================================

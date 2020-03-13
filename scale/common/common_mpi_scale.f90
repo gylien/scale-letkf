@@ -187,12 +187,12 @@ subroutine set_common_mpi_scale
 !    return
   endif
 
-#ifdef DEBUG
-  if (nprocs_e /= n_mem*n_mempn) then
-    write (6, '(A)'), '[Error] XXXXXX wrong!!'
-    stop
-  end if
-#endif
+!#ifdef DEBUG
+!  if (nprocs_e /= n_mem*n_mempn) then
+!    write (6, '(A)'), '[Error] XXXXXX wrong!!'
+!    stop
+!  end if
+!#endif
 
   call mpi_timer('set_common_mpi_scale:mpi_comm_split_e:', 2)
 
@@ -503,12 +503,12 @@ mem_loop: DO it = 1, nitmax
   if (ENS_WITH_MEAN) then
     mmean = MEMBER+1
     mmean_rank_e = mod(mmean-1, n_mem*n_mempn)
-#ifdef DEBUG
-    if (mmean_rank_e /= rank_to_mem(1,mempe_to_rank(1,mmean)+1)-1) then
-      write (6, '(A)'), '[Error] XXXXXX wrong!!'
-      stop
-    end if
-#endif
+!#ifdef DEBUG
+!    if (mmean_rank_e /= rank_to_mem(1,mempe_to_rank(1,mmean)+1)-1) then
+!      write (6, '(A)'), '[Error] XXXXXX wrong!!'
+!      stop
+!    end if
+!#endif
     msprd_rank_e = mmean_rank_e
 
     if (ENS_WITH_MDET) then
@@ -517,12 +517,12 @@ mem_loop: DO it = 1, nitmax
 
       mmdet = MEMBER+2
       mmdet_rank_e = mod(mmdet-1, n_mem*n_mempn)
-#ifdef DEBUG
-      if (mmdet_rank_e /= rank_to_mem(1,mempe_to_rank(1,mmdet)+1)-1) then
-        write (6, '(A)'), '[Error] XXXXXX wrong!!'
-        stop
-      end if
-#endif
+!#ifdef DEBUG
+!      if (mmdet_rank_e /= rank_to_mem(1,mempe_to_rank(1,mmdet)+1)-1) then
+!        write (6, '(A)'), '[Error] XXXXXX wrong!!'
+!        stop
+!      end if
+!#endif
 
       mmdetobs = MEMBER+1
       if (MDET_CYCLED) then
