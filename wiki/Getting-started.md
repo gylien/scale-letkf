@@ -15,7 +15,7 @@ See [directory structure](directory-structure.md) for the entire structure of th
 
 ## Build SCALE-LETKF
 
-(See also [usage-on-OFP](usage-on-OFP.md))
+(See also [usage-on-OFP](https://github.com/gylien/scale-letkf/wiki/Usage-on-OFP))
 
 ### Build SCALE-RM
 
