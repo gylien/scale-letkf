@@ -16,6 +16,8 @@ MODULE radar_tools
   !USE common_namelist
   use mpi
   use common_nml, only: &
+    RADAR_THIN_HORI, &
+    RADAR_THIN_VERT, &
     LOG_LEVEL
   use common_mpi_scale, only: &
     myrank_o, &

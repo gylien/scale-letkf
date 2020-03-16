@@ -325,6 +325,9 @@ MODULE common_nml
   real(r_size) :: RADAR_SO_SIZE_VERT = 1000.0d0
   real(r_size) :: RADAR_MAX_ABS_VR = 100.0d0
 
+  integer :: RADAR_THIN_HORI = 1 ! Thinning horizontal interval (# of grids)
+  integer :: RADAR_THIN_VERT = 1 ! Thinning vertical interval (# of grids)
+
   !---PARAM_LETKF_H08
   logical :: H08_REJECT_LAND = .false. ! true: reject Himawari-8 radiance over the land
   logical :: H08_RTTOV_CLD = .true. ! true: all-sky, false: CSR in RTTOV fwd model
@@ -1034,6 +1037,8 @@ subroutine read_nml_letkf_radar
     NRADARTYPE, &
     RADAR_SO_SIZE_HORI, &
     RADAR_SO_SIZE_VERT, &
+    RADAR_THIN_HORI, &
+    RADAR_THIN_VERT, &
     RADAR_MAX_ABS_VR, &
     USE_METHOD3_REF_MELT
 

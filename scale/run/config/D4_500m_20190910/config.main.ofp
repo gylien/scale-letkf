@@ -16,7 +16,7 @@ RSCGRP="debug-flat"
 DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
 
 
-EXP4=D4_500m_20190910
+EXP4=D4_500m_20190910_THIN
 
 
 OUTDIR="/work/hp150019/share/honda/SCALE-LETKF/AIP_D4_VERIFY/${EXP4}"
@@ -124,9 +124,6 @@ LTIMESLOT=30     # Timeslot interval for 4D-LETKF (second)
 
 MEMBER=50      # Ensemble size 
 NNODES=62      # Ensemble size + 1 (mean) +1 (mdet) + 10 (additional)
-
-MEMBER=8      # Ensemble size 
-NNODES=10      # Ensemble size + 1 (mean) +1 (mdet) + 10 (additional)
 
 PPN=64              # Number of processes per node
 

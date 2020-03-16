@@ -5,15 +5,9 @@
 #
 #===============================================================================
 
-STIME='20190910120000'
-STIME='20190910130000'
-ETIME='20190910131000'
-
-STIME='20190910140000'
-ETIME='20190910141000'
 
 STIME='20190910150000'
-ETIME='20190910152000'
+ETIME='20190910151000'
 
 
 TIME_LIMIT='0:30:00'
@@ -28,16 +22,16 @@ DACYCLE=1
 DIRECT_TRANSFER=1
 
 # Run fcst from analysis ensemble mean by dacycle-forecast members
-DACYCLE_RUN_FCST=0
+DACYCLE_RUN_FCST=1
 
 # Maximum number of dacycle forecasts 
-MAX_DACYCLE_RUN_FCST=20
+MAX_DACYCLE_RUN_FCST=10
 
 # Number of dafcst members
-NUM_DACYCLE_FCST_MEM=0
+NUM_DACYCLE_FCST_MEM=10
 
 # Forecast time for dacycle-forecast members that will be initiated from the analysis ensemble mean
-DACYCLE_RUN_FCST_TIME=1800 # sec
+DACYCLE_RUN_FCST_TIME=1200 # sec
 
 # Cycle # of 1st dacycle-forecast start
 ICYC_DACYCLE_RUN_FCST=10

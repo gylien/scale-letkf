@@ -104,15 +104,15 @@
  USE_OBSERR_RADAR_REF = .true.
  USE_OBSERR_RADAR_VR = .true.
  RADAR_REF_THRES_DBZ = 10.0D0,
-! MIN_RADAR_REF_MEMBER_OBSRAIN = 5, 
-! MIN_RADAR_REF_MEMBER_OBSNORAIN = 5, 
- MIN_RADAR_REF_MEMBER_OBSRAIN = 0,  ! DEBUG
- MIN_RADAR_REF_MEMBER_OBSNORAIN = 1,! DEBUG
+ MIN_RADAR_REF_MEMBER_OBSRAIN = 5, 
+ MIN_RADAR_REF_MEMBER_OBSNORAIN = 5, 
  MIN_RADAR_REF_DBZ = 10.0D0,
  LOW_REF_SHIFT = -5.0D0,
  RADAR_ZMAX = 11.0D3,
  RADAR_SO_SIZE_HORI = 500.0D0,
  RADAR_SO_SIZE_VERT = 500.0D0,
+ RADAR_THIN_HORI = 1,
+ RADAR_THIN_VERT = 1,
  RADAR_MAX_ABS_VR = 50.0D0,
  USE_METHOD3_REF_MELT = .false.,
 /
@@ -127,13 +127,13 @@
 /
 
 &PARAM_PLOT_DCL
- plot_obs  = .true. ,
- plot_anal = .true. ,
- plot_fcst = .true. ,
- plot_fcst_t0 = .true. ,
- plot_zlev_min = 10 , 
- plot_zlev_max = 40 , 
- plot_zlev_intv = 5 , 
+ PLOT_OBS  = .true.,
+ PLOT_ANAL = .true.,
+ PLOT_FCST = .true.,
+ PLOT_FCST_T0 = .true.,
+ PLOT_ZLEV_MIN = 10,
+ PLOT_ZLEV_MAX = 40,
+ PLOT_ZLEV_INTV = 5,
 /
 
 

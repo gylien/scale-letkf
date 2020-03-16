@@ -852,6 +852,7 @@ subroutine read_obs_radar_toshiba(cfile, obs)
   character(len=19) :: timelabel
 #endif
 
+  integer :: ii, jj, kk
 
   call mpi_timer('', 3)
 
@@ -1130,8 +1131,18 @@ subroutine read_obs_radar_toshiba(cfile, obs)
   obs%nobs = 0
   obs_ref%nobs = 0
   do idx = 1, nobs_sp
+
+    ! Thinning
+    ii = nint( abs( grid_lon_ze(idx) - lon0) / dlon )
+    jj = nint( abs( grid_lat_ze(idx) - lat0) / dlat )
+    kk = nint( abs( grid_z_ze(idx) - z0) / RADAR_SO_SIZE_VERT )
+
+    if ( mod(ii, RADAR_THIN_HORI) /= 0 .or. mod(jj, RADAR_THIN_HORI) /= 0 .or. &
+         mod(kk, RADAR_THIN_VERT) /= 0 ) cycle
+
     if (grid_count_ze(idx) > 0) then
       obs%nobs = obs%nobs + 1
+
       ! Count refrectivity obs ( > MIN_RADAR_REF ) below RADAR_ZMAX
       if ( grid_ze(idx) > MIN_RADAR_REF .and. grid_z_ze(idx) < RADAR_ZMAX ) then
         obs_ref%nobs = obs_ref%nobs + 1
@@ -1153,6 +1164,15 @@ subroutine read_obs_radar_toshiba(cfile, obs)
   min_obs_vr = huge(1.0d0)
   max_obs_vr = -huge(1.0d0)
   do idx = 1, nobs_sp
+
+    ! Thinning
+    ii = nint( abs( grid_lon_ze(idx) - lon0) / dlon )
+    jj = nint( abs( grid_lat_ze(idx) - lat0) / dlat )
+    kk = nint( abs( grid_z_ze(idx) - z0) / RADAR_SO_SIZE_VERT )
+
+    if ( mod(ii, RADAR_THIN_HORI) /= 0 .or. mod(jj, RADAR_THIN_HORI) /= 0 .or. &
+         mod(kk, RADAR_THIN_VERT) /= 0 ) cycle
+
     if (grid_count_ze(idx) > 0) then
       n = n + 1
       obs%elm(n) = id_radar_ref_obs
@@ -1367,9 +1387,9 @@ subroutine read_obs_radar_jrc(cfile, obs)
   obs%meta(3) = 82.0_r_size
 
   ! count number of obs 
-  do k = 1, zdim
-    do j = 1, ydim
-      do i = 1, xdim
+  do k = 1, zdim, RADAR_THIN_VERT
+    do j = 1, ydim, RADAR_THIN_HORI
+      do i = 1, xdim, RADAR_THIN_HORI
         if (zh3d(i,j,k) /= fill_zh .and. vr3d(i,j,k) /= fill_vr)then
           obs%nobs = obs%nobs + 2
         endif
@@ -1388,9 +1408,9 @@ subroutine read_obs_radar_jrc(cfile, obs)
   min_obs_vr = huge(1.0)
   max_obs_vr = -huge(1.0)
 
-  do k = 1, zdim
-    do j = 1, ydim
-      do i = 1, xdim
+  do k = 1, zdim, RADAR_THIN_VERT
+    do j = 1, ydim, RADAR_THIN_HORI
+      do i = 1, xdim, RADAR_THIN_HORI
         if (zh3d(i,j,k) /= fill_zh .and. vr3d(i,j,k) /= fill_vr)then
           ! zh
           n = n + 1
