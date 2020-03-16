@@ -16,9 +16,10 @@ FUNCTION: int read_toshiba_mpr
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include <inttypes.h>
 #include <limits.h>
 #include <endian.h>
-#include <zlib.h>
+//#include <zlib.h>
 #include "read_toshiba_mpr.h"
 
 int16_t char2int16(void *input)
@@ -74,7 +75,7 @@ int read_toshiba_mpr(char *in_file,
   int ierr;
   unsigned char *buf;
   FILE *fp;
-  char *is_gzip;
+//  char *is_gzip;
 
   buf = malloc(bufsize);
   if(buf == NULL){
@@ -91,8 +92,8 @@ int read_toshiba_mpr(char *in_file,
     return -9;
   }
 
-  is_gzip = strstr(in_file, ".gz\0");
-  if(is_gzip != NULL) bsize = ungzip_toshiba_mpr(bufsize, bsize, buf);
+//  is_gzip = strstr(in_file, ".gz\0");
+//  if(is_gzip != NULL) bsize = ungzip_toshiba_mpr(bufsize, bsize, buf);
 
   ierr = decode_toshiba_mpr(bsize, buf, opt_verbose, hd, az, el, rtdat);
   if(ierr != 0) return ierr;
@@ -102,6 +103,7 @@ int read_toshiba_mpr(char *in_file,
   return 0;
 }
 
+/*
 size_t ungzip_toshiba_mpr(size_t outbufsize, size_t bufsize, unsigned char *buf){
   unsigned char *outbuf;
   size_t datsize;
@@ -135,6 +137,7 @@ size_t ungzip_toshiba_mpr(size_t outbufsize, size_t bufsize, unsigned char *buf)
   }
   return datsize;
 }
+*/
 
 int decode_toshiba_mpr(size_t bufsize, unsigned char *buf,
                        int opt_verbose,

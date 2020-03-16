@@ -9,7 +9,7 @@
 #include <limits.h>
 #include <sys/time.h>
 #include <jitclient.h>
-#include <zlib.h>
+//#include <zlib.h>
 #include "read_toshiba_mpr.h"
 #include "jitdt_read_toshiba_mpr.h"
 
@@ -58,7 +58,7 @@ int jitdt_read_toshiba(int n_type, char *jitdt_place, mppawr_header hd[n_type],
   for(i_type = 0; i_type < n_type; i_type++){
 //  is_gzip = strstr(in_file, ".gz\0");
 //  if(is_gzip != NULL) bsize = ungzip_toshiba_mpr(bufsize, bsize, buf);
-    bsize[i_type] = ungzip_toshiba_mpr(bufsize, bsize[i_type], buf);
+//    bsize[i_type] = ungzip_toshiba_mpr(bufsize, bsize[i_type], buf);
 
     ierr = decode_toshiba_mpr(bsize[i_type], buf + i_type * bufsize, opt_verbose, hd + i_type, az[i_type], el[i_type], rtdat[i_type]);
     if(ierr != 0) return ierr;
@@ -77,6 +77,7 @@ int jitdt_read_toshiba(int n_type, char *jitdt_place, mppawr_header hd[n_type],
   return 0;
 }
 
+/*
 size_t ungzip_toshiba_mpr(size_t outbufsize, size_t bufsize, unsigned char *buf){
   unsigned char *outbuf;
   size_t datsize;
@@ -110,4 +111,4 @@ size_t ungzip_toshiba_mpr(size_t outbufsize, size_t bufsize, unsigned char *buf)
   }
   return datsize;
 }
-
+*/
