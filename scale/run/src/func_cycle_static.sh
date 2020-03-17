@@ -1267,7 +1267,14 @@ EOF
       ANAL_MEAN_OUT_FREQ=100000
       ANAL_MDET_OUT_FREQ=100000
     fi
-    
+ 
+    OBSDEP_OUT_TF=".false." 
+    if ((OBSDEP_OUT == 1)); then
+      OBSDEP_OUT_TF=".true." 
+      OBSDEP_OUT_BASENAME="${OUTDIR[$d]}/$time/obsdep/obsdep"
+      mkdir -p ${OUTDIR[$d]}/$time/obsdep
+    fi
+
     # DEBUG
     ANAL_MEAN_OUT_FREQ=0
     ANAL_MDET_OUT_FREQ=0
@@ -1311,7 +1318,8 @@ EOF
             -e "/!--OUT_GRADS_DA_ALL_PATH--/a OUT_GRADS_DA_ALL_PATH = \"${OUT_GRADS_DA_ALL_PATH}\"," \
             -e "/!--NOBS_OUT--/a NOBS_OUT = ${NOBS_OUT_TF}," \
             -e "/!--NOBS_OUT_BASENAME--/a NOBS_OUT_BASENAME = \"${NOBS_OUT_BASENAME}\"," \
-            -e "/!--OBSDEP_OUT--/a OBSDEP_OUT = .false.," \
+            -e "/!--OBSDEP_OUT_BASENAME--/a OBSDEP_OUT_BASENAME = \"${OBSDEP_OUT_BASENAME}\"," \
+            -e "/!--OBSDEP_OUT--/a OBSDEP_OUT = ${OBSDEP_OUT_TF}," \
         >> $CONFIG_DIR/${conf_file}
 
 #    # Most of these parameters are not important for letkf

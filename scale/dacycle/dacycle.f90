@@ -545,7 +545,7 @@ program dacycle
       ! WRITE ANAL and ENS MEAN
       !
       call write_ens_mpi(anal3d, anal2d, mean3d=mean3d, mean2d=mean2d)
-      call monit_obs_mpi(mean3d, mean2d, monit_step=2)
+      call monit_obs_mpi(mean3d, mean2d, monit_step=2, timelabel=trim(fstimelabel(1:15)) )
 
 
       ! Plot Analysis mean
