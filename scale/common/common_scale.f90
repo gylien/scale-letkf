@@ -60,11 +60,7 @@ MODULE common_scale
   !--- 3D, 2D diagnostic variables (in SCALE history files)
   ! 
   INTEGER,PARAMETER :: nv3dd=13
-#ifdef H08
-  INTEGER,PARAMETER :: nv2dd=9  ! H08
-#else
   INTEGER,PARAMETER :: nv2dd=7
-#endif
   INTEGER,PARAMETER :: iv3dd_u=1
   INTEGER,PARAMETER :: iv3dd_v=2
   INTEGER,PARAMETER :: iv3dd_w=3
@@ -85,29 +81,16 @@ MODULE common_scale
   INTEGER,PARAMETER :: iv2dd_v10m=5
   INTEGER,PARAMETER :: iv2dd_t2m=6
   INTEGER,PARAMETER :: iv2dd_q2m=7
-#ifdef H08
-  INTEGER,PARAMETER :: iv2dd_lsmask=8 ! H08
-  INTEGER,PARAMETER :: iv2dd_skint=9 ! H08
-#endif
   CHARACTER(vname_max),PARAMETER :: v3dd_name(nv3dd) = &
      (/'U', 'V', 'W', 'T', 'PRES', &
        'QV', 'QC', 'QR', 'QI', 'QS', 'QG', 'RH', 'height'/)
   LOGICAL,PARAMETER :: v3dd_hastime(nv3dd) = &
      (/.true., .true., .true., .true., .true., &
        .true., .true., .true., .true., .true., .true., .true., .false./)
-#ifdef H08
-  CHARACTER(vname_max),PARAMETER :: v2dd_name(nv2dd) = &       ! H08
-     (/'topo', 'SFC_PRES', 'PREC', 'U10', 'V10', 'T2', 'Q2', & ! H08
-       'lsmask', 'SFC_TEMP'/)                                  ! H08
-  LOGICAL,PARAMETER :: v2dd_hastime(nv2dd) = &                    ! H08
-     (/.false., .true., .true., .true., .true., .true., .true., & ! H08
-       .false., .true./)  
-#else
   CHARACTER(vname_max),PARAMETER :: v2dd_name(nv2dd) = &
      (/'topo', 'SFC_PRES', 'PREC', 'U10', 'V10', 'T2', 'Q2'/)
   LOGICAL,PARAMETER :: v2dd_hastime(nv2dd) = &
      (/.false., .true., .true., .true., .true., .true., .true./)
-#endif
 
   ! 
   !--- Variables for model coordinates
@@ -1442,18 +1425,9 @@ subroutine read_history_direct(v3dg, v2dg)
     ATMOS_PHY_SF_U10, &
     ATMOS_PHY_SF_V10, &
     ATMOS_PHY_SF_T2, &
-#ifdef H08
-    ATMOS_PHY_SF_Q2, &
-    ATMOS_PHY_SF_SFC_TEMP
-#else
     ATMOS_PHY_SF_Q2
-#endif
   use scale_topography, only: &
     TOPO_Zsfc
-#ifdef H08
-  use scale_landuse, only: &
-    LANDUSE_frac_land
-#endif
   use scale_atmos_grid_cartesC_real, only: &
     ATMOS_GRID_CARTESC_REAL_CZ
   use scale_atmos_grid_cartesC_index, only: &
@@ -1535,12 +1509,6 @@ subroutine read_history_direct(v3dg, v2dg)
       v2dg_RP(:,:,iv2d) = ATMOS_PHY_SF_T2(:,:)
     case (iv2dd_q2m)
       v2dg_RP(:,:,iv2d) = ATMOS_PHY_SF_Q2(:,:)
-#ifdef H08
-    case (iv2dd_lsmask)
-      v2dg_RP(:,:,iv2d) = LANDUSE_frac_land(:,:)
-    case (iv2dd_skint)
-      v2dg_RP(:,:,iv2d) = ATMOS_PHY_SF_SFC_TEMP(:,:)
-#endif
     case default
       write (6, '(3A)') "[Error] Variable '", trim(v2dd_name(iv2d)), "' is not recognized."
       stop
@@ -1765,21 +1733,6 @@ subroutine state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
   v2dgh_RP(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_q2m) = v3dg(1,:,:,iv3d_q)
 
 !  v2dgh_RP(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_rain) = [[No way]]
-
-!#ifdef H08
-!  v2dgh_RP(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_skint) = v3dg(1,:,:,iv3d_t)
-!
-!  ! Assume the point where terrain height is less than 10 m is the ocean. T.Honda (02/09/2016)
-!  !---------------------------------------------------------
-!
-!!$OMP PARALLEL DO PRIVATE(j,i)
-!  do j = 1, nlat
-!    do i = 1, nlon
-!      v2dgh_RP(i+IHALO,j+JHALO,iv2dd_lsmask) = min(max(topo(i,j) - 10.0d0, 0.0d0), 1.0d0)
-!    enddo
-!  enddo
-!!$OMP END PARALLEL DO
-!#endif
 
 
   ! Communicate the lateral halo areas

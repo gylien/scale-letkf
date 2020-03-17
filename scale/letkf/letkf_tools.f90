@@ -153,7 +153,6 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,addi3d,addi2d)
   var_local(:,6) = VAR_LOCAL_TC(:)
   var_local(:,7) = VAR_LOCAL_RADAR_REF(:)
   var_local(:,8) = VAR_LOCAL_RADAR_VR(:)
-  var_local(:,9) = VAR_LOCAL_H08(:) ! H08
   var_local_n2nc_max = 1
   var_local_n2nc(1) = 1
   var_local_n2n(1) = 1
@@ -1524,10 +1523,6 @@ subroutine obs_local_cal(ri, rj, rlev, rz, nvar, iob, ic, ndist, nrloc, nrdiag)
     nd_v = ABS(LOG(VERT_LOCAL_RAIN_BASE) - LOG(rlev)) / vert_loc_ctype(ic)  ! for rain, use VERT_LOCAL_RAIN_BASE for the base of vertical localization
   else if (obtyp == 22) then ! obtypelist(obtyp) == 'PHARAD'
     nd_v = ABS(obs(obset)%lev(obidx) - rz) / vert_loc_ctype(ic)             ! for PHARAD, use z-coordinate for vertical localization
-#ifdef H08
-  else if (obtyp == 23) then ! obtypelist(obtyp) == 'H08IRB'                ! H08
-    nd_v = ABS(LOG(obsda_sort%lev(iob)) - LOG(rlev)) / vert_loc_ctype(ic)   ! H08 for H08IRB, use obsda2%lev(iob) for the base of vertical localization
-#endif
   else
     nd_v = ABS(LOG(obs(obset)%lev(obidx)) - LOG(rlev)) / vert_loc_ctype(ic)
   end if

@@ -41,7 +41,7 @@ MODULE common_obs_scale
   IMPLICIT NONE
   PUBLIC
 
-  INTEGER,PARAMETER :: nid_obs_varlocal=9 !H08
+  INTEGER,PARAMETER :: nid_obs_varlocal=8
 !
 ! conventional observations
 !
@@ -81,7 +81,7 @@ MODULE common_obs_scale
        'H08', 'TCX', 'TCY', 'TCP'/)
 
   CHARACTER(3),PARAMETER :: obelmlist_varlocal(nid_obs_varlocal)= &
-     (/'WND', '  T', 'MOI', ' PS', 'PRC', 'TCV', 'REF', ' Vr', 'H08'/)
+     (/'WND', '  T', 'MOI', ' PS', 'PRC', 'TCV', 'REF', ' Vr'/)
 
   ! Parameter 'nobtype' is set in common_nml.f90
   CHARACTER(6),PARAMETER :: obtypelist(nobtype)= &
@@ -121,10 +121,6 @@ MODULE common_obs_scale
     ! This array preserves the most sensitive height derived from transmittance outputs from RTTOV.
     ! For Himawari-8 assimilation, LETKF uses obsda%lev instead of obs%lev.
     ! 
-#ifdef H08
-    REAL(r_size),ALLOCATABLE :: lev(:) ! H08
-    REAL(r_size),ALLOCATABLE :: val2(:) ! H08 ! clear sky BT (gues)
-#endif
     REAL(r_size),ALLOCATABLE :: ensval(:,:)
     INTEGER,ALLOCATABLE :: qc(:)
   END TYPE obs_da_value
@@ -940,20 +936,12 @@ SUBROUTINE obs_da_value_allocate(obsda,member)
   ALLOCATE( obsda%idx (obsda%nobs) )
   ALLOCATE( obsda%key (obsda%nobs) )
   ALLOCATE( obsda%val (obsda%nobs) )
-#ifdef H08
-  ALLOCATE( obsda%lev (obsda%nobs) ) ! H08
-  ALLOCATE( obsda%val2(obsda%nobs) ) ! H08
-#endif
   ALLOCATE( obsda%qc  (obsda%nobs) )
 
   obsda%nobs_in_key = 0
   obsda%idx = 0
   obsda%key = 0
   obsda%val = 0.0d0
-#ifdef H08
-  obsda%lev = 0.0d0 ! H08
-  obsda%val2 = 0.0d0 ! H08
-#endif
   obsda%qc = 0
 
   if (member > 0) then
@@ -976,10 +964,6 @@ SUBROUTINE obs_da_value_deallocate(obsda)
   IF(ALLOCATED(obsda%idx   )) DEALLOCATE(obsda%idx   )
   IF(ALLOCATED(obsda%key   )) DEALLOCATE(obsda%key   )
   IF(ALLOCATED(obsda%val   )) DEALLOCATE(obsda%val   )
-#ifdef H08
-  IF(ALLOCATED(obsda%lev   )) DEALLOCATE(obsda%lev   ) ! H08
-  IF(ALLOCATED(obsda%val2  )) DEALLOCATE(obsda%val2  ) ! H08
-#endif
   IF(ALLOCATED(obsda%ensval)) DEALLOCATE(obsda%ensval)
   IF(ALLOCATED(obsda%qc    )) DEALLOCATE(obsda%qc    )
 
@@ -1197,11 +1181,7 @@ SUBROUTINE read_obs_da(cfile,obsda,im)
   CHARACTER(*),INTENT(IN) :: cfile
   TYPE(obs_da_value),INTENT(INOUT) :: obsda
   INTEGER,INTENT(IN) :: im
-#ifdef H08
-  REAL(r_sngl) :: wk(6) ! H08
-#else
-  REAL(r_sngl) :: wk(4) ! H08
-#endif
+  REAL(r_sngl) :: wk(4)
   INTEGER :: n,iunit
 
 !  call obs_da_value_allocate(obsda)
@@ -1218,10 +1198,6 @@ SUBROUTINE read_obs_da(cfile,obsda,im)
       obsda%ensval(im,n) = REAL(wk(3),r_size)
     end if
     obsda%qc(n) = NINT(wk(4))
-#ifdef H08
-    obsda%lev(n) = REAL(wk(5),r_size) ! H08
-    obsda%val2(n) = REAL(wk(6),r_size) ! H08
-#endif
   END DO
   CLOSE(iunit)
 
@@ -1235,11 +1211,7 @@ SUBROUTINE write_obs_da(cfile,obsda,im,append)
   INTEGER,INTENT(IN) :: im
   LOGICAL,INTENT(IN),OPTIONAL :: append
   LOGICAL :: append_
-#ifdef H08
-  REAL(r_sngl) :: wk(6) ! H08
-#else
   REAL(r_sngl) :: wk(4) 
-#endif
   INTEGER :: n,iunit
 
   iunit=92
@@ -1260,10 +1232,6 @@ SUBROUTINE write_obs_da(cfile,obsda,im,append)
       wk(3) = REAL(obsda%ensval(im,n),r_sngl)
     end if
     wk(4) = REAL(obsda%qc(n),r_sngl)
-#ifdef H08
-    wk(5) = REAL(obsda%lev(n),r_sngl) ! H08
-    wk(6) = REAL(obsda%val2(n),r_sngl) ! H08
-#endif
     WRITE(iunit) wk
   END DO
   CLOSE(iunit)
@@ -1327,441 +1295,5 @@ subroutine write_obs_dep(cfile, nobs, set, idx, qc, omb, oma)
 
   return
 end subroutine write_obs_dep
-!
-!-----------------------------------------------------------------------
-!   TC vital obs subroutines by T. Honda (03/28/2016)
-!-----------------------------------------------------------------------
-!
-SUBROUTINE search_tc_subdom(ritc,rjtc,v2d,yobs_tcx,yobs_tcy,yobs_mslp)
-  use scale_atmos_grid_cartesC, only: &
-      ATMOS_GRID_CARTESC_CXG, &
-      ATMOS_GRID_CARTESC_CYG, &
-      DX, &
-      DY
-  use scale_atmos_grid_cartesC_index, only: &
-      IHALO, JHALO
-  use scale_prc, only: &
-      PRC_myrank
-
-  IMPLICIT NONE
-  INTEGER :: il, jl, ig, jg
-  REAL(r_size) :: xdis, ydis, rdis
-  REAL(r_size),INTENT(IN) :: ritc, rjtc
-  REAL(r_size),INTENT(IN) :: v2d(nlonh,nlath,nv2dd)
-  REAL(r_size),INTENT(OUT) :: yobs_mslp !(Pa)
-!  REAL(r_size),INTENT(OUT) :: yobs_lon, yobs_lat !(deg)
-  REAL(r_size),INTENT(OUT) :: yobs_tcx, yobs_tcy !(m)
-
-  REAL(r_size) :: slp2d(nlonh,nlath)
-  REAL(r_size) :: dz, t, q, var5
-
-  yobs_mslp = 9.99d33
-  yobs_tcx = 9.99d33
-  yobs_tcy = 9.99d33
-
-  DO jl = 1, nlat 
-  DO il = 1, nlon 
-    t = v2d(il,jl,iv2dd_t2m)
-    q = v2d(il,jl,iv2dd_q2m)
-    dz = -1.0d0 * v2d(il,jl,iv2dd_topo)
-    slp2d(il,jl) = v2d(il,jl,iv2dd_ps)
-    call prsadj(slp2d(il,jl),dz,t,q)
-  ENDDO
-  ENDDO
-
-  DO jl = JHALO + 1, nlat - JHALO
-  DO il = IHALO + 1, nlon - IHALO
-    call ij_l2g(PRC_myrank, il, jl, ig, jg)
-    xdis = abs(real(ig,kind=r_size) - ritc) * DX
-    ydis = abs(real(jg,kind=r_size) - rjtc) * DY
-    rdis = sqrt(xdis*xdis + ydis*ydis)
-
-    IF(rdis > TC_SEARCH_DIS)CYCLE
-
-    IF(IHALO >= 2 .and. JHALO >= 2)THEN
-      call wgt_ave2d(slp2d(:,:),il,jl,var5)
-    ELSE
-      var5 = slp2d(il,jl)
-    ENDIF
-
-    if(var5 < yobs_mslp)then
-      yobs_mslp = var5
-      yobs_tcx = (real(ig,kind=r_size) - 1.0d0) * DX + ATMOS_GRID_CARTESC_CXG(1)
-      yobs_tcy = (real(jg,kind=r_size) - 1.0d0) * DY + ATMOS_GRID_CARTESC_CYG(1)
-    endif
-  ENDDO
-  ENDDO
-
-  RETURN
-END SUBROUTINE search_tc_subdom
-
-!-- 25 points weighted average (tentative)--
-! 2D weight is...
-!     1 1 1 1 1
-!     1 3 3 3 1
-!     1 3 5 3 1
-!     1 3 3 3 1
-!     1 1 1 1 1
-!
-SUBROUTINE wgt_ave2d(var,i,j,var5)
-  IMPLICIT NONE
-  REAL(r_size),INTENT(IN) :: var(nlonh,nlath)
-  INTEGER,INTENT(IN) :: i,j
-  REAL(r_size),INTENT(OUT) :: var5
-
-  var5 = ((var(i,j) * 5.0d0 + &
-         (sum(var(i-1:i+1,j-1:j+1)) - var(i,j)) * 3.0d0 + &
-         (sum(var(i-2:i+2,j-2:j+2)) - sum(var(i-1:i+1,j-1:j+1))) * 1.0d0)) / 45.0d0
-
-  RETURN
-END SUBROUTINE wgt_ave2d
-
-
-!
-!-----------------------------------------------------------------------
-!   Himawari-8 obs subroutines by T. Honda (10/29/2015)
-!-----------------------------------------------------------------------
-#ifdef H08
-!
-SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd,yobs_H08_clr)
-  use scale_mapprojection, only: &
-      MAPPROJECTION_rotcoef
-  use scale_H08_fwd
-  use scale_atmos_grid_cartesC_index, only: &
-    KHALO
-
-  IMPLICIT NONE
-  INTEGER :: n, np, k, ch
-  INTEGER,INTENT(IN) :: nprof ! Num of Brightness Temp "Loc" observed by Himawari-8
-                              ! NOTE: multiple channels (obs) on each grid point !!
-  REAL(r_size),INTENT(IN) :: ri(nprof),rj(nprof)
-  REAL(r_size),INTENT(IN) :: lon(nprof),lat(nprof)
-  REAL(r_size),INTENT(IN) :: v3d(nlevh,nlonh,nlath,nv3dd)
-  REAL(r_size),INTENT(IN) :: v2d(nlonh,nlath,nv2dd)
-  INTEGER,INTENT(IN),OPTIONAL :: stggrd
-  REAL(RP) :: rotc(2)
-
-  INTEGER :: stggrd_ = 0
-
-! -- 2D (nlevh,nbtobs) or 1D (nbtobs) profiles for RTTOV --  
-  REAL(r_size) :: prs2d(nlevh,nprof)
-  REAL(r_size) :: tk2d(nlevh,nprof)
-  REAL(r_size) :: qv2d(nlevh,nprof)
-  REAL(r_size) :: qliq2d(nlevh,nprof)
-  REAL(r_size) :: qice2d(nlevh,nprof)
-
-  REAL(r_size) :: tsfc1d(nprof)
-  REAL(r_size) :: qsfc1d(nprof)
-  REAL(r_size) :: psfc1d(nprof)
-  REAL(r_size) :: usfc1d(nprof)
-  REAL(r_size) :: vsfc1d(nprof)
-  REAL(r_size) :: lon1d(nprof)
-  REAL(r_size) :: lat1d(nprof)
-  REAL(r_size) :: topo1d(nprof)
-  REAL(r_size) :: lsmask1d(nprof)
-
-! -- brightness temp from RTTOV
-  REAL(r_size) :: btall_out(nch,nprof) ! NOTE: RTTOV always calculates all (10) channels!!
-  REAL(r_size) :: btclr_out(nch,nprof) ! NOTE: RTTOV always calculates all (10) channels!!
-! -- transmittance from RTTOV
-  REAL(r_size) :: trans_out(nlev,nch,nprof)
- 
-  REAL(r_size) :: max_weight(nch,nprof)
-  REAL(r_size) :: tmp_weight
-
-  REAL(r_size),INTENT(OUT) :: yobs(nprof*nch)
-  REAL(r_size),OPTIONAL,INTENT(OUT) :: yobs_H08_clr(nprof*nch)
-  INTEGER,INTENT(OUT) :: qc(nprof*nch)
-  REAL(r_size),INTENT(OUT) :: plev_obs(nch*nprof)
-
-  REAL(r_size) :: rdp ! delta p
-  INTEGER :: slev, elev
-
-  REAL(r_size) :: utmp, vtmp ! U10m & V10m tmp for rotation
-  REAL(RP) :: rotc(1,1,2)
-  real(r_size) :: lon_tmp(1,1),lat_tmp(1,1)
-
-  if (present(stggrd)) stggrd_ = stggrd
-
-  yobs = undef
-  qc = iqc_good
-
-  lon1d(:) = lon(:)
-  lat1d(:) = lat(:)
-
-! -- make profile arrays for RTTOV --
-  DO np = 1, nprof ! -- make profiles
-
-    CALL itpl_2d(v2d(:,:,iv2dd_skint),ri(np),rj(np),tsfc1d(np)) ! T2 is better??
-!    CALL itpl_2d(v2d(:,:,iv2dd_t2m),ri(np),rj(np),tsfc1d(np))
-    CALL itpl_2d(v2d(:,:,iv2dd_q2m),ri(np),rj(np),qsfc1d(np))
-    CALL itpl_2d(v2d(:,:,iv2dd_topo),ri(np),rj(np),topo1d(np))
-    CALL itpl_2d(v2d(:,:,iv2dd_lsmask),ri(np),rj(np),lsmask1d(np))
-    CALL itpl_2d(v2d(:,:,iv2dd_ps),ri(np),rj(np),psfc1d(np))
-!    call prsadj(yobs,rk-topo,t,q)
-!    if (abs(rk-topo) > PS_ADJUST_THRES) then
-!      write (6,'(A,F6.1)') '[Warning] PS observation height adjustment exceeds the threshold. dz=', abs(rk-topo)
-!      qc = iqc_ps_ter
-!    end if
-
-    if (stggrd_ == 1) then
-      CALL itpl_2d(v2d(:,:,iv2dd_u10m),ri(np)-0.5,rj(np),utmp)  !###### should modity itpl_3d to prevent '1.0' problem....??
-      CALL itpl_2d(v2d(:,:,iv2dd_v10m),ri(np),rj(np)-0.5,vtmp)  !######
-    else
-      CALL itpl_2d(v2d(:,:,iv2dd_u10m),ri(np),rj(np),utmp)
-      CALL itpl_2d(v2d(:,:,iv2dd_v10m),ri(np),rj(np),vtmp)
-    end if
-
-    lon_tmp(1,1) = lon(np)*deg2rad
-    lat_tmp(1,1) = lat(np)*deg2rad
-    call MAPPROJECTION_rotcoef(1, 1, 1, 1, 1, 1, &
-                               lon_tmp(1,1),lat_tmp(1,1),rotc)
-    usfc1d(np) = utmp * rotc(1,1,1) - vtmp * rotc(1,1,2)
-    vsfc1d(np) = utmp * rotc(1,1,2) + vtmp * rotc(1,1,1)
-
-    CALL itpl_2d_column(v3d(:,:,:,iv3dd_p),ri(np),rj(np),prs2d(:,np))
-    CALL itpl_2d_column(v3d(:,:,:,iv3dd_t),ri(np),rj(np),tk2d(:,np))
-    CALL itpl_2d_column(v3d(:,:,:,iv3dd_q),ri(np),rj(np),qv2d(:,np))
-    CALL itpl_2d_column(v3d(:,:,:,iv3dd_qc),ri(np),rj(np),qliq2d(:,np))
-    CALL itpl_2d_column((v3d(:,:,:,iv3dd_qi) &
-                       + v3d(:,:,:,iv3dd_qs) &
-                       + v3d(:,:,:,iv3dd_qg)),ri(np),rj(np),qice2d(:,np))
-
-  ENDDO ! -- make profiles
-
-
-!
-! -- NOTE: The channel number for RTTOV is always 10, because it should be the same
-!          with that in Himawari-8 RTTOV coef files.
-!
-!        : Satellite zenith angles are computed within SCALE_RTTOV_fwd using (lon,lat).
-!
-
-  slev = 1 + KHALO
-  elev = nlevh - KHALO
-
-  CALL SCALE_RTTOV_fwd(nch, & ! num of channels
-                       nlev,& ! num of levels
-                       nprof,& ! num of profs
-                       prs2d(elev:slev:-1,1:nprof),& ! (Pa)
-                       tk2d(elev:slev:-1,1:nprof),& ! (K)
-                       qv2d(elev:slev:-1,1:nprof),& ! (kg/kg)
-                       qliq2d(elev:slev:-1,1:nprof),& ! (kg/kg)
-                       qice2d(elev:slev:-1,1:nprof),& ! (kg/kg)
-                       tsfc1d(1:nprof),& ! (K)
-                       qsfc1d(1:nprof),& ! (kg/kg)
-                       psfc1d(1:nprof),& ! (Pa)
-                       usfc1d(1:nprof),& ! (m/s)
-                       vsfc1d(1:nprof),& ! (m/s)
-                       topo1d(1:nprof),& ! (m)
-                       lon1d(1:nprof),& ! (deg)
-                       lat1d(1:nprof),& ! (deg)
-                       lsmask1d(1:nprof),& ! (0-1)
-                       btall_out(1:nch,1:nprof),& ! (K)
-                       btclr_out(1:nch,1:nprof),& ! (K)
-                       trans_out(nlev:1:-1,1:nch,1:nprof))
-!
-! -- Compute max weight level using trans_out 
-! -- (Transmittance from each user pressure level to Top Of the Atmosphere)
-! -- btall_out is substituted into yobs
-
-  n = 0
-  DO np = 1, nprof
-  DO ch = 1, nch
-    n = n + 1
-
-    rdp = 1.0d0 / (prs2d(slev+1,np) - prs2d(slev,np))
-    max_weight(ch,np) = abs((trans_out(2,ch,np) - trans_out(1,ch,np)) * rdp )
-
-
-    plev_obs(n) = (prs2d(slev+1,np) + prs2d(slev,np)) * 0.5d0 ! (Pa)
-
-    DO k = 2, nlev-1
-
-      rdp = 1.0d0 / abs(prs2d(slev+k,np) - prs2d(slev+k-1,np))
-      tmp_weight = (trans_out(k+1,ch,np) - trans_out(k,ch,np)) * rdp 
-      if(tmp_weight > max_weight(ch,np))then
-        max_weight(ch,np) = tmp_weight
-        plev_obs(n) = (prs2d(slev+k,np) + prs2d(slev+k-1,np)) * 0.5d0 ! (Pa)
-      endif
-    ENDDO
-
-    yobs(n) = btall_out(ch,np)
-!
-! ## comment out by T.Honda (02/09/2016)
-! -- tentative QC here --
-!    IF(plev_obs(n) >= H08_LIMIT_LEV)THEN
-!      qc(n) = iqc_good
-!    ELSE
-!      qc(n) = iqc_obs_bad
-!    ENDIF
-
-    SELECT CASE(H08_CH_USE(ch))
-    CASE(1)
-      qc(n) = iqc_good
-    CASE DEFAULT
-      qc(n) = iqc_obs_bad
-    END SELECT
-
-    IF(H08_REJECT_LAND .and. (lsmask1d(np) > 0.5d0))THEN
-      qc(n) = iqc_obs_bad
-    ENDIF
-
-    IF(abs(btall_out(ch,np) - btclr_out(ch,np)) > H08_CLDSKY_THRS)THEN
-! Cloudy sky
-      yobs(n) = yobs(n) * (-1.0d0)
-    ELSE
-! Clear sky
-      yobs(n) = yobs(n) * 1.0d0
-    ENDIF
-   
-    yobs_H08_clr(n) = btclr_out(ch,np)
-
-  ENDDO ! ch
-  ENDDO ! np
-
-  RETURN
-END SUBROUTINE Trans_XtoY_H08
-#endif
-
-SUBROUTINE get_nobs_H08(cfile,nn)
-  IMPLICIT NONE
-  CHARACTER(*),INTENT(IN) :: cfile
-  INTEGER,INTENT(OUT) :: nn ! num of all H08 obs
-!  REAL(r_sngl) :: wk(4+nch)
-!  INTEGER :: ios 
-  INTEGER :: iprof
-  INTEGER :: iunit
-  LOGICAL :: ex
-  INTEGER :: sz
-
-  nn = 0 
-  iprof = 0
-  iunit=91
-      
-      
-  INQUIRE(FILE=cfile,EXIST=ex)
-  IF(ex) THEN
-    OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential')
-    
-!    READ(iunit,IOSTAT=ios)wk
-!    IF(ios /= 0) THEN 
-!      WRITE(6,'(3A)') '[Warning]',cfile,': Reading error -- skipped'
-!      RETURN
-!    END IF
-    
-! get file size by reading through the entire file... too slow for big files
-!-----------------------------
-!    DO
-!      READ(iunit,IOSTAT=ios) wk
-!      IF(ios /= 0) EXIT
-!      iprof = iprof + 1
-!      nn = nn + nch
-!    END DO
-!-----------------------------
-
-! get file size by INQUIRE statement... may not work for some older fortran compilers
-!-----------------------------
-    INQUIRE(UNIT=iunit, SIZE=sz)
-    IF (MOD(sz, r_sngl * (4+nch+2)) /= 0) THEN
-      WRITE(6,'(3A)') '[Warning]',cfile,': Reading error -- skipped'
-      RETURN
-    END IF
-    iprof = sz / (r_sngl * (4+nch+2))
-    nn = iprof * nch
-!-----------------------------
-
-    WRITE(6,*)' H08 FILE ', cfile
-    WRITE(6,'(I10,A)') nn,' OBSERVATIONS INPUT'
-    WRITE(6,'(A12,I10)') '   num of prof:',iprof
-    CLOSE(iunit)
-  ELSE
-    WRITE(6,'(2A)') cfile,' does not exist -- skipped'
-  END IF
-
-  RETURN
-END SUBROUTINE get_nobs_H08
-
-SUBROUTINE read_obs_H08(cfile,obs)
-  IMPLICIT NONE
-  CHARACTER(*),INTENT(IN) :: cfile
-  TYPE(obs_info),INTENT(INOUT) :: obs
-  REAL(r_sngl) :: wk(4+nch)
-!  REAL(r_sngl) :: tmp
-  INTEGER :: n,iunit
-
-  INTEGER :: nprof, np, ch
-
-  nprof = obs%nobs / nch
-
-  iunit=91
-  OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential')
-
-  n = 0
-  DO np=1,nprof
-    READ(iunit) wk
-
-    DO ch = 1, nch
-      n = n + 1
-
-      obs%elm(n) = NINT(wk(1))
-      obs%typ(n) = NINT(wk(2))
-      obs%lon(n) = REAL(wk(3),r_size)
-      obs%lat(n) = REAL(wk(4),r_size)
-      obs%dat(n) = REAL(wk(4+ch),r_size)
-      obs%dif(n) = 0.0d0
-      obs%lev(n) = ch + 6.0 ! substitute channnel number instead of the obs level
-      obs%err(n) = REAL(OBSERR_H08(ch),r_size)
-    END DO
-  END DO
-  CLOSE(iunit)
-
-  RETURN
-END SUBROUTINE read_obs_H08
-
-SUBROUTINE write_obs_H08(cfile,obs,append,missing)
-  IMPLICIT NONE
-  CHARACTER(*),INTENT(IN) :: cfile
-  TYPE(obs_info),INTENT(IN) :: obs
-  LOGICAL,INTENT(IN),OPTIONAL :: append
-  LOGICAL,INTENT(IN),OPTIONAL :: missing
-  LOGICAL :: append_
-  LOGICAL :: missing_
-  REAL(r_sngl) :: wk(4+nch)
-  INTEGER :: n,iunit
-  INTEGER :: iprof, ns, ne
-
-  iunit=92
-  append_ = .false.
-  IF(present(append)) append_ = append
-  missing_ = .true.
-  IF(present(missing)) missing_ = missing
-
-  iprof = obs%nobs / nch
-
-
-  IF(append_) THEN
-    OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='append')
-  ELSE
-    OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential')
-  END IF
-
-  DO n=1,iprof
-    ns = (n-1)*nch + 1
-    ne = n*nch
-
-    wk(1) = REAL(obs%elm(ns),r_sngl)
-    wk(2) = REAL(obs%typ(ns),r_sngl)
-    wk(3) = REAL(obs%lon(ns),r_sngl)
-    wk(4) = REAL(obs%lat(ns),r_sngl)
-    wk(5:5+nch-1) = REAL(obs%dat(ns:ne),r_size)
-    WRITE(iunit) wk
-
-  ENDDO
-
-  CLOSE(iunit)
-
-  RETURN
-END SUBROUTINE write_obs_H08
 
 END MODULE common_obs_scale

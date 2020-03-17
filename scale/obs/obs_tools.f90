@@ -233,31 +233,6 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
 !  REAL(r_size) :: timer
 !  INTEGER :: ierr
 
-#ifdef H08
-! -- for Himawari-8 obs --
-  INTEGER :: nprof_H08 ! num of H08 obs
-  REAL(r_size),ALLOCATABLE :: ril_H08(:),rjl_H08(:)
-  REAL(r_size),ALLOCATABLE :: lon_H08(:),lat_H08(:)
-  REAL(r_size),ALLOCATABLE :: tmp_ril_H08(:),tmp_rjl_H08(:)
-  REAL(r_size),ALLOCATABLE :: tmp_lon_H08(:),tmp_lat_H08(:)
-  INTEGER,ALLOCATABLE :: n2prof(:) ! obs num 2 prof num
-
-  REAL(r_size),ALLOCATABLE :: yobs_H08(:),plev_obs_H08(:)
-  REAL(r_size),ALLOCATABLE :: yobs_H08_clr(:)
-  REAL(r_size),ALLOCATABLE :: CA(:) ! (Okamoto et al., 2014QJRMS)
-  INTEGER :: ns
-  INTEGER,ALLOCATABLE :: qc_H08(:)
-#endif
-
-! -- for TC vital assimilation --
-!  INTEGER :: obs_idx_TCX, obs_idx_TCY, obs_idx_TCP ! obs index
-!  INTEGER :: bTC_proc ! the process where the background TC is located.
-! bTC: background TC in each subdomain
-! bTC(1,:) : tcx (m), bTC(2,:): tcy (m), bTC(3,:): mslp (Pa)
-!  REAL(r_size),ALLOCATABLE :: bTC(:,:)
-!  REAL(r_size),ALLOCATABLE :: bufr(:,:)
-!  REAL(r_size) :: bTC_mslp
-
 !CALL MPI_BARRIER(MPI_COMM_a,ierr)
 !CALL CPU_TIME(timer)
 !if (myrank == 0) print *, '######', timer
@@ -373,12 +348,6 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
             if (oqc(n) == iqc_ref_low) oqc(n) = iqc_good ! when process the observation operator, we don't care if reflectivity is too small
           end if
         end if
-#ifdef H08
-      !=========================================================================
-!      case (obsfmt_h08)
-      !-------------------------------------------------------------------------
-
-#endif
       !=========================================================================
       end select
 
@@ -419,221 +388,6 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
 !##!$OMP END PARALLEL
 
 
-#ifdef H08
-!
-! -- Count the number of the Himawari-8 obs "location" (=num of prof).
-!    Then, Trans_XtoY_H08 will be called without openMP.
-!
-
-  if (DEPARTURE_STAT_H08) then !-- [DEPARTURE_STAT_H08]
-
-    ALLOCATE(tmp_ril_H08(nnobs))
-    ALLOCATE(tmp_rjl_H08(nnobs))
-    ALLOCATE(tmp_lon_H08(nnobs))
-    ALLOCATE(tmp_lat_H08(nnobs))
-    ALLOCATE(n2prof(nnobs))
-
-    n2prof = 0
-    nprof_H08 = 0
-    do n = 1, nnobs
-      if (use_key) then
-        nn = obsda_sort%key(n)
-      else
-        nn = n
-      end if
-      iset = obsda_sort%set(nn)
-      iidx = obsda_sort%idx(nn)
-
-      if (step == 1) then
-        obsdep_set(n) = iset
-        obsdep_idx(n) = iidx
-      end if
-
-      oelm(n) = obs(iset)%elm(iidx)
-      if(oelm(n) /= id_H08IR_obs)cycle
-
-      call rij_g2l(PRC_myrank, obs(iset)%ri(iidx), obs(iset)%rj(iidx), ril, rjl)
-#ifdef DEBUG
-      if (PRC_myrank /= obs(iset)%rank(iidx) .or. obs(iset)%rank(iidx) == -1) then
-        write (6, *) "[Error] This observation provided for monitoring does not reside in my rank: ", &
-                     PRC_myrank, obs(iset)%rank(iidx), obs(iset)%ri(iidx), obs(iset)%rj(iidx), ril, rjl
-        stop
-      end if
-#endif
-
-      if(nprof_H08 > 1)then
-        if((tmp_ril_H08(nprof_H08)==ril) .and. (tmp_rjl_H08(nprof_H08)==rjl))then
-          n2prof(n) = nprof_H08
-          cycle
-        else
-          nprof_H08 = nprof_H08 + 1
-          tmp_ril_H08(nprof_H08) = ril
-          tmp_rjl_H08(nprof_H08) = rjl
-          tmp_lon_H08(nprof_H08) = obs(iset)%lon(iidx)
-          tmp_lat_H08(nprof_H08) = obs(iset)%lat(iidx)
-          n2prof(n) = nprof_H08
-        endif
-      else ! nprof_H08 <= 1
-        nprof_H08 = nprof_H08 + 1
-        tmp_ril_H08(nprof_H08) = ril
-        tmp_rjl_H08(nprof_H08) = rjl
-        tmp_lon_H08(nprof_H08) = obs(iset)%lon(iidx)
-        tmp_lat_H08(nprof_H08) = obs(iset)%lat(iidx)
-        n2prof(n) = nprof_H08
-      endif
-    end do ! [ n = 1, nnobs ]
-
-    IF(nprof_H08 >=1)THEN ! [nprof_H08 >=1]
-      ALLOCATE(ril_H08(nprof_H08))
-      ALLOCATE(rjl_H08(nprof_H08))
-      ALLOCATE(lon_H08(nprof_H08))
-      ALLOCATE(lat_H08(nprof_H08))
-
-      ril_H08 = tmp_ril_H08(1:nprof_H08)
-      rjl_H08 = tmp_rjl_H08(1:nprof_H08)
-      lon_H08 = tmp_lon_H08(1:nprof_H08)
-      lat_H08 = tmp_lat_H08(1:nprof_H08)
-
-      DEALLOCATE(tmp_ril_H08, tmp_rjl_H08)
-      DEALLOCATE(tmp_lon_H08, tmp_lat_H08)
-
-      ALLOCATE(yobs_H08(nprof_H08*nch))
-      ALLOCATE(yobs_H08_clr(nprof_H08*nch))
-      ALLOCATE(CA(nprof_H08*nch))
-      ALLOCATE(plev_obs_H08(nprof_H08*nch))
-      ALLOCATE(qc_H08(nprof_H08*nch))
-
-
-      CALL Trans_XtoY_H08(nprof_H08,ril_H08,rjl_H08,&
-                          lon_H08,lat_H08,v3dgh,v2dgh,&
-                          yobs_H08,plev_obs_H08,&
-                          qc_H08,stggrd=1,yobs_H08_clr=yobs_H08_clr)
-
-      ! yobs here should be positive!!
-      yobs_H08 = abs(yobs_H08)
-
-      write (6, '(A)')"MEAN-HIMAWARI-8-STATISTICS"
-
-!$OMP PARALLEL DO SCHEDULE(DYNAMIC,5) PRIVATE(n,nn,iset,iidx,ns)
-      do n = 1, nnobs
-        if (use_key) then
-          nn = obsda_sort%key(n)
-        else
-          nn = n
-        end if
-        iset = obsda_sort%set(nn)
-        iidx = obsda_sort%idx(nn)
-
-        oelm(n) = obs(iset)%elm(iidx)
-        if(oelm(n) /= id_H08IR_obs)cycle
-  
-        ns = (n2prof(n) - 1) * nch + nint(obsda_sort%lev(nn) - 6.0) 
-
-        if (DEPARTURE_STAT_T_RANGE <= 0.0d0 .or. & 
-          abs(obs(iset)%dif(iidx)) <= DEPARTURE_STAT_T_RANGE) then
-!          oqc(n) = iqc_otype
-
-          oqc(n) = qc_H08(ns)
-          ohx(n) = yobs_H08(ns)
-!          if(plev_obs_H08(ns) < H08_LIMIT_LEV) oqc(n) = iqc_obs_bad
-
-          CA(n) =  (abs(yobs_H08(ns) - yobs_H08_clr(ns)) & ! CM
-                   +  abs(obs(iset)%dat(iidx) - yobs_H08_clr(ns)) & ! CO
-                   &) * 0.5d0 
-
-          if (step == 1) then
-            obsdep_qc(n) = oqc(n)
-            obsdep_omb(n) = ohx(n)
-          else if (step == 2) then
-            if (obsdep_qc(n) == iqc_good) then ! Use the QC value of y_a only if the QC of y_b is good
-              obsdep_qc(n) = oqc(n)            !
-            end if                             !
-            obsdep_oma(n) = ohx(n)
-          end if
-                   
-          if(oqc(n) == iqc_good) then
-            ohx(n) = obs(iset)%dat(iidx) - ohx(n) 
-            write (6, '(A,2I6,2F8.2,5F11.4,I6,F10.4)')"H08-O-A-B",&
-                  obs(iset)%elm(iidx), &
-                  nint(obsda_sort%lev(nn)), & ! obsda_sort%lev includes the band num.
-                  obs(iset)%lon(iidx), &
-                  obs(iset)%lat(iidx), &
-                  ohx(n), &! O-A
-                  obsda_sort%val(nn), &! O-B
-                  plev_obs_H08(ns), &
-                  obs(iset)%dat(iidx), &
-                  obs(iset)%err(iidx), &
-                  oqc(n),&
-                  CA(n) 
-          endif
-
-        endif ! [DEPARTURE_STAT_T_RANGE]
-      end do ! [ n = 1, nnobs ]
-!$OMP END PARALLEL DO
-
-      DEALLOCATE(yobs_H08, yobs_H08_clr, plev_obs_H08, qc_H08, CA)
-    ENDIF ! [nprof_H08 >=1]
-
-    IF(ALLOCATED(n2prof)) DEALLOCATE(n2prof)
-    IF(ALLOCATED(tmp_ril_H08)) DEALLOCATE(tmp_ril_H08)
-    IF(ALLOCATED(tmp_rjl_H08)) DEALLOCATE(tmp_rjl_H08)
-    IF(ALLOCATED(tmp_lon_H08)) DEALLOCATE(tmp_lon_H08)
-    IF(ALLOCATED(tmp_lat_H08)) DEALLOCATE(tmp_lat_H08)
-  endif !-- [DEPARTURE_STAT_H08]
-
-#endif
-
-! ###  -- TC vital assimilation -- ###
-!  if (obs_idx_TCX > 0 .and. obs_idx_TCY > 0 .and. obs_idx_TCP > 0 .and.&
-!    obs(obsda_sort%set(obs_idx_TCX))%dif(obsda_sort%idx(obs_idx_TCX)) == &
-!    obs(obsda_sort%set(obs_idx_TCY))%dif(obsda_sort%idx(obs_idx_TCY)) .and. &
-!    obs(obsda_sort%set(obs_idx_TCY))%dif(obsda_sort%idx(obs_idx_TCY)) == &
-!    obs(obsda_sort%set(obs_idx_TCP))%dif(obsda_sort%idx(obs_idx_TCP)) .and. & 
-!    (DEPARTURE_STAT_T_RANGE <= 0.0d0 .or. &
-!    abs(obs(obsda_sort%set(obs_idx_TCX))%dif(obsda_sort%idx(obs_idx_TCX))) <= DEPARTURE_STAT_T_RANGE))then
-!
-!    allocate(bTC(3,0:nprocs_d-1))
-!    allocate(bufr(3,0:nproces_d-1))
-!
-!    bTC = 9.99d33
-!    bufr = 9.99d33
-!
-!!!!!!    call search_tc_subdom(obsda_sort%ri(obs_idx_TCX),obsda_sort%rj(obs_idx_TCX),v2dg,bTC(1,PRC_myrank),bTC(2,PRC_myrank),bTC(3,PRC_myrank))
-!
-!    CALL MPI_BARRIER(MPI_COMM_d,ierr)
-!    CALL MPI_ALLREDUCE(bTC,bufr,3*nprocs_d,MPI_r_size,MPI_MIN,MPI_COMM_d,ierr)
-!    bTC = bufr
-!
-!    deallocate(bufr)
-!
-!
-!    ! Assume MSLP of background TC is lower than 1100 (hPa). 
-!    bTC_mslp = 1100.0d2
-!    do n = 0, nprocs_d - 1
-!      write(6,'(3e20.5)')bTC(1,n),bTC(2,n),bTC(3,n) ! debug
-!      if (bTC(3,n) < bTC_mslp ) then
-!        bTC_mslp = bTC(3,n)
-!        bTC_proc = n
-!      endif
-!    enddo ! [ n = 0, nprocs_d - 1]
-!
-!    do n = 1, 3
-!      if(n==1) i = obs_idx_TCX
-!      if(n==2) i = obs_idx_TCY
-!      if(n==3) i = obs_idx_TCP
-!
-!      ohx(i) = bTC(n,bTC_proc)
-!      oqc(i) = iqc_otype
-!      if(bTC_MSLP < 1100.0d2) oqc(i) = iqc_good
-!
-!      if (oqc(i) == iqc_good) then
-!        ohx(i) = obs(obsda_sort%set(i))%dat(obsda_sort%idx(i)) - ohx(i)
-!      end if
-!    enddo
-!
-!  endif ! [DEPARTURE_STAT_T_RANGE]
-
-
   call monit_dep(nnobs,oelm,ohx,oqc,nobs,bias,rmse)
 
   monit_type = .false.
@@ -649,9 +403,6 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
     monit_type(uid_obs(id_radar_ref_zero_obs)) = .true.
     monit_type(uid_obs(id_radar_vr_obs)) = .true.
 !    monit_type(uid_obs(id_radar_prh_obs)) = .true.
-  end if
-  if (DEPARTURE_STAT_H08) then
-    monit_type(uid_obs(id_H08IR_obs)) = .true.
   end if
 
   deallocate (oelm)
@@ -706,9 +457,6 @@ subroutine read_obs_all(obs)
 !      if (.not. OBS_USE_JITDT) then
       call read_obs_radar_jrc(trim(OBS_IN_NAME(iof))//trim(timelabel_obs), obs(iof))
 !      end if
-    case (obsfmt_h08)
-      if (myrank_da /= 0) return
-      call get_nobs_H08(trim(OBS_IN_NAME(iof))//trim(timelabel_obs),obs(iof)%nobs) ! H08
     case default
       write(6,*) '[Error] Unsupported observation file format!'
       stop
@@ -728,9 +476,6 @@ subroutine read_obs_all(obs)
         call read_obs_radar(trim(OBS_IN_NAME(iof))//trim(timelabel_obs),obs(iof))
       !case (obsfmt_pawr_toshiba)
       !  data already read by 'read_obs_radar_toshiba' above
-      case (obsfmt_h08)
-        call obs_info_allocate(obs(iof), extended=.true.)
-        call read_obs_H08(trim(OBS_IN_NAME(iof))//trim(timelabel_obs),obs(iof)) ! H08
       end select
     endif
   end do ! [ iof = 1, OBS_IN_NUM ]
@@ -768,8 +513,6 @@ subroutine write_obs_all(obs, missing, file_suffix)
       call write_obs(trim(filestr),obs(iof),missing=missing_)
     case (obsfmt_radar)
       call write_obs_radar(trim(filestr),obs(iof),missing=missing_)
-    case (obsfmt_h08)
-      call write_obs_H08(trim(filestr),obs(iof),missing=missing_) ! H08
     end select
   end do ! [ iof = 1, OBS_IN_NUM ]
 
@@ -879,9 +622,6 @@ subroutine get_nobs_da_mpi(nobs)
 !      obsdafile = OBSDA_MDET_IN_BASENAME
 !    end if
 !    write (obsda_suffix(2:7), '(I6.6)') myrank_d
-!#ifdef H08
-!    call get_nobs(trim(obsdafile) // obsda_suffix, 6, nobs) ! H08
-!#else
 !    call get_nobs(trim(obsdafile) // obsda_suffix, 4, nobs)
 !#endif
 !  end if
@@ -892,11 +632,7 @@ subroutine get_nobs_da_mpi(nobs)
     obsdafile = OBSDA_IN_BASENAME
     call filename_replace_mem(obsdafile, 1)
     write (obsda_suffix(2:7), '(I6.6)') myrank_d
-#ifdef H08
-    call get_nobs(trim(obsdafile) // obsda_suffix, 6, nobs) ! H08
-#else
     call get_nobs(trim(obsdafile) // obsda_suffix, 4, nobs)
-#endif
   end if
   call MPI_BCAST(nobs, 1, MPI_INTEGER, 0, MPI_COMM_e, ierr)
 !-----------------------------
@@ -907,11 +643,7 @@ end subroutine get_nobs_da_mpi
 !-------------------------------------------------------------------------------
 ! Partially reduce observations processed in the same processes in the iteration
 !-------------------------------------------------------------------------------
-#ifdef H08
-subroutine obs_da_value_partial_reduce_iter(obsda, iter, nstart, nobs, ensval, qc, lev, val2)
-#else
 subroutine obs_da_value_partial_reduce_iter(obsda, iter, nstart, nobs, ensval, qc)
-#endif
   implicit none
   type(obs_da_value), intent(inout) :: obsda
   integer, intent(in)      :: iter
@@ -919,10 +651,6 @@ subroutine obs_da_value_partial_reduce_iter(obsda, iter, nstart, nobs, ensval, q
   integer, intent(in)      :: nobs
   real(r_size), intent(in) :: ensval(nobs)
   integer, intent(in)      :: qc(nobs)
-#ifdef H08
-  real(r_size), intent(in) :: lev(nobs)
-  real(r_size), intent(in) :: val2(nobs)
-#endif
   integer :: nend
   integer :: im
 
@@ -940,12 +668,6 @@ subroutine obs_da_value_partial_reduce_iter(obsda, iter, nstart, nobs, ensval, q
 
   ! variables without an ensemble dimension
   obsda%qc(nstart:nend) = max(obsda%qc(nstart:nend), qc)
-#ifdef H08
-  if (im <= MEMBER) then ! only consider lev, val2 from members, not from the means
-    obsda%lev(nstart:nend) = obsda%lev(nstart:nend) + lev
-    obsda%val2(nstart:nend) = obsda%val2(nstart:nend) + val2
-  end if
-#endif
 
   return
 end subroutine obs_da_value_partial_reduce_iter
@@ -1030,14 +752,6 @@ subroutine obs_da_value_allreduce(obsda)
   if (nprocs_e > 1) then
     call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%qc(:), obsda%nobs, MPI_INTEGER, MPI_MAX, MPI_COMM_e, ierr)
   end if
-#ifdef H08
-  if (nprocs_e > 1) then
-    call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%lev(:), obsda%nobs, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)
-    call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%val2(:), obsda%nobs, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)
-  end if
-  obsda%lev(:) = obsda%lev(:) / real(MEMBER, r_size)
-  obsda%val2(:) = obsda%val2(:) / real(MEMBER, r_size)
-#endif
 
   call mpi_timer('obs_da_value_allreduce:mpi_allreduce:', 3)
 
