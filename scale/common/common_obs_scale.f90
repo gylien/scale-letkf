@@ -1240,6 +1240,9 @@ SUBROUTINE write_obs_da(cfile,obsda,im,append)
 END SUBROUTINE write_obs_da
 
 subroutine write_obs_dep(cfile, nobs, set, idx, qc, omb, oma)
+  use scale_atmos_grid_cartesC, only: &
+      DX, &
+      DY
   implicit none
   character(*), intent(in) :: cfile
   integer, intent(in) :: nobs
@@ -1252,7 +1255,12 @@ subroutine write_obs_dep(cfile, nobs, set, idx, qc, omb, oma)
   real(r_sngl) :: wk(11)
   integer :: n, iunit
 
+  real(r_size) :: rig_radar, rjg_radar
+
   iunit=92
+
+  ! Assume PAWR obs only
+  call phys2ij( obs(set(1))%meta(1), obs(set(1))%meta(2), rig_radar, rjg_radar )
 
   open (iunit, file=cfile, form='unformatted', access='sequential')
   do n = 1, nobs
@@ -1260,6 +1268,11 @@ subroutine write_obs_dep(cfile, nobs, set, idx, qc, omb, oma)
     wk(2) = real(obs(set(n))%lon(idx(n)), r_sngl)
     wk(3) = real(obs(set(n))%lat(idx(n)), r_sngl)
     wk(4) = real(obs(set(n))%lev(idx(n)), r_sngl)
+    if ( OBSDEP_OUT_RADAR_COOD ) then
+      wk(2) = real( ( obs(set(n))%ri(idx(n)) - rig_radar )*DX, r_sngl )
+      wk(3) = real( ( obs(set(n))%rj(idx(n)) - rjg_radar )*DY, r_sngl )
+      wk(4) = real( obs(set(n))%lev(idx(n)) - obs(set(n))%meta(3), r_sngl )
+    endif
     wk(5) = real(obs(set(n))%dat(idx(n)), r_sngl)
     wk(6) = real(obs(set(n))%err(idx(n)), r_sngl)
     wk(7) = real(obs(set(n))%typ(idx(n)), r_sngl)

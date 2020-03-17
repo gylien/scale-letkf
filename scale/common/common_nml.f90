@@ -283,6 +283,7 @@ MODULE common_nml
                                                    ! if set to .false., the statistics are only printed by the ensemble mean group, which may save time
 
   LOGICAL               :: OBSDEP_OUT = .true.
+  LOGICAL               :: OBSDEP_OUT_RADAR_COOD = .true.
   character(filelenmax) :: OBSDEP_OUT_BASENAME = 'obsdep'
   LOGICAL               :: OBSGUES_OUT = .false.                      !XXX not implemented yet...
   character(filelenmax) :: OBSGUES_OUT_BASENAME = 'obsgues.<member>'  !XXX not implemented yet...
@@ -986,6 +987,7 @@ subroutine read_nml_letkf_monitor
     DEPARTURE_STAT_T_RANGE, &
     DEPARTURE_STAT_ALL_PROCESSES, &
     OBSDEP_OUT, &
+    OBSDEP_OUT_RADAR_COOD, &
     OBSDEP_OUT_BASENAME, &
     OBSGUES_OUT, &
     OBSGUES_OUT_BASENAME, &
