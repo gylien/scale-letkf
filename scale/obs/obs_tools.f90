@@ -137,7 +137,7 @@ subroutine monit_obs_mpi(v3dg, v2dg, monit_step, timelabel)
         call MPI_GATHERV(obsdep_oma, cnts, MPI_r_size,  obsdep_g_oma, cntr, dspr, MPI_r_size,  0, MPI_COMM_d, ierr)
       end if
 
-      if (myrank_d == 0) then
+      if ( myrank_d == 0 .and. obsdep_g_nobs > 0 ) then
         write (6,'(A,I6.6,2A)') 'MYRANK ', myrank,' is writing an obsda file ', trim(OBSDEP_OUT_BASENAME)//'_'//trim(timelabel)//'.dat'
         call write_obs_dep(trim(OBSDEP_OUT_BASENAME)//'_'//trim(timelabel)//'.dat', &
                            obsdep_g_nobs, obsdep_g_set, obsdep_g_idx, obsdep_g_qc, obsdep_g_omb, obsdep_g_oma)
