@@ -2777,7 +2777,7 @@ SUBROUTINE Trans_XtoY_H08_allg(v3d,v2d,yobs,yobs_clr,qc,stggrd)
       tsfc1d(np) = v3d(KHALO+1,i+IHALO,j+JHALO,iv3dd_t)
       qsfc1d(np) = v3d(KHALO+1,i+IHALO,j+JHALO,iv3dd_q)
       topo1d(np) = 0.0_r_size
-      lsmask1d(np) = 0.0_r_size
+      lsmask1d(np) = 0.0_r_size ! land
       psfc1d(np) = v3d(KHALO+1,i+IHALO,j+JHALO,iv3dd_p)
 
     endif

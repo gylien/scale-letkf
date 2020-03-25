@@ -1,1 +1,1 @@
-config/2000m_DA_0302_CTH2_NOGROSS/config.main.K
+config/2000m_NODA_0306/config.main.K

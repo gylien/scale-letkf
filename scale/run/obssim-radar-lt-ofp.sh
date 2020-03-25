@@ -9,21 +9,23 @@ OBSTYPE="RADAR"
 #OBSTYPE="LT"
 #OBSTYPE="FP" # Flash point
 #OBSTYPE="CONV"
-#OBSTYPE="ALL"
+OBSTYPE="ALL"
 
 # Generate new obs format file
 OBSSIM_OBSOUT=".false." # anal/gues
 #OBSSIM_OBSOUT=".true." # fcst
 
+H08_RTTOV_CFRAC=1
+
 TYPE=fcst
 #TYPE=hist
-TYPE=anal
+#TYPE=anal
 #TYPE=gues
 
 
 
-EXP=2000m_DA_0302_CTH2_NOGROSS
-EXP=2000m_DA_0302
+EXP=2000m_NODA_0306
+#EXP=2000m_DA_0306
 
 . config/${EXP}/config.main.$SYS
 . config/${EXP}/config.fcst
@@ -34,12 +36,17 @@ OBSSIM_RADAR_LAT=180
 
 
 
-tstart='2001-01-01 1:20:00'
 tstart='2001-01-01 1:05:00'
-#tstart='2001-01-01 1:10:00'
-#tstart='2001-01-01 1:15:00'
+tstart='2001-01-01 1:10:00'
+tstart='2001-01-01 1:15:00'
+tstart='2001-01-01 1:20:00'
+tstart='2001-01-01 1:25:00'
+tstart='2001-01-01 1:30:00'
+#tstart='2001-01-01 1:00:00'
+tend='2001-01-01 2:00:00'
+tstart='2001-01-01 1:00:00'
 tend=$tstart
-#tend='2001-01-01 1:20:00'
+#tend='2001-01-01 1:25:00'
 
 if [ "$TYPE" == "fcst" ] || [ "$TYPE" == "hist" ]; then
   tstart='2001-01-01 1:00:00'
@@ -52,9 +59,9 @@ if [ "$TYPE" == "fcst" ] || [ "$TYPE" == "hist" ]; then
 
   tstart='2001-01-01 1:10:00'
   tstart='2001-01-01 1:20:00'
-  #tstart='2001-01-01 1:30:00'
-  tstart='2001-01-01 1:05:00'
-  tstart='2001-01-01 1:00:00'
+  tstart='2001-01-01 1:30:00'
+  #tstart='2001-01-01 1:05:00'
+  #tstart='2001-01-01 1:00:00'
 
 
 
@@ -65,7 +72,6 @@ if [ "$TYPE" == "fcst" ] || [ "$TYPE" == "hist" ]; then
 
   FCSTLEN=1800 
   TE=7
-  TE=11 # DEBUG
 
   if [ "$TYPE" == "hist" ] ; then
     TE=2
@@ -85,13 +91,13 @@ MEM_NP=${SCALE_NP}
 MEM=mean
 
 SMEM=0 # 
+#SMEM=320 # 
 #SMEM=252 # 
 EMEM=${SMEM} # mean
 
-#SMEM=0
-#EMEM=9
-#SMEM=10
-#EMEM=20
+
+
+
 
 #--SMEM--
 #--EMEM--
@@ -112,6 +118,10 @@ TOPO=${OUTDIR}/const/topo
 
 #tend=$(date -ud "${FCSTLEN} second $tstart" '+%Y-%m-%d %H:%M:%S')
 
+if [ "$OBSTYPE" = 'H08' ]; then
+  PPN=32
+  PPN=16
+fi
 
 #
 MEM_L=`seq ${SMEM} ${EMEM}`
@@ -195,6 +205,7 @@ cat << EOF >> $RUNCONF_COMMON
 
 &PARAM_LETKF_H08
  H08_RTTOV_COEF_PATH = "./"
+ H08_RTTOV_CFRAC = ${H08_RTTOV_CFRAC},
 /
 
 EOF

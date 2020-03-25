@@ -766,6 +766,7 @@ subroutine read_nml_letkf_h08
     H08_MIN_CLD_MEMBER, &
     H08_CLDSKY_THRS, &
     H08_RTTOV_MINQ, &
+    H08_RTTOV_CFRAC, &
     H08_RTTOV_CFRAC_CNST, &
     H08_LIMIT_LEV, &
     H08_BT_MIN, &
