@@ -135,15 +135,15 @@ cat config.main.${config_suffix} | \
 rm config.main.${config_suffix}
 
 ### NCDF file merge
-cat config/${CONFIG}/sno_bulk.sh | \
-   sed -e "s/<STIME>/${STIME}/g" | \
-   sed -e "s/<PARENT_REF_TIME>/${PARENT_REF_TIME}/g" | \
-   sed -e "s/<FCSTLEN>/${FCSTLEN}/g" | \
-   sed -e "s/<NP_OFILE_X>/${NP_OFILE_X}/g" | \
-   sed -e "s/<NP_OFILE_Y>/${NP_OFILE_Y}/g" \
- > sno_bulk_ref_${PARENT_REF_TIME}_${STIME}.sh
+#cat config/${CONFIG}/sno_bulk.sh | \
+#   sed -e "s/<STIME>/${STIME}/g" | \
+#   sed -e "s/<PARENT_REF_TIME>/${PARENT_REF_TIME}/g" | \
+#   sed -e "s/<FCSTLEN>/${FCSTLEN}/g" | \
+#   sed -e "s/<NP_OFILE_X>/${NP_OFILE_X}/g" | \
+#   sed -e "s/<NP_OFILE_Y>/${NP_OFILE_Y}/g" \
+# > sno_bulk_ref_${PARENT_REF_TIME}_${STIME}.sh
 
-chmod 750 sno_bulk_ref_${PARENT_REF_TIME}_${STIME}.sh
+#chmod 750 sno_bulk_ref_${PARENT_REF_TIME}_${STIME}.sh
 
 . config.main || exit $?
 #. config.$SCPNAME || exit $?
@@ -208,7 +208,12 @@ rm -f exp/*
 ln -s $OUTDIR/exp/${jobid}_${SCPNAME}_${STIME} exp
 
 #-------------------------------------------------------------------------------
-#
+# new version: plot using GrADS
+cd post
+./post${script_suffix}.sh ${PARENT_REF_TIME} ${STIME} ${FCSTLEN} &> post.log.${PARENT_REF_TIME}.${STIME}
+cd -
+#-------------------------------------------------------------------------------
+# (old version: plot using fortran DCL)
 #echo 'exec sno'
 # ./sno_bulk_ref_${PARENT_REF_TIME}_${STIME}.sh > ./sno_bulk_${PARENT_REF_TIME}_${STIME}.log 2>&1 &
 #
@@ -217,6 +222,7 @@ ln -s $OUTDIR/exp/${jobid}_${SCPNAME}_${STIME} exp
 echo 'exec d4 init...'
 spinup_d3=3600
 intv_d4=3600
+fcstlen_d4=5400
 
 cd ../run_d4_init
  STIME_f=`date -d "${STIME:0:4}-${STIME:4:2}-${STIME:6:2} ${STIME:8:2}:${STIME:10:2}:${STIME:12:2}" +"%F %T"`
@@ -224,7 +230,7 @@ cd ../run_d4_init
  while [ `date -d "$STIME_D4_f" +%s` -le `date -d "${FCSTLEN} second -${intv_d4} second ${STIME_f}" +%s` ] ;do
    STIME_D4=`date -d "${STIME_D4_f}" +%Y%m%d%H%M%S`
    sleep 17s
-   ./admin.sh ${PARENT_REF_TIME} ${STIME} ${STIME_D4} ${intv_d4} "00:25:00" $NMEM &>admin.log.${PARENT_REF_TIME}.${STIME}.${STIME_D4} &
+   ./admin.sh ${PARENT_REF_TIME} ${STIME} ${STIME_D4} ${fcstlen_d4} "00:25:00" $NMEM &>admin.log.${PARENT_REF_TIME}.${STIME}.${STIME_D4} &
  STIME_D4_f=`date -d "${intv_d4} second ${STIME_D4_f}" +"%F %T"`
  done
 cd -
