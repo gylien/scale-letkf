@@ -23,7 +23,9 @@ cd ${wkdir}
 
 mkdir -p ${outdir}
 
-stimefgrads=$(date -ud "$tstart" '+%H:%MZ%d%b%Y')
+
+tinit=`echo $gribfile_dir | grep -o '[0-9]\{10\}'`
+stimefgrads=$(date -ud "${tinit:0:4}-${tinit:4:2}-${tinit:6:2} ${tinit:8:2}" '+%H:%MZ%d%b%Y')
 
 cat ${wkdir}/ctl/land.ctl | sed "s/<STIME>/${stimefgrads}/g" > ${outdir}/land.ctl
 cat ${wkdir}/ctl/sfc.ctl | sed "s/<STIME>/${stimefgrads}/g" > ${outdir}/sfc.ctl

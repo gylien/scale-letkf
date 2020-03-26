@@ -69,7 +69,7 @@ while ((t <= 120)); do
       now=`date -u +'%Y-%m-%d %H:%M:%S'`
       echo "$now [CONV] $YYYYMMDDHH -> gfs.$YYYYMMDDHHMMSS_fcst - GrADS" >> ${wkdir}/get_ncep_gfs.log
       bash $wkdir/run/grads/convert.sh "$TIME_fcst" "$TIME_fcst" "$datadir/ncepgfs/${YYYYMMDDHH}/gfs" \
-       > ${wkdir}/convert_arads.log 2>&1
+       > ${wkdir}/convert_grads.log 2>&1
 
       now=`date -u +'%Y-%m-%d %H:%M:%S'`
       echo "$now [CONV] $YYYYMMDDHH -> gfs.$YYYYMMDDHHMMSS_fcst - Plot (background job)" >> ${wkdir}/get_ncep_gfs.log
