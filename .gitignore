@@ -1,17 +1,3 @@
-external/JMA_precip
-external/msm
-external/sync_OBCX
-external/ncepobs_gdas/run/dec_prepbufr/prepbufr.in
-external/ncepobs_gdas/run/dec_prepbufr/dec_prepbufr*
-external/ncepobs_gdas/run/plot/map
-external/ncepobs_gdas/20????????
-external/ncepobs_gdas/mtime*
-external/ncepobs_gdas/*log*
-external/ncepgfs/run/plot/*log*
-external/ncepgfs/20????????
-external/ncepgfs/mtime*
-external/ncepgfs/*log*
-
 admin_*
 scale_develop
 scale_ope
