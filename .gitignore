@@ -10,6 +10,7 @@ scale/tmp
 scale/configure.user
 scale/common/datetime
 scale/common/pdbash
+scale/common/*__genmod.f90
 scale/run*/config.main
 scale/run*/config.main*
 scale/run*/config.cycle
@@ -41,6 +42,10 @@ scale/run_d3/plot/plot_temp/*
 scale/run_d3/plot/draw_uvw
 scale/run_d3/plot/draw_dbz
 scale/run_d3/plot/draw_rain
+scale/run_d1_init
+scale/run_gefs
+scale/run_light
+scale/run_light_2
 scale/letkf/letkf
 scale/obs/obsmake
 scale/obs/obsope
