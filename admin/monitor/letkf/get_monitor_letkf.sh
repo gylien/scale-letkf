@@ -56,3 +56,8 @@ done
  cd -
 done
 
+if [ `date -d "$time_end_fmt" +%H` == "00" ];then
+  mkdir -p ./save/$time_end
+  cp ./figs/*.png ./save/$time_end/
+fi
+

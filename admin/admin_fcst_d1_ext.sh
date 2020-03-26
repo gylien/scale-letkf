@@ -150,7 +150,7 @@ success=0
 now="$(date -u +'%Y-%m-%d %H:%M:%S')"
 echo "$now [RUN ] $TIMEPRINT" >> $logfile
 cd ${rundir} 
-./admin.sh ${TIMEf} "06:00:00" $nmem_d1_ext
+./admin.sh ${TIMEf} "04:00:00" $nmem_d1_ext
 res=$?
   
 if ((res == 0)); then

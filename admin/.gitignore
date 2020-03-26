@@ -2,13 +2,4 @@ admin_cycle.time
 *log*
 *lock*
 running*
-tmp
-monitor/*.txt
-monitor/letkf/*.txt
-monitor/letkf/draw/*.mod
-monitor/letkf/draw/a.out
-monitor/realtime/draw_d1-3
-monitor/realtime/draw_d1-4
-monitor/realtime/draw_d4
-monitor/realtime/setup.mod
 

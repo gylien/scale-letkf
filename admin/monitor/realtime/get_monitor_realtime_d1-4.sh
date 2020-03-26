@@ -39,6 +39,7 @@ if [ "$timeref_p" == "$timeref" ];then
  rm temp
 fi
 
+
 timeobs=`tail -n 1 ${monitor_dir}/monitor_obs.txt | awk '{print $1}'`0000
 timegfs=`tail -n 1 ${monitor_dir}/monitor_gfs.txt | awk '{print $1}'`0000
 timed1=`tail -n 1 ${monitor_dir}/monitor_cycle_temp.txt | awk '{print $1}'`0000
@@ -47,11 +48,9 @@ timed1=`tail -n 1 ${monitor_dir}/monitor_cycle_temp.txt | awk '{print $1}'`0000
 [ "$timegfs" -eq "0000" ] && timegfs=$timegfs_p ### TORI AEZU
 [ "$timed1" -eq "0000" ] && timed1=$timed1_p ### TORI AEZU
 
-
-latest=`ls -1 ${OUTBASE}/d2/*/fcstgpi/mdet/sfc_prcp_* | tail -n 1`
+latest=`ls -1 ${OUTBASE}/d2/2020*/fcstgpi/mdet/sfc_prcp_f000000.png | tail -n 1`
 based2=`echo $latest | egrep --only-matching [0-9]{14}`
 lend2=`basename $latest | sed -e 's/[^0-9]//g' `
-
 
 yyyy=`echo $based2 | cut -c 1-4`
 mm=`echo $based2 | cut -c 5-6`
@@ -63,13 +62,12 @@ sec=`echo $based2 | cut -c 13-14`
 
 timed2=`date -d "$lend2 sec ${yyyy}-${mm}-${dd} ${hh}:${mon}:${sec}" +%Y%m%d%H%M%S`
 
-
 timed3=$timed3_p
 
-list=`ls -1td ${OUTBASE}/d3/ref_*/*/plot/mean | head -n 10`
+list=`ls -1td ${OUTBASE}/d3/ref_2020*/2020*/fcstgpi/mean | head -n 10`
 if [ ! -z "$list" ];then
 for path in $list;do
-latest=`ls -1 $path/rain_*.png | tail -n 1` 
+latest=`ls -1 $path/sfc_prcp_*.png | tail -n 1` 
 based3=`echo $latest | egrep --only-matching /[0-9]{14} | cut -c 2-15`
 lend3=`basename $latest | egrep --only-matching f[0-9]{6} | cut -c 2-7`
 
@@ -80,7 +78,6 @@ hh=`echo $based3 | cut -c 9-10`
 mon=`echo $based3 | cut -c 11-12`
 sec=`echo $based3 | cut -c 13-14`
 timed3_new=`date -d "$lend3 sec ${yyyy}-${mm}-${dd} ${hh}:${mon}:${sec}" +%Y%m%d%H%M%S`
-
 [ $timed3_new -gt $timed3 ] && timed3=$timed3_new
 done
 fi
@@ -89,7 +86,7 @@ D4mode=d4_1km
 
 timed4=$timed4_p
 
-list=`ls -1t ${OUTBASE}/d3/ref_*/*/$D4mode/anal/mean/init_*.pe000000.nc | head -n 10`
+list=`ls -1t ${OUTBASE}/d3/ref_2020*/2020*/$D4mode/anal/mean/init_*.pe000000.nc | head -n 10`
 if [ ! -z "$list" ];then
 for file in $list;do
 based3=`echo $file | egrep --only-matching "init_[0-9]{8}-[0-9]{6}" | cut -c 6-20`
@@ -104,6 +101,8 @@ timed4_new=`date -ud "1 hour ${yyyy}-${mm}-${dd} ${hh}:${min}:${sec}" +%Y%m%d%H%
 [ $timed4_new -gt $timed4 ] && timed4=$timed4_new
 done
 fi
+
+
 echo $timeref $timeobs $timegfs $timed1 $timed2 $timed3 $timed4 >> data/d1-4.txt
 tac data/d1-4.txt > data_inv/d1-4.txt 
 

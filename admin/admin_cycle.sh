@@ -161,7 +161,7 @@ success=0
   echo "$now [RUN ] $TIMEPRINT/$ntry" >> $logfile
 
   cd ${rundir}
-  ./admin.sh ${TIMEf} "00:50:00" $nmem
+  ./admin.sh ${TIMEf} "00:30:00" $nmem
 
   res=$?
 

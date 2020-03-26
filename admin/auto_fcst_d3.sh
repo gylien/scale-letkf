@@ -1,5 +1,19 @@
 #!/bin/bash -l
 
+running='running_fcst_d3'
+
+if [ -f $running ] ;then
+  echo 'already running.'
+  exit 1
+else
+  echo $HOSTNAME $$ > $running
+fi
+
+function unlock () {
+ [ `cat $running | awk '{print $2}'` == $$ ] && rm -f $running
+}
+trap unlock EXIT
+
 isec=0
 cyclesec=300
 limitsec=21600
@@ -7,7 +21,7 @@ limitsec=21600
 PARENT_TIME_B=`date -d "-1 year" +"%F %T"`
 
 
-FCSTHOUR_DEF=14 ### maximum 5 hour
+FCSTHOUR_DEF=5 ### maximum 5 hour
 
 . admin.rc || exit $1
 
