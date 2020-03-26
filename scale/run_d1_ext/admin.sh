@@ -79,18 +79,38 @@ fi
 ### wait until the submittion of previous jobs are completed
 
 iwait=1
-while [ $iwait == 1 ];do
+res=`grep prep fcst${script_suffix}.stat.*`
+mytime=${STIME}
+if [ -s waiting_list ] || [ ! -z "$res" ];then
+ echo $mytime >> waiting_list
+else
 iwait=0
-running_jobs=`ls -x fcst${script_suffix}.stat.*`
-if [ "$running_jobs" != "" ];then
-for statfile in $running_jobs ;do
-if [ "`cat $statfile`" == "prep" ] ;then
- iwait=1
- sleep 10s
+fi
+
+while [ $iwait == 1 ];do
+if [ -s waiting_list ] ;then
+ next=`cat waiting_list | head -n 1`
+ res=`grep prep fcst${script_suffix}.stat.*`
+ if [ "$next" == "$mytime" ] && [ -z "$res" ] ;then 
+   iwait=0 
+   wcl=`cat waiting_list| wc -l`
+   wcl=`expr $wcl - 1`
+   cp waiting_list temp_list
+   cat temp_list | tail -n $wcl > waiting_list 
+   rm temp_list
+ else
+  sleep 23s
+ fi
+else
+ iwait=0 ### never occur
+ echo 'ERROR'
+ exit 1
 fi
 done
-fi
-done
+
+[ -f waiting_list ] && [ ! -s waiting_list ] && rm waiting_list ### clean
+
+echo 'prep' > fcst${script_suffix}.stat.$mytime
 
 #-------------------------------------------------------------------------------
 
