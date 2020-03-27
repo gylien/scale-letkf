@@ -10,10 +10,11 @@ OBSTYPE="RADAR"
 #OBSTYPE="FP" # Flash point
 #OBSTYPE="CONV"
 OBSTYPE="ALL"
+OBSTYPE="FP" # Flash point
 
 # Generate new obs format file
 OBSSIM_OBSOUT=".false." # anal/gues
-#OBSSIM_OBSOUT=".true." # fcst
+OBSSIM_OBSOUT=".true." # fcst
 
 H08_RTTOV_CFRAC=1
 
@@ -58,10 +59,10 @@ if [ "$TYPE" == "fcst" ] || [ "$TYPE" == "hist" ]; then
 
 
   tstart='2001-01-01 1:10:00'
-  tstart='2001-01-01 1:20:00'
+  #tstart='2001-01-01 1:20:00'
   tstart='2001-01-01 1:30:00'
   #tstart='2001-01-01 1:05:00'
-  #tstart='2001-01-01 1:00:00'
+  tstart='2001-01-01 1:00:00'
 
 
 
@@ -70,8 +71,8 @@ if [ "$TYPE" == "fcst" ] || [ "$TYPE" == "hist" ]; then
   FCSTLEN=3600 
   TE=13
 
-  FCSTLEN=1800 
-  TE=7
+  #FCSTLEN=1800 
+  #TE=7
 
   if [ "$TYPE" == "hist" ] ; then
     TE=2
@@ -308,7 +309,7 @@ while (($(date -ud "$ctime" '+%s') <= $(date -ud "$tend" '+%s'))); do # -- time
     ONAME=${ORG_DIR}/fp_${HTIME}_${MEM}.dat
     OBSSIM_NUM_3D_VARS="1"
     OBSSIM_3D_VARS_LIST="5003" 
-    OBSSIM_NUM_2D_VARS="0"
+    OBSSIM_NUM_2D_VARS="1"
     OBSSIM_2D_VARS_LIST="5004" 
     OHEAD="fp" 
 

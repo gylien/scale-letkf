@@ -164,13 +164,6 @@ SUBROUTINE obsope_cal(obs, obsda_return)
 !  CALL MPI_BARRIER(MPI_COMM_a,ierr)
   rrtimer00 = MPI_WTIME()
 
-#ifdef H08
-!  call phys2ij(MSLP_TC_LON,MSLP_TC_LAT,MSLP_TC_rig,MSLP_TC_rjg)
-  bris = real(BUFFER_DX/DX,r_size) + real(IHALO,r_size) 
-  brjs = real(BUFFER_DY/DY,r_size) + real(JHALO,r_size)
-  brie = (real(nlong+2*IHALO,r_size) - bris)
-  brje = (real(nlatg+2*JHALO,r_size) - brjs)
-#endif
 
   nobs_alldomain = 0
   do iof = 1, OBS_IN_NUM
@@ -269,60 +262,6 @@ SUBROUTINE obsope_cal(obs, obsda_return)
 #ifdef H08
           ELSEIF( OBS_IN_FORMAT(iof) == 3) THEN ! for H08 obs (OBS_IN_FORMAT(iof) = 3) ! H08
 
-            nprof_H08 = 0
-            nobs_0 = nobs
-            nallprof = obs(iof)%nobs/nch
-
-            ALLOCATE(tmp_ri_H08(nallprof))
-            ALLOCATE(tmp_rj_H08(nallprof))
-            ALLOCATE(tmp_lon_H08(nallprof))
-            ALLOCATE(tmp_lat_H08(nallprof))
-
-            do n = 1, nallprof
-              ns = (n - 1) * nch + 1
-              if (obs(iof)%dif(ns) > slot_lb .and. obs(iof)%dif(ns) <= slot_ub) then
-                nslot = nslot + 1
-                call phys2ij(obs(iof)%lon(ns),obs(iof)%lat(ns),rig,rjg)
-                call rij_g2l_auto(proc,rig,rjg,ritmp,rjtmp)
-
-                if (myrank_d == proc) then
-                  nprof_H08 = nprof_H08 + 1 ! num of prof in myrank node
-                  tmp_ri_H08(nprof_H08) = ritmp
-                  tmp_rj_H08(nprof_H08) = rjtmp
-                  tmp_lon_H08(nprof_H08) = obs(iof)%lon(ns)
-                  tmp_lat_H08(nprof_H08) = obs(iof)%lat(ns)
-
-                  nobs = nobs + nch
-                  nobs_slot = nobs_slot + 1
-                  obsda%set(nobs-nch+1:nobs) = iof
-                  obsda%ri(nobs-nch+1:nobs) = rig
-                  obsda%rj(nobs-nch+1:nobs) = rjg
-                  ri(nobs-nch+1:nobs) = ritmp
-                  rj(nobs-nch+1:nobs) = rjtmp
-                  do ch = 1, nch
-                    obsda%idx(nobs-nch+ch) = ns + ch - 1
-                  enddo
-
-                end if ! [ myrank_d == proc ]
-              end if ! [ obs(iof)%dif(n) > slot_lb .and. obs(iof)%dif(n) <= slot_ub ]
-            end do ! [ n = 1, nallprof ]
-
-            IF(nprof_H08 >=1)THEN
-              ALLOCATE(ri_H08(nprof_H08))
-              ALLOCATE(rj_H08(nprof_H08))
-              ALLOCATE(lon_H08(nprof_H08))
-              ALLOCATE(lat_H08(nprof_H08))
-
-              ri_H08 = tmp_ri_H08(1:nprof_H08)
-              rj_H08 = tmp_rj_H08(1:nprof_H08)
-              lon_H08 = tmp_lon_H08(1:nprof_H08)
-              lat_H08 = tmp_lat_H08(1:nprof_H08)
-
-            ENDIF
-
-            DEALLOCATE(tmp_ri_H08,tmp_rj_H08)
-            DEALLOCATE(tmp_lon_H08,tmp_lat_H08)
-
 #endif
           ENDIF ! end of nobs count [if (OBS_IN_FORMAT(iof) = 3)]
 
@@ -397,7 +336,7 @@ SUBROUTINE obsope_cal(obs, obsda_return)
 
                 case (4, 6) ! Lighting obs
                   call Trans_XtoY_LT(obs(iof)%elm(n),ri(nn),rj(nn),rk, &
-                                     v3dg,v2dg,obsda%val(nn),obsda%qc(nn))
+                                     v3dg,v2dg,obsda%val(nn),obsda%qc(nn), myrank_d)
 
                 end select
               end if
@@ -414,78 +353,8 @@ SUBROUTINE obsope_cal(obs, obsda_return)
 
 #ifdef H08
           ELSEIF((OBS_IN_FORMAT(iof) == 3).and.(nprof_H08 >=1 ))THEN ! H08
-! -- Note: Trans_XtoY_H08 is called without OpenMP but it can use a parallel (with OpenMP) RTTOV routine
-!
-            !------
-            if (.not. USE_OBS(23)) then
-              obsda%qc(nobs_0+1:nobs) = iqc_otype
-            else
-            !------
 
-            ALLOCATE(yobs_H08(nprof_H08*nch))
-            ALLOCATE(yobs_H08_clr(nprof_H08*nch))
-            ALLOCATE(plev_obs_H08(nprof_H08*nch))
-            ALLOCATE(qc_H08(nprof_H08*nch))
-
-!            CALL Trans_XtoY_H08(nprof_H08,ri_H08,rj_H08,&
-!                                lon_H08,lat_H08,v3dg,v2dg,&
-!                                yobs_H08,plev_obs_H08,&
-!                                qc_H08,yobs_H08_clr=yobs_H08_clr)
-
-! Clear sky yobs(>0)
-! Cloudy sky yobs(<0)
-
-            obsda%qc(nobs_0+1:nobs) = iqc_obs_bad
-
-            ns = 0
-            DO nn = nobs_0 + 1, nobs
-              ns = ns + 1
-
-              obsda%val(nn) = yobs_H08(ns)
-              obsda%qc(nn) = qc_H08(ns)
-
-              if(obsda%qc(nn) == iqc_good)then
-                rig = obsda%ri(nn)
-                rjg = obsda%rj(nn)
-
-! -- tentative treatment around the TC center --
-!                dist_MSLP_TC = sqrt(((rig - MSLP_TC_rig) * DX)**2&
-!                                   +((rjg - MSLP_TC_rjg) * DY)**2)
-
-!                if(dist_MSLP_TC <= dist_MSLP_TC_MIN)then
-!                  obsda%qc(nn) = iqc_obs_bad
-!                endif
-
-! -- Rejecting Himawari-8 obs over the buffer regions. --
-                if((rig <= bris) .or. (rig >= brie) .or.&
-                   (rjg <= brjs) .or. (rjg >= brje))then
-                  obsda%qc(nn) = iqc_obs_bad
-                endif
-              endif
-
-!
-!  NOTE: T.Honda (10/16/2015)
-!  The original H08 obs does not inlcude the level information.
-!  However, we have the level information derived by RTTOV (plev_obs_H08) here, 
-!  so that we substitute the level information into obsda%lev.  
-!  The substituted level information is used in letkf_tools.f90
-!
-              obsda%lev(nn) = plev_obs_H08(ns)
-              obsda%val2(nn) = yobs_H08_clr(ns)
-
-!              write(6,'(a,f12.1,i9)')'H08 debug_plev',obsda%lev(nn),nn
-
-            END DO ! [ nn = nobs_0 + 1, nobs ]
-
-            DEALLOCATE(ri_H08, rj_H08)
-            DEALLOCATE(lon_H08, lat_H08)
-            DEALLOCATE(yobs_H08, plev_obs_H08)
-            DEALLOCATE(yobs_H08_clr)
-            DEALLOCATE(qc_H08)
-
-            !------
-            end if ! [.not. USE_OBS(23)]
-            !------
+! allg here
 
 #endif
           ENDIF ! H08
@@ -774,7 +643,7 @@ SUBROUTINE obsmake_cal(obs)
 
                 case (4, 6)
                   call Trans_XtoY_LT(obs(iof)%elm(n),ri,rj,rk, &
-                                     v3dg,v2dg,obs(iof)%dat(n),iqc)
+                                     v3dg,v2dg,obs(iof)%dat(n),iqc,myrank_d)
                 end select
 
  !!! For radar observation, when reflectivity value is too low, do not generate ref/vr observations
@@ -1038,7 +907,7 @@ subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, stggrd)
 
           case (id_lt3d_obs, id_fp3d_obs)
             call Trans_XtoY_LT(OBSSIM_3D_VARS_LIST(iv3dsim), ri, rj, rk, &
-                               v3dgh, v2dgh, tmpobs, tmpqc)
+                               v3dgh, v2dgh, tmpobs, tmpqc, myrank_d)
 
           case (-999)
 !            if (iv3dsim == 7) then
@@ -1090,11 +959,11 @@ subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, stggrd)
 
             case (id_lt2d_obs)
               call Trans_XtoY_LT(OBSSIM_2D_VARS_LIST(iv2dsim), ri, rj, rk, &
-                                 v3dgh, v2dgh, tmpobs, tmpqc)
+                                 v3dgh, v2dgh, tmpobs, tmpqc, myrank_d)
 
             case (id_fp2d_obs)
               call Trans_XtoY_LT(OBSSIM_2D_VARS_LIST(iv2dsim), ri, rj, rk, &
-                                 v3dgh, v2dgh, tmpobs, tmpqc)
+                                 v3dgh, v2dgh, tmpobs, tmpqc, myrank_d)
             case (id_H08IR_obs)
               USE_HIM8 = .true.
               cycle
