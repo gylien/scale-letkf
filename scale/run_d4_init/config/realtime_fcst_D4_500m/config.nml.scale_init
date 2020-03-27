@@ -101,8 +101,6 @@
 #
 #################################################
 
-### TORI AEZU
-
 &PARAM_ATMOS_GRID_CARTESC_INDEX
  KMAX = 60,
  IMAX = 8,
@@ -129,8 +127,6 @@
  OKMAX = 1,
 /
 
-### TORI AEZU
-
 &PARAM_ATMOS_GRID_CARTESC
  DX = 500.D0,
  DY = 500.D0,
@@ -152,12 +148,9 @@
 /
 
 &PARAM_MAPPROJECTION
- MAPPROJECTION_basepoint_lon = 134.9512D0,
- MAPPROJECTION_basepoint_lat =  34.7105D0,
+ MAPPROJECTION_basepoint_lon = 139.609D0,
+ MAPPROJECTION_basepoint_lat =  35.861D0,
  MAPPROJECTION_type          = 'MER',
-! MAPPROJECTION_type          = 'LC',
-! MAPPROJECTION_LC_lat1       =  30.00D0,
-! MAPPROJECTION_LC_lat2       =  40.00D0,
 /
 
 #################################################
