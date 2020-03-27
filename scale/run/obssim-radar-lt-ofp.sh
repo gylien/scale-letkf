@@ -5,27 +5,27 @@ USER=honda
 SYS=ofp
 
 OBSTYPE="RADAR"
-#OBSTYPE="H08"
+OBSTYPE="H08"
 #OBSTYPE="LT"
 #OBSTYPE="FP" # Flash point
 #OBSTYPE="CONV"
-OBSTYPE="ALL"
-OBSTYPE="FP" # Flash point
+#OBSTYPE="ALL"
+#OBSTYPE="FP" # Flash point
 
 # Generate new obs format file
 OBSSIM_OBSOUT=".false." # anal/gues
-OBSSIM_OBSOUT=".true." # fcst
+#OBSSIM_OBSOUT=".true." # fcst
 
 H08_RTTOV_CFRAC=1
 
 TYPE=fcst
 #TYPE=hist
-#TYPE=anal
-#TYPE=gues
+TYPE=anal
+TYPE=gues
 
 
 
-EXP=2000m_NODA_0306
+EXP=2000m_DA_0306_TEST_Him8
 #EXP=2000m_DA_0306
 
 . config/${EXP}/config.main.$SYS
@@ -46,6 +46,7 @@ tstart='2001-01-01 1:30:00'
 #tstart='2001-01-01 1:00:00'
 tend='2001-01-01 2:00:00'
 tstart='2001-01-01 1:00:00'
+tstart='2001-01-01 1:40:00'
 tend=$tstart
 #tend='2001-01-01 1:25:00'
 

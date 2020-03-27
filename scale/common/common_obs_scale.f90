@@ -2473,7 +2473,7 @@ subroutine read_obs_all(obs)
     case (2)
       call get_nobs_radar(trim(OBS_IN_NAME(iof)), obs(iof)%nobs, obs(iof)%meta(1), obs(iof)%meta(2), obs(iof)%meta(3))
     case (3) !H08 
-      call get_nobs_H08(trim(OBS_IN_NAME(iof)),obs(iof)%nobs) ! H08
+      call get_nobs_Him8_grd(trim(OBS_IN_NAME(iof)),obs(iof)%nobs) ! H08
     case (4)
       call get_nobs(trim(OBS_IN_NAME(iof)),8,obs(iof)%nobs) ! Lightning
     case (5)
@@ -2497,7 +2497,7 @@ subroutine read_obs_all(obs)
     case (2)
       call read_obs_radar(trim(OBS_IN_NAME(iof)),obs(iof))
     case (3) ! H08 
-      call read_obs_H08(trim(OBS_IN_NAME(iof)),obs(iof)) ! H08
+      call read_obs_Him8_grd(trim(OBS_IN_NAME(iof)),obs(iof)) ! H08
     case (4) 
       call read_obs(trim(OBS_IN_NAME(iof)),obs(iof)) ! Lightning
     case (5) 
@@ -3533,5 +3533,78 @@ subroutine read_obs_lt_grd(cfile,obs)
   return
 end subroutine read_obs_lt_grd
 
+subroutine read_obs_Him8_grd( cfile, obs )
+  use scale_grid, only: &
+      GRID_CXG, GRID_CYG, &
+      GRID_CZ
+  use scale_grid_index, only: &
+      IHALO, JHALO, KHALO
+  implicit none
+
+  character(*),intent(in) :: cfile
+  type(obs_info),intent(inout) :: obs
+  integer :: i, j
+  integer :: ch
+
+  real(r_sngl) :: tbb3d(nlong,nlatg,10)
+  real(r_sngl) :: err3d(nlong,nlatg,10)
+
+  integer :: iunit, iolen
+  integer :: irec, n
+
+  iunit = 91
+  inquire (iolength = iolen) iolen
+  open(iunit,file=cfile,form='unformatted',access='direct',recl=nlong*nlatg*iolen)
+  irec = 0
+
+  do ch = 1, 10
+    irec = irec + 1
+    read(iunit,rec=irec) ((tbb3d(i,j,ch), i = 1, nlong), j = 1, nlatg)
+    irec = irec + 1
+    read(iunit,rec=irec) ((err3d(i,j,ch), i = 1, nlong), j = 1, nlatg)
+  enddo
+
+  ch = 3
+  n = 0
+  ! Assume only band 9
+  do j = 1, nlatg
+  do i = 1, nlong
+
+    n = n + 1
+    obs%elm(n) = id_H08IR_obs ! Him8
+    obs%lon(n) = GRID_CXG(i+IHALO)
+    obs%lat(n) = GRID_CYG(j+JHALO)
+    obs%lev(n) = 3  ! band 9 (9-6)
+    obs%typ(n) = 23
+    obs%dif(n) = 0.0_r_size
+
+    obs%dat(n) = real( tbb3d(i,j,ch) + err3d(i,j,ch)*H08_OBSERR_TRUE, kind=r_size ) 
+    obs%err(n) = 3.0_r_size ! tentative ! not used
+
+  enddo
+  enddo
+
+  return
+end subroutine read_obs_Him8_grd
+
+subroutine get_nobs_Him8_grd(cfile,nn)
+  implicit none
+  character(*),intent(in) :: cfile
+  integer,intent(out) :: nn
+  INTEGER :: iunit
+  LOGICAL :: ex
+
+  nn = 0
+  iunit=91
+
+  inquire(file=cfile,exist=ex)
+  if(ex) then
+    nn = nlong * nlatg * 1 ! assume 10 band
+  else
+    write(6,'(2A)') cfile,' does not exist -- skipped'
+  end iF
+
+  return
+end subroutine get_nobs_Him8_grd
 
 END MODULE common_obs_scale

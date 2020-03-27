@@ -510,23 +510,23 @@ SUBROUTINE set_letkf_obs
         cycle
       end if
 
-! -- reject Himawari-8 obs sensitivie above H08_LIMIT_LEV (Pa) ! H08 --
-      if (obsda%lev(n) < H08_LIMIT_LEV) then
-        obsda%qc(n) = iqc_obs_bad
-        cycle
-      endif
+!! -- reject Himawari-8 obs sensitivie above H08_LIMIT_LEV (Pa) ! H08 --
+!      if (obsda%lev(n) < H08_LIMIT_LEV) then
+!        obsda%qc(n) = iqc_obs_bad
+!        cycle
+!      endif
 
 !
 ! -- Counting how many members have cloud.
 ! -- Cloudy members should have negative values.
 !
-      mem_ref = 0
-      do i = 1, MEMBER
-        if (obsda%ensval(i,n) < 0.0d0) then
-          mem_ref = mem_ref + 1
-          obsda%ensval(i,n) = obsda%ensval(i,n) * (-1.0d0)
-        end if
-      end do
+!      mem_ref = 0
+!      do i = 1, MEMBER
+!        if (obsda%ensval(i,n) < 0.0d0) then
+!          mem_ref = mem_ref + 1
+!          obsda%ensval(i,n) = obsda%ensval(i,n) * (-1.0d0)
+!        end if
+!      end do
 
 !
 ! -- reject Band #11(ch=5) & #12(ch=6) of Himawari-8 obs ! H08
@@ -573,11 +573,11 @@ SUBROUTINE set_letkf_obs
     enddo
     sig_b = dsqrt(sig_b / REAL(MEMBER-1,r_size))
 
-    if (QC_SIGB) then
-      if (sig_b < obs(iof)%err(n)) then
-        obsda%qc(n) = 225
-      endif
-    endif
+!    if (QC_SIGB) then
+!      if (sig_b < obs(iof)%err(n)) then
+!        obsda%qc(n) = 225
+!      endif
+!    endif
 
 !   compute sprd in obs space ! H08
 
@@ -612,23 +612,23 @@ SUBROUTINE set_letkf_obs
       !  H08_CLDSKY_THRS  < 0.0: turn off ! all members are diagnosed as cloudy.
       !  H08_CLDSKY_THRS  > 0.0: turn on
       !
-      IF(mem_ref < H08_MIN_CLD_MEMBER)THEN ! Clear sky
-        IF(ABS(obsda%val(n)) > 1.0d0 * obs(iof)%err(iidx)) THEN
-          obsda%qc(n) = iqc_gross_err
-        END IF
-      ELSE ! Cloudy sky
-        IF(ABS(obsda%val(n)) > GROSS_ERROR_H08 * obs(iof)%err(iidx)) THEN
-          obsda%qc(n) = iqc_gross_err
-        END IF
-      END IF
+!      IF(mem_ref < H08_MIN_CLD_MEMBER)THEN ! Clear sky
+!        IF(ABS(obsda%val(n)) > 1.0d0 * obs(iof)%err(iidx)) THEN
+!          obsda%qc(n) = iqc_gross_err
+!        END IF
+!      ELSE ! Cloudy sky
+!        IF(ABS(obsda%val(n)) > GROSS_ERROR_H08 * obs(iof)%err(iidx)) THEN
+!          obsda%qc(n) = iqc_gross_err
+!        END IF
+!      END IF
 
       IF(obs(iof)%dat(iidx) < H08_BT_MIN)THEN
         obsda%qc(n) = iqc_gross_err
       ENDIF
 
-!      IF(ABS(obsda%val(n)) > GROSS_ERROR_H08 * obs(iof)%err(iidx)) THEN
-!        obsda%qc(n) = iqc_gross_err
-!      END IF
+      IF(ABS(obsda%val(n)) > GROSS_ERROR_H08 * obs(iof)%err(iidx)) THEN
+        obsda%qc(n) = iqc_gross_err
+      END IF
     case (id_tclon_obs)
       IF(ABS(obsda%val(n)) > GROSS_ERROR_TCX * obs(iof)%err(iidx)) THEN
         obsda%qc(n) = iqc_gross_err
@@ -1070,6 +1070,7 @@ SUBROUTINE set_letkf_obs
         obsda2%rj(nn_ext) = obsda%rj(obsda%key(nn_sub))
 #ifdef H08
         obsda2%lev(nn_ext) = obsda%lev(obsda%key(nn_sub)) ! H08
+        obsda2%val2(nn_ext) = obsda%val2(obsda%key(nn_sub)) ! H08
 #endif
       end do
     end do
@@ -1138,6 +1139,7 @@ SUBROUTINE set_letkf_obs
       obsbufs%rj(n) = obsda%rj(obsda%key(obsidx(n)))
 #ifdef H08
       obsbufs%lev(n) = obsda%lev(obsda%key(obsidx(n))) ! H08
+      obsbufs%val2(n) = obsda%val2(obsda%key(obsidx(n))) ! H08
 #endif
     end do
 
@@ -1157,6 +1159,7 @@ SUBROUTINE set_letkf_obs
     call MPI_GATHERV(obsbufs%rj, ns, MPI_r_size, obsbufr%rj, nr, nrt, MPI_r_size, ip, MPI_COMM_d, ierr)
 #ifdef H08
     call MPI_GATHERV(obsbufs%lev, ns, MPI_r_size, obsbufr%lev, nr, nrt, MPI_r_size, ip, MPI_COMM_d, ierr) ! H08
+    call MPI_GATHERV(obsbufs%val2, ns, MPI_r_size, obsbufr%val2, nr, nrt, MPI_r_size, ip, MPI_COMM_d, ierr) ! H08
 #endif
 
     ! c) In the domain receiving data, copy the receive buffer to obsda2
@@ -1220,6 +1223,7 @@ SUBROUTINE set_letkf_obs
               obsda2%rj(ns_ext:ne_ext) = obsbufr%rj(ns_bufr:ne_bufr)
 #ifdef H08
               obsda2%lev(ns_ext:ne_ext) = obsbufr%lev(ns_bufr:ne_bufr) ! H08
+              obsda2%val2(ns_ext:ne_ext) = obsbufr%val2(ns_bufr:ne_bufr) ! H08
 #endif
             end do
           end do ! [ ictype = 1, nctype ]

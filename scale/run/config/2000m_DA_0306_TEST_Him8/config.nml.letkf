@@ -6,7 +6,9 @@
 !--OBS_IN_NUM--
 !--OBS_IN_NAME--
 ! OBS_IN_FORMAT = 5, ! radar
- OBS_IN_FORMAT = 6, ! flash
+! OBS_IN_FORMAT = 6, ! flash
+! OBS_IN_FORMAT = 3, ! Him8
+ OBS_IN_FORMAT = 5, 6, 3, ! Him8
 !--OBSDA_RUN--
 !--OBSDA_OUT--
 !--OBSDA_OUT_BASENAME--
@@ -66,7 +68,7 @@
 ! 2.0D3: in-between ROI of 6km in Dowell et al. (2004a) and that of 8 km in Tong and Xue (2005)
  VERT_LOCAL =   2.0D3,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,
                   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,
-                  -1., 1.0D3,   -1.,   -1.,  0.0d0,
+                  -1., 1.0D3,   0.0d0,   -1.,  0.0d0,
 ! similar to Zhang et al. 2004 (ROI=3km) and Aksoy et al. (2009) with ROI of 4 km
 ! TIME_LOCAL = 3.0D0,
  HORI_LOCAL_RADAR_OBSNOREF = 2.0D3,
@@ -125,6 +127,12 @@
  LT_ZMAX = 12.0d3, ! tropopause
  XY_THINNING_LT = 32,
  Z_THINNING_LT = 1,
+/
+
+&PARAM_LETKF_H08
+ H08_OBSERR_RUN_CLR = 3.0d0,
+ H08_OBSERR_RUN_CLD = 6.0d0,
+ H08_THIN_NG = 1,
 /
 
 !*** Attach SCALE configuration below ***

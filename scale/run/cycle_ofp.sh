@@ -116,6 +116,10 @@ echo "[$(datetime_now)] Initialization (stage in)"
 bash $SCRP_DIR/src/stage_in.sh a
 stage_in server || exit $?
 
+mkdir -p $TMPROOT/run/letkf
+cp $RTTOV_COEF $TMPROOT/run/letkf
+cp $RTTOV_SCCOEF $TMPROOT/run/letkf
+
 #===============================================================================
 # Creat a job script
 

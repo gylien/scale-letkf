@@ -11,13 +11,18 @@ OFP_MODE="regular-flat"
 OFP_MODE="debug-flat"
 
 
-EXP=2000m_DA_0306_TEST
+EXP=2000m_DA_0306_TEST_Him8
 
 INIT_LOC_ENS=1 # 1: initialize with random bubble location and amplitude (Aksoy et al. 2009)
 
 INIT_LOC_ENS_FILE="/work/hp150019/f22013/SCALE-LETKF/scale-LT/OUTPUT/input/AKSOY2009/init_loc_ens320_3K_0226.txt"
 
 INPUT_SND="/work/hp150019/f22013/SCALE-LETKF/scale-LT/OUTPUT/input/WK320" # Initial U/V perturbations
+
+# -- RTTOV_DIR --
+DIR_RTTOV=/work/hp150019/share/honda/RTTOV12.3
+RTTOV_COEF=${DIR_RTTOV}/rtcoef_rttov12/rttov7pred54L/rtcoef_himawari_8_ahi.dat
+RTTOV_SCCOEF=${DIR_RTTOV}/rtcoef_rttov12/cldaer_ir/sccldcoef_himawari_8_ahi.dat
 
 #===============================================================================
 
@@ -82,8 +87,10 @@ LAND_INPUT=0            # 0: No land input (use cycling land variables)
 LAND_FORMAT=99          # 0: SCALE init files (with exactly same domain settings; do not need additional preprocessing)
                         # 99: From the same file as used in generating the boundary conditions ($BDY_FORMAT)
 
-OBSNUM=1
+OBSNUM=3
 OBSNAME[1]=radar3d
+OBSNAME[2]=fp
+OBSNAME[3]=Him8
 
 #===============================================================================
 # Cycling settings
@@ -100,6 +107,8 @@ MEMBER=320           # Ensemble size
 
 NNODES=110
 
+#MEMBER=9
+#NNODES=10
 
 PPN=64              # Number of processes per node
 

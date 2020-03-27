@@ -264,7 +264,10 @@ MODULE common_nml
                                   ! 2: Tompkins and Janiskova (2004QJRMS) method
                                   ! (as in Okamoto 2017QJRMS)
 
-
+  integer :: H08_THIN_NG = 10 ! 20 km
+  real(r_size) :: H08_OBSERR_TRUE = 3.0 ! true obs error for OSSE
+  real(r_size) :: H08_OBSERR_RUN_CLR = 3.0 ! obs error for OSSE
+  real(r_size) :: H08_OBSERR_RUN_CLD = 6.0 ! obs error for OSSE
   logical :: H08_REJECT_LAND = .false. ! true: reject Himawari-8 radiance over the land
   logical :: H08_RTTOV_CLD = .true. ! true: all-sky, false: CSR in RTTOV fwd model
   real(r_size) :: H08_RTTOV_MINQ = 0.10d0 ! Threshold of water/ice contents for diagnosing cloud fraction (g m-3)
@@ -762,6 +765,10 @@ subroutine read_nml_letkf_h08
 
   namelist /PARAM_LETKF_H08/ &
     H08_REJECT_LAND, &
+    H08_OBSERR_TRUE, &
+    H08_OBSERR_RUN_CLR, &
+    H08_OBSERR_RUN_CLD, &
+    H08_THIN_NG, &
     H08_RTTOV_CLD, &
     H08_MIN_CLD_MEMBER, &
     H08_CLDSKY_THRS, &

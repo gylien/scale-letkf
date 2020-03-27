@@ -1386,7 +1386,8 @@ subroutine obs_local_cal(ri, rj, rlev, rz, nvar, iob, ic, ndist, nrloc, nrdiag)
   else if (obtyp == 22) then ! obtypelist(obtyp) == 'PHARAD'
     nd_v = ABS(obs(obset)%lev(obidx) - rz) / vert_loc_ctype(ic)             ! for PHARAD, use z-coordinate for vertical localization
 !#ifdef H08
-!  else if (obtyp == 23) then ! obtypelist(obtyp) == 'H08IRB'                ! H08
+  else if (obtyp == 23) then ! obtypelist(obtyp) == 'H08IRB'                ! H08
+     nd_v = 0.0d0
 !    nd_v = ABS(LOG(obsda2%lev(iob)) - LOG(rlev)) / vert_loc_ctype(ic)       ! H08 for H08IRB, use obsda2%lev(iob) for the base of vertical localization
 !#endif
 
@@ -1438,6 +1439,14 @@ subroutine obs_local_cal(ri, rj, rlev, rz, nvar, iob, ic, ndist, nrloc, nrdiag)
   ! Calculate (observation variance / localization)
   !
   nrdiag = obs(obset)%err(obidx) * obs(obset)%err(obidx) / nrloc
+
+  if (  obtyp == 23) then
+    if ( obsda2%val2(iob) <= 1.0) then ! clear
+      nrdiag = H08_OBSERR_RUN_CLR**2 / nrloc
+    else ! cloudy
+      nrdiag = H08_OBSERR_RUN_CLD**2 / nrloc
+    endif
+  endif
 
   return
 end subroutine obs_local_cal
