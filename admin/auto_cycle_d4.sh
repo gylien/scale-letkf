@@ -1,43 +1,52 @@
 #!/bin/sh
 
-isec=0
-cyclesec=60
-limitsec=21600
-
-
-. `pwd`/admin.rc || exit $1
-
-FCSTLEN=600
-
-EXPBASE=${realtimebase}/r0051_nest/exp_d4_1km
-
-wkdir="$(cd "$( dirname "$0" )" && pwd)"
-
 source ~/.bashrc
 
+wkdir="$(cd "$( dirname "$0" )" && pwd)"
+. $wkdir/admin.rc || exit $1
 
-while [ $isec -le $limitsec ] ;do
+#-----------------------------
+running=$wkdir'/running_dacycle_d4'
 
+if [ -f $running ] ;then
+  echo 'already running.'
+  exit 1
+else
+  echo $HOSTNAME $$ > $running
+fi
 
-START_TIME="$(date -u +'%Y-%m-%d %H:%M:%S')"
-START_TIMEf="$(date -ud "${START_TIME}" +'%Y%m%d%H%M%S')"
-LIMIT_TIMEf="$(date -ud "-1 hour ${START_TIME}" +'%Y%m%d%H%M%S')"
+function unlock () {
+ [ `cat $running | awk '{print $2}'` == $$ ] && rm -f $running
+}
+trap unlock EXIT
+#-----------------------------
 
+isec=0
+cyclesec=60
+limitsec=86400
 
-INIT_TIME="$(date -ud "${START_TIME}" +'%Y-%m-%d %H:00:00')"
-INIT_TIMEf="$(date -ud "${INIT_TIME}" +'%Y%m%d%H%M%S')"
+END_TIME="2020-03-31 00:00:00"
 
-while [ ! -d $EXPBASE/$INIT_TIMEf/bdy/0050 ];do
- INIT_TIME="$(date -ud "-1 hour ${INIT_TIME}" +'%Y-%m-%d %H:00:00')"
- INIT_TIMEf="$(date -ud "${INIT_TIME}" +'%Y%m%d%H%M%S')"
-done
- if [ $INIT_TIMEf -ge $LIMIT_TIMEf ] ; then
- nohup ./admin_cycle_d4.sh "$INIT_TIME" $FCSTLEN &> admin_cycle_d4.log&
- fi
+rundir=${realtimebase}/scale_${scale_ver}/scale-letkf_${letkf_ver}_d4/scale/run
 
- sleep ${cyclesec}s 
- isec=`expr $isec + $cyclesec`
- echo "$isec / $limitsec wait..."
-done
+INIT_TIME="$(date -ud +'%Y-%m-%d %H:00:00')"
+INIT_TIMEf="$(date -ud "$INIT_TIME" +'%Y%m%d%H0000')"
 
+cd $rundir
+$rundir/prep.sh init 
+
+  echo " $INIT_TIME start "
+  nohup ./start.sh "$INIT_TIMEf" &> admin_cycle_d4.log.${INIT_TIMEf}
+ res=$?
+ [ $res != 0 ] exit 99
+  echo " $INIT_TIME complete "
+
+while [ `date -ud "1 hour $INIT_TIME" +%s` -le `date -ud "$END_TIME" +%s` ] ; do
+ INIT_TIME="$(date -ud "1 hour $INIT_TIME" +'%Y-%m-%d %H:00:00')"
+ INIT_TIMEf="$(date -ud "$INIT_TIME" +'%Y%m%d%H0000')"
+  echo " $INIT_TIME start "
+ nohup ./restart.sh "$INIT_TIMEf" &> admin_cycle_d4.log.${INIT_TIMEf}
+ [ $res != 0 ] exit 99
+  echo " $INIT_TIME complete "
+done 
 
