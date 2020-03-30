@@ -587,7 +587,8 @@ if ((DACYCLE == 1)) &&  ((OBS_USE_JITDT == 1)) ; then
     echo "JIT-DT will send the following files in "${JIT_TARFILE}
     RADAR_CHECK_OBS_DA_TIME_TF=".true."
     tar -tf ${JIT_TARFILE}
-    src/launch-jitdt-offline.sh ${n_cycles} > /dev/null&
+#    src/launch-jitdt-offline.sh ${n_cycles} > /dev/null&
+    src/launch-jitdt-offline.sh ${n_cycles} &> log_jitdt_offline &
     OBS_JITDT_CHECK_RADAR_TIME_TF=".false."
   else
     OBS_JITDT_CHECK_RADAR_TIME_TF=".true."
@@ -1054,8 +1055,8 @@ EOF
             -e "/!--RESTART_OUTPUT--/a RESTART_OUTPUT = .true.," \
             -e "/!--RESTART_OUT_BASENAME--/a RESTART_OUT_BASENAME = \"${OUTDIR[$d]}/${time}/anal/<member>/init\"," \
             -e "/!--RESTART_OUT_POSTFIX_TIMELABEL--/a RESTART_OUT_POSTFIX_TIMELABEL = .true.," \
-            -e "/!--TOPO_IN_BASENAME--/a TOPO_IN_BASENAME = \"${INDIR[$d]}/const/topo/topo\"," \
-            -e "/!--LANDUSE_IN_BASENAME--/a LANDUSE_IN_BASENAME = \"${INDIR[$d]}/const/landuse/landuse\"," \
+            -e "/!--TOPO_IN_BASENAME--/a TOPO_IN_BASENAME = \"${DATA_TOPO}/const/topo/topo\"," \
+            -e "/!--LANDUSE_IN_BASENAME--/a LANDUSE_IN_BASENAME = \"${DATA_LANDUSE}/const/landuse/landuse\"," \
             -e "/!--FILE_HISTORY_DEFAULT_BASENAME--/a FILE_HISTORY_DEFAULT_BASENAME = \"${FILE_HISTORY_DEFAULT_BASENAME}\"," \
             -e "/!--FILE_HISTORY_DEFAULT_TINTERVAL--/a FILE_HISTORY_DEFAULT_TINTERVAL = ${CYCLEFOUT}.D0," \
             -e "/!--FILE_HISTORY_OUTPUT_STEP0--/a FILE_HISTORY_OUTPUT_STEP0 = ${FILE_HISTORY_OUTPUT_STEP0}," \
@@ -1074,7 +1075,7 @@ EOF
             -e "/!--RESTART_OUT_ADDITIONAL_EFF_MEMBER--/a RESTART_OUT_ADDITIONAL_EFF_MEMBER = ${RESTART_OUT_ADDITIONAL_EFF_MEMBER}")"
     if ((d == 1)); then
       conf="$(echo "$conf" | \
-          sed -e "/!--ATMOS_BOUNDARY_IN_BASENAME--/a ATMOS_BOUNDARY_IN_BASENAME = \"${INDIR[$d]}/${bdy_start_time}/bdy/${mem_bdy}/boundary\"," \
+          sed -e "/!--ATMOS_BOUNDARY_IN_BASENAME--/a ATMOS_BOUNDARY_IN_BASENAME = \"${BGDIR}/${parent_start_time}/bdy/${mem_bdy}/boundary_$(datetime_scale $parent_start_time)\"," \
               -e "/!--ATMOS_BOUNDARY_START_DATE--/a ATMOS_BOUNDARY_START_DATE = ${bdy_start_time:0:4}, ${bdy_start_time:4:2}, ${bdy_start_time:6:2}, ${bdy_start_time:8:2}, ${bdy_start_time:10:2}, ${bdy_start_time:12:2}," \
               -e "/!--ATMOS_BOUNDARY_UPDATE_DT--/a ATMOS_BOUNDARY_UPDATE_DT = $BDYINT.D0,")"
     fi
@@ -1309,7 +1310,7 @@ EOF
             -e "/!--ANAL_MDET_OUT_FREQ--/a ANAL_MDET_OUT_FREQ = ${ANAL_MDET_OUT_FREQ}," \
             -e "/!--ANAL_SPRD_OUT_FREQ--/a ANAL_SPRD_OUT_FREQ = ${ANAL_SPRD_OUT_FREQ}," \
             -e "/!--GUES_ANAL_POSTFIX_TIMELABEL--/a GUES_ANAL_POSTFIX_TIMELABEL = ${GUES_ANAL_POSTFIX_TIMELABEL_TF}," \
-            -e "/!--LETKF_TOPO_IN_BASENAME--/a LETKF_TOPO_IN_BASENAME = \"${INDIR[$d]}/const/topo/topo\"," \
+            -e "/!--LETKF_TOPO_IN_BASENAME--/a LETKF_TOPO_IN_BASENAME = \"${DATA_TOPO}/const/topo/topo\"," \
             -e "/!--INFL_ADD_IN_BASENAME--/a INFL_ADD_IN_BASENAME = \"${OUTDIR[$d]}/const/addi/init\"," \
             -e "/!--RELAX_SPREAD_OUT--/a RELAX_SPREAD_OUT = ${RTPS_INFL_OUT_TF}," \
             -e "/!--RELAX_SPREAD_OUT_BASENAME--/a RELAX_SPREAD_OUT_BASENAME = \"${RELAX_SPREAD_OUT_BASENAME}\"," \
