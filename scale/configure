@@ -6,10 +6,23 @@ SCALE_RM_OBJDIR = $(TOPDIR)/scale-rm/src/.libs
 include $(TOPDIR)/sysdep/Makedef.$(SCALE_SYS)
 include $(TOPDIR)/Mkinclude
 
+#------
 
-NETCDF_INC = $(SCALE_NETCDF_INCLUDE)
-NETCDF_LIB = $(SCALE_NETCDF_LIBS)
+include ../arch/configure.user.$(SCALE_SYS)
 
+#------
+
+ifeq ($(SCALE_SINGLE_FP),T)
+FOPTS     += -DSINGLE
+endif
+
+TOPDIR    = ../../..
+SCALE_INC = -I$(TOPDIR)/include
+SCALE_LIB = -L$(TOPDIR)/lib -lscale
+SCALE_RM_OBJDIR = $(TOPDIR)/scale-rm/src/.libs
+
+include $(TOPDIR)/sysdep/Makedef.$(SCALE_SYS)
+include $(TOPDIR)/Mkinclude
 
 #------
 
@@ -17,18 +30,10 @@ include ../arch/configure.user.$(SCALE_SYS)
 
 #------
 
-
-ifeq ($(SCALE_SINGLE_FP),T)
-FOPTS     += -DSINGLE
-FOPTS_SCALE += -DSINGLE
-endif
-
 ifeq ($(SCALE_USER_VER),T)
 FOPTS     += -DSCALEUV
-FOPTS_SCALE += -DSCALEUV
 endif
 
 ifeq ($(LETKF_SINGLE_FP),T)
 FOPTS     += -DSINGLELETKF
-FOPTS_SCALE += -DSINGLELETKF
 endif

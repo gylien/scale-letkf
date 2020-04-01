@@ -3,7 +3,7 @@ SCALE_USER_VER = T
 
 # Precision
 LETKF_SINGLE_FP = F
-SCALE_SINGLE_FP = T
+SCALE_SINGLE_FP = F
 
 # Libraries
 #-----------------
@@ -18,7 +18,7 @@ BUFR_LIB   = -L/data/opt/bufrlib/10.1.0_intel/lib -lbufrlib
 
 FOPTS_SCALE = $(FFLAGS)
 
-FOPTS     = $(FOPTS_SCALE) 
+FOPTS     = $(FOPTS_SCALE)
 
 FOPTS_EXE  = $(FOPTS)
 
@@ -26,5 +26,4 @@ FOPTS_EXE  = $(FOPTS)
 FBYTESWAP = -convert little_endian
 FFREE     = -free
 FFIXED    = -fixed
-
 
