@@ -10,7 +10,7 @@ SCALE_SINGLE_FP = F
 
 LAPACK_LIB = -mkl=sequential
 
-BUFR_LIB   = -L/data/opt/bufrlib/10.1.0_intel/lib -lbufrlib
+#BUFR_LIB   = -L/data/opt/bufrlib/10.1.0_intel/lib -lbufrlib
 
 
 # Compiler flags

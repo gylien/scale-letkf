@@ -1,30 +1,36 @@
-# Version flags
-SCALE_USER_VER = T
+TOPDIR    = ../../..
+SCALE_INC = -I$(TOPDIR)/include
+SCALE_LIB = -L$(TOPDIR)/lib -lscale 
+SCALE_RM_OBJDIR = $(TOPDIR)/scale-rm/src/.libs
 
-# Precision
-LETKF_SINGLE_FP = F
-SCALE_SINGLE_FP = T
+include $(TOPDIR)/sysdep/Makedef.$(SCALE_SYS)
+include $(TOPDIR)/Mkinclude
 
-# Libraries
-#-----------------
+NETCDF_INC = $(SCALE_NETCDF_INCLUDE)
+NETCDF_LIB = $(SCALE_NETCDF_LIBS)
 
 LAPACK_LIB = -mkl=sequential
 
-BUFR_LIB   = -L/data/opt/bufrlib/10.1.0_intel/lib -lbufrlib
+#BUFR_LIB  = -L/data/opt/bufrlib/10.1.0_intel/lib -lbufrlib
 
-
-# Compiler flags
-#-----------------
+######
 
 FOPTS_SCALE = $(FFLAGS)
 
 FOPTS     = $(FOPTS_SCALE) 
 
-FOPTS_EXE  = $(FOPTS)
-
-#FMCMODEL  = -mcmodel=medium -shared-intel
 FBYTESWAP = -convert little_endian
 FFREE     = -free
 FFIXED    = -fixed
 
+configure.user.Linux64-intel-mpt 
+# -- for Himawari-8 assimilatin on the K computer (T.Honda)
+# -- If you want to compile without RTTOV (Himawari assimilation),
+# -- you should set "H08 = F".
+H08       = F
+
+DIR_RTTOV = /home/honda/local/RTTOV
+RT_LDFLAGS = -L$(DIR_RTTOV)/lib -lrttov11.2.0_test -lrttov11.2.0_other \
+             -lrttov11.2.0_coef_io -lrttov11.2.0_parallel -lrttov11.2.0_main
+RT_INCLUDE = -I$(DIR_RTTOV)/mod -I$(DIR_RTTOV)/include
 
