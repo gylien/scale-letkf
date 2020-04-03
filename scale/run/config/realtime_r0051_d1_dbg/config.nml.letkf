@@ -1,5 +1,5 @@
 &PARAM_LOG
- LOG_LEVEL = 3, ! debug
+ LOG_LEVEL = 1, ! debug
 /
 
 &PARAM_OBSOPE
