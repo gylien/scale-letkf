@@ -20,6 +20,28 @@ staging_list_common_static cycle
 mkdir -p ${TMPROOT}/topo
 mkdir -p ${TMPROOT}/landuse
 
+mtot=$((MEMBER+1))
+mmean=$((MEMBER+1))
+name_m[$mmean]='mean'
+if (( DET_RUN == 1 )); then
+  mtot=$((MEMBER+2))
+  mmdet=$((MEMBER+2))
+  name_m[$mmdet]='mdet'
+fi
+
+for m in $(seq $MEMBER); do
+  name_m[$m]=$(printf $MEMBER_FMT $m)
+done
+
+totalnp=$((PPN*NNODES))
+SCALE_NP_TOTAL=0
+for d in `seq $DOMNUM`; do
+  SCALE_NP_TOTAL=$((SCALE_NP_TOTAL+SCALE_NP[$d]))
+done
+
+repeat_mems=$((mtot*SCALE_NP_TOTAL/totalnp))
+nitmax=$((mtot*SCALE_NP_TOTAL/totalnp))
+
 #-------------------------------------------------------------------------------
 # time-variant outputs
 
@@ -39,13 +61,13 @@ while ((time <= ETIME)); do
     for m in $(seq $mtot); do
       mkdir -p ${TMPROOT}/${name_m[$m]}
       for d in $(seq $DOMNUM); do
-        ln -sf ${INDIR[$d]}/${time}/anal/${name_m[$m]}/*.nc ${TMPROOT}/${name_m[$m]}/
-#        for q in $(seq ${mem_np_[$d]}); do
-#          pathin="${INDIR[$d]}/${time}/anal/${name_m[$m]}${CONNECTOR}init$(scale_filename_sfx $((q-1)))"
-#          path="${name_m[$m]}/anal.d$(printf $DOMAIN_FMT $d)_$(datetime_scale $time)$(scale_filename_sfx $((q-1)))"
+#        ln -sf ${INDIR[$d]}/${time}/anal/${name_m[$m]}/*.nc ${TMPROOT}/${name_m[$m]}/
+        for q in $(seq ${SCALE_NP[$d]}); do
+          pathin="${INDIR[$d]}/${time}/anal/${name_m[$m]}${CONNECTOR}init$(scale_filename_sfx $((q-1)))"
+          path="${name_m[$m]}/anal.d$(printf $DOMAIN_FMT $d)_$(datetime_scale $time)$(scale_filename_sfx $((q-1)))"
 ##          echo "${pathin}|${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+${SCALE_NP_S[$d]}+q))]}
-#          ln -sf ${pathin} ${TMPROOT}/${name_m[$m]}/anal.d$(printf $DOMAIN_FMT $d)_$(datetime_scale $time)$(scale_filename_sfx $((q-1)))
-#        done
+          ln -sf ${pathin} ${TMPROOT}/${name_m[$m]}/init.d$(printf $DOMAIN_FMT $d)_$(datetime_scale $time)$(scale_filename_sfx $((q-1)))
+        done
       done
     done
   fi
@@ -708,7 +730,7 @@ while ((time <= ETIME)); do
                 -e "/!--FILE_AGGREGATE--/a FILE_AGGREGATE = ${FILE_AGGREGATE}," \
                 -e "/!--TIME_STARTDATE--/a TIME_STARTDATE = ${time:0:4}, ${time:4:2}, ${time:6:2}, ${time:8:2}, ${time:10:2}, ${time:12:2}," \
                 -e "/!--RESTART_OUTPUT--/a RESTART_OUTPUT = ${RESTART_OUTPUT}," \
-                -e "/!--RESTART_OUT_BASENAME--/a RESTART_OUT_BASENAME = \"${mem_bdy}/init.d${dfmt}\"," \
+                -e "/!--RESTART_OUT_BASENAME--/a RESTART_OUT_BASENAME = \"${mem_bdy}/init_bdy.d${dfmt}\"," \
                 -e "/!--TOPO_IN_BASENAME--/a TOPO_IN_BASENAME = \"topo/topo.d${dfmt}\"," \
                 -e "/!--LANDUSE_IN_BASENAME--/a LANDUSE_IN_BASENAME = \"landuse/landuse.d${dfmt}\"," \
                 -e "/!--LAND_PROPERTY_IN_FILENAME--/a LAND_PROPERTY_IN_FILENAME = \"${TMPROOT_CONSTDB}/dat/land/param.bucket.conf\",")"
@@ -812,17 +834,19 @@ while ((time <= ETIME)); do
       if ((d > 1)); then
         ONLINE_IAM_DAUGHTER=".true."
       fi
-      if ((loop == 1 && MAKEINIT == 1)); then
-        RESTART_IN_BASENAME="${name_m[$m]}/init.d${dfmt}"
-      else
-        RESTART_IN_BASENAME="${name_m[$m]}/anal.d${dfmt}"
-      fi
+#      if ((loop == 1 && MAKEINIT == 1)); then
+#        RESTART_IN_BASENAME="${name_m[$m]}/init.d${dfmt}"
+#      else
+#        RESTART_IN_BASENAME="${name_m[$m]}/anal.d${dfmt}"
+#      fi
+      RESTART_IN_BASENAME="${name_m[$m]}/init.d${dfmt}"
+      RESTART_IN_POSTFIX_TIMELABEL_TF=".true."
 
-      if ((loop == 1 )); then
-        RESTART_IN_POSTFIX_TIMELABEL_TF=".false."
-      else
-        RESTART_IN_POSTFIX_TIMELABEL_TF=".true."
-      fi
+#      if ((loop == 1 )); then
+#        RESTART_IN_POSTFIX_TIMELABEL_TF=".false."
+#      else
+#        RESTART_IN_POSTFIX_TIMELABEL_TF=".true."
+#      fi
 
       if [ "${name_m[$m]}" = 'mean' ]; then ###### using a variable for 'mean', 'mdet', 'sprd'
         RESTART_OUT_ADDITIONAL_COPIES=1
@@ -919,13 +943,13 @@ while ((time <= ETIME)); do
         if ((OCEAN_INPUT == 1)); then
           if ((OCEAN_FORMAT == 99)); then
             conf="$(echo "$conf" | \
-                sed -e "/!--OCEAN_RESTART_IN_BASENAME--/a OCEAN_RESTART_IN_BASENAME = \"${mem_bdy}/init.d${dfmt}_$(datetime_scale $time)\",")"
+                sed -e "/!--OCEAN_RESTART_IN_BASENAME--/a OCEAN_RESTART_IN_BASENAME = \"${mem_bdy}/init_bdy.d${dfmt}_$(datetime_scale $time)\",")"
           fi
         fi
         if ((LAND_INPUT == 1)); then
           if ((LAND_FORMAT == 99)); then
             conf="$(echo "$conf" | \
-                sed -e "/!--LAND_RESTART_IN_BASENAME--/a LAND_RESTART_IN_BASENAME = \"${mem_bdy}/init.d${dfmt}_$(datetime_scale $time)\",")"
+                sed -e "/!--LAND_RESTART_IN_BASENAME--/a LAND_RESTART_IN_BASENAME = \"${mem_bdy}/init_bdy.d${dfmt}_$(datetime_scale $time)\",")"
           fi
         fi
         echo "$conf" >> $CONFIG_DIR/${conf_file}

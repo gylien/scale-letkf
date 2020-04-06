@@ -80,7 +80,7 @@ declare -a proc2grpproc
 if ((RUN_LEVEL <= 2)); then
   safe_init_tmpdir $NODEFILE_DIR || exit $?
 fi
-distribute_da_cycle "$NODELIST_TYPE" $NODEFILE_DIR || exit $?
+#distribute_da_cycle "$NODELIST_TYPE" $NODEFILE_DIR || exit $? # TEST
 
 echo "[$(datetime_now)] ### 4" >&2
 
@@ -131,6 +131,21 @@ cd $TMPROOT
 
 #-------------------------------------------------------------------------------
 
+mtot=$((MEMBER+1))
+if (( DET_RUN == 1 )); then
+  mtot=$((MEMBER+2))
+fi
+
+totalnp=$((PPN*NNODES))
+SCALE_NP_TOTAL=0
+for d in `seq $DOMNUM`; do
+  SCALE_NP_TOTAL=$((SCALE_NP_TOTAL+SCALE_NP[$d]))
+done
+
+repeat_mems=$((mtot*SCALE_NP_TOTAL/totalnp))
+nitmax=$((mtot*SCALE_NP_TOTAL/totalnp))
+
+
 s_flag=1
 e_flag=0
 time=$STIME
@@ -178,20 +193,20 @@ while ((time <= ETIME)); do
   done
   echo
   echo "  Nodes used:               $NNODES_APPAR"
-  for n in $(seq $NNODES_APPAR); do
-    echo "    ${node[$n]}"
-  done
+#  for n in $(seq $NNODES_APPAR); do
+#    echo "    ${node[$n]}"
+#  done
   echo
   echo "  Processes per node:       $PPN_APPAR"
-  echo "  Total processes:          $totalnp"
+#  echo "  Total processes:          $totalnp"
   echo
   echo "  Nodes per SCALE run:      $mem_nodes"
   echo "  Processes per SCALE run:  $mem_np"
   echo
   echo "  Ensemble size:            $MEMBER"
-  for m in $(seq $mtot); do
-    echo "      ${name_m[$m]}: ${node_m[$m]}"
-  done
+#  for m in $(seq $mtot); do
+#    echo "      ${name_m[$m]}: ${node_m[$m]}"
+#  done
   echo
 
 #-------------------------------------------------------------------------------
@@ -242,13 +257,6 @@ while ((time <= ETIME)); do
       fi
 
       nodestr=proc
-      if ((IO_ARB == 1)); then
-        if ((s == 3)); then
-          nodestr='set1.proc'
-        elif ((s == 5)); then
-          nodestr='set2.proc'
-        fi
-      fi
 
       if ((s <= 3)); then
         conf_time=$time
@@ -262,25 +270,12 @@ while ((time <= ETIME)); do
           for it in $(seq $nit); do
             echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: start" >&2
 
-            if ((IO_ARB == 1)); then ##
-              mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}_${it}.conf log/${stepexecname[$s]}.NOUT_${conf_time}_${it} || exit $? &
-            else ##
-              mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}_${it}.conf log/${stepexecname[$s]}.NOUT_${conf_time}_${it} || exit $?
-            fi ##
+            mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}_${it}.conf log/${stepexecname[$s]}.NOUT_${conf_time}_${it} || exit $?
 
             echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: end" >&2
           done
         else
-          if ((IO_ARB == 1)); then ##
-            if ((s == 5)); then ##
-              mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}.conf log/${stepexecname[$s]}.NOUT_${conf_time} \
-                      "$SCRP_DIR/sleep.sh" || exit $? &
-            else ##
-              mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}.conf log/${stepexecname[$s]}.NOUT_${conf_time} || exit $? &
-            fi ##
-          else ##
-            mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}.conf log/${stepexecname[$s]}.NOUT_${conf_time} || exit $?
-          fi ##
+          mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}.conf log/${stepexecname[$s]}.NOUT_${conf_time} || exit $?
         fi
 
       else
@@ -291,20 +286,12 @@ while ((time <= ETIME)); do
           for it in $(seq $nit); do
             echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: start" >&2
 
-            if ((IO_ARB == 1)); then ##
-              mpirunf $nodestr $execpath ${execpath}.conf "${stdout_dir}/NOUT-${it}" "$SCRP_DIR/${job}_step.sh" "$time" $loop $it || exit $? &
-            else ##
-              mpirunf $nodestr $execpath ${execpath}.conf "${stdout_dir}/NOUT-${it}" "$SCRP_DIR/${job}_step.sh" "$time" $loop $it || exit $?
-            fi ##
+            mpirunf $nodestr $execpath ${execpath}.conf "${stdout_dir}/NOUT-${it}" "$SCRP_DIR/${job}_step.sh" "$time" $loop $it || exit $?
 
             echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: end" >&2
           done
         else
-          if ((IO_ARB == 1)); then ##                                 
-            mpirunf $nodestr $execpath ${execpath}.conf "${stdout_dir}/NOUT" "$SCRP_DIR/${job}_step.sh" "$time" "$loop" || exit $? &
-          else ##
-            mpirunf $nodestr $execpath ${execpath}.conf "${stdout_dir}/NOUT" "$SCRP_DIR/${job}_step.sh" "$time" "$loop" || exit $?
-          fi ##
+          mpirunf $nodestr $execpath ${execpath}.conf "${stdout_dir}/NOUT" "$SCRP_DIR/${job}_step.sh" "$time" "$loop" || exit $?
         fi
 
       fi
@@ -312,9 +299,6 @@ while ((time <= ETIME)); do
     fi
   done
 
-  if ((IO_ARB == 1)); then ##                                 
-    wait                   ##
-  fi                       ##
 
 #-------------------------------------------------------------------------------
 # Online stage out

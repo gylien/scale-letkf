@@ -1082,7 +1082,7 @@ for it in $(seq $its $ite); do
           if ((OCEAN_FORMAT == 0)); then
             ocean_base="$TMPOUT/${stimes[$c]}/anal/${mem_bdy}${CONNECTOR}init_ocean"
           elif ((OCEAN_FORMAT == 99 && mkinit != 1)); then
-            ocean_base="$TMPOUT/${stimes[$c]}/bdy/${mem_bdy}${CONNECTOR}init_bdy"
+            ocean_base="$TMPOUT/${stimes[$c]}/bdy/${mem_bdy}${CONNECTOR}init_bdy_$(datetime_scale $time)"
           fi
         fi
 
@@ -1091,7 +1091,7 @@ for it in $(seq $its $ite); do
           if ((LAND_FORMAT == 0)); then
             land_base="$TMPOUT/${stimes[$c]}/anal/${mem_bdy}${CONNECTOR}init_land"
           elif ((LAND_FORMAT == 99 && mkinit != 1)); then
-            land_base="$TMPOUT/${stimes[$c]}/bdy/${mem_bdy}${CONNECTOR}init_bdy"
+            land_base="$TMPOUT/${stimes[$c]}/bdy/${mem_bdy}${CONNECTOR}init_bdy_$(datetime_scale $time)"
           fi
         fi
 

@@ -66,11 +66,7 @@ declare -a proc2group
 declare -a proc2grpproc
 
 safe_init_tmpdir $NODEFILE_DIR || exit $?
-if ((IO_ARB == 1)); then                              ##
-  distribute_da_cycle_set - $NODEFILE_DIR || exit $?  ##
-else                                                  ##
-  distribute_da_cycle - $NODEFILE_DIR || exit $?
-fi                                                    ##
+distribute_da_cycle - $NODEFILE_DIR || exit $?
 
 #===============================================================================
 # Determine the staging list
@@ -107,14 +103,6 @@ EOF
 if [ "$CONF_MODE" != 'static' ]; then
   echo "${SCRP_DIR}/${job}_step.sh|${job}_step.sh" >> ${STAGING_DIR}/${STGINLIST}
 fi
-
-#===============================================================================
-
-if ((IO_ARB == 1)); then                                              ##
-  echo "${SCRP_DIR}/sleep.sh|sleep.sh" >> ${STAGING_DIR}/${STGINLIST} ##
-  NNODES=$((NNODES*2))                                                ##
-  NNODES_APPAR=$((NNODES_APPAR*2))                                    ##
-fi                                                                    ##
 
 #===============================================================================
 # Stage in

@@ -107,7 +107,7 @@ MEMBER=3          # Ensemble size
 
 NNODES=1    # Number of nodes
 
-PPN=8              # Number of processes per node
+PPN=10              # Number of processes per node
 
 
 THREADS=1          # Number of threads per process

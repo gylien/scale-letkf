@@ -73,6 +73,12 @@ fi
 
 if ((MKINIT == 1 || USE_INIT_FROM_BDY == 1)); then
   RESTART_OUTPUT='.true.'
+  RESTART_OUT_BASENAME="${TMPDIR}\/init"
+  if [ "$SCPCALL" = 'fcst' ] && ((MKINIT == 1)); then
+    RESTART_OUT_BASENAME="${TMPDIR}\/init"
+  else
+    RESTART_OUT_BASENAME="${TMPDIR}\/init_bdy"
+  fi
 else
   RESTART_OUTPUT='.false.'
 fi
@@ -192,7 +198,7 @@ cat $TMPDAT/conf/config.nml.scale_init | \
         -e "/!--FILE_AGGREGATE--/a FILE_AGGREGATE = ${FILE_AGGREGATE}," \
         -e "/!--TIME_STARTDATE--/a TIME_STARTDATE = $S_YYYY, $S_MM, $S_DD, $S_HH, $S_II, $S_SS," \
         -e "/!--RESTART_OUTPUT--/a RESTART_OUTPUT = $RESTART_OUTPUT," \
-        -e "/!--RESTART_OUT_BASENAME--/a RESTART_OUT_BASENAME = \"${TMPDIR}\/init\"," \
+        -e "/!--RESTART_OUT_BASENAME--/a RESTART_OUT_BASENAME = \"${RESTART_OUT_BASENAME}\"," \
         -e "/!--TOPO_IN_BASENAME--/a TOPO_IN_BASENAME = \"${TOPO}\"," \
         -e "/!--LANDUSE_IN_BASENAME--/a LANDUSE_IN_BASENAME = \"${LANDUSE}\"," \
         -e "/!--LAND_PROPERTY_IN_FILENAME--/a LAND_PROPERTY_IN_FILENAME = \"${TMPDAT_CONSTDB}/land/param.bucket.conf\"," \

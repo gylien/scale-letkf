@@ -1218,7 +1218,7 @@ for it in $(seq $its $ite); do
         if ((OCEAN_FORMAT == 0)); then
           ocean_base="$TMPOUT/${time}/anal/${mem_bdy}${CONNECTOR}init_ocean"
         elif ((OCEAN_FORMAT == 99 && mkinit != 1)); then
-          ocean_base="$TMPOUT/${time}/bdy/${mem_bdy}${CONNECTOR}init_bdy"
+          ocean_base="$TMPOUT/${time}/bdy/${mem_bdy}${CONNECTOR}init_bdy_$(datetime_scale $time)"
         fi
       fi
 
@@ -1227,7 +1227,7 @@ for it in $(seq $its $ite); do
         if ((LAND_FORMAT == 0)); then
           land_base="$TMPOUT/${time}/anal/${mem_bdy}${CONNECTOR}init_land"
         elif ((LAND_FORMAT == 99 && mkinit != 1)); then
-          land_base="$TMPOUT/${time}/bdy/${mem_bdy}${CONNECTOR}init_bdy"
+          land_base="$TMPOUT/${time}/bdy/${mem_bdy}${CONNECTOR}init_bdy_$(datetime_scale $time)"
         fi
       fi
 
@@ -1374,13 +1374,6 @@ letkf_1 () {
 #echo
 #echo "* Pre-processing scripts"
 #echo
-
-if ((IO_ARB == 1)); then     ##
-  if ((MYRANK == 0)); then   ##
-    echo "[$(datetime_now)] ${time}: ${stepname[5]}: Wait for 360 seconds" >&2 ##
-  fi                         ##
-  sleep 360s                 ##
-fi                           ##
 
 if ((MYRANK == 0)); then
   echo "[$(datetime_now)] ${time}: ${stepname[5]}: Pre-processing script start" >&2

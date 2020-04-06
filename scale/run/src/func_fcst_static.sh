@@ -666,9 +666,9 @@ while ((time_s <= ETIME)); do
               bdy_no_suffix=
             fi
             cat $SCRP_DIR/config.nml.grads_boundary | \
-                sed -e "s#--FNAME_ATMOS--#${TMPROOT_BDYDATA}/${mem_bdy}/bdyorg_atm_$(datetime_scale $time_bdy_start_prev)${bdy_no_suffix}#g" \
-                    -e "s#--FNAME_SFC--#${TMPROOT_BDYDATA}/${mem_bdy}/bdyorg_sfc_$(datetime_scale $time_bdy_start_prev)${bdy_no_suffix}#g" \
-                    -e "s#--FNAME_LAND--#${TMPROOT_BDYDATA}/${mem_bdy}/bdyorg_lnd_$(datetime_scale $time_bdy_start_prev)${bdy_no_suffix}#g" \
+                sed -e "s#--DIR--/bdyatm#${TMPROOT_BDYDATA}/${mem_bdy}/bdyorg_atm_$(datetime_scale $time_bdy_start_prev)${bdy_no_suffix}#g" \
+                    -e "s#--DIR--/bdysfc#${TMPROOT_BDYDATA}/${mem_bdy}/bdyorg_sfc_$(datetime_scale $time_bdy_start_prev)${bdy_no_suffix}#g" \
+                    -e "s#--DIR--/bdyland#${TMPROOT_BDYDATA}/${mem_bdy}/bdyorg_lnd_$(datetime_scale $time_bdy_start_prev)${bdy_no_suffix}#g" \
                 > $CONFIG_DIR/${conf_file}
 
             if ((stage_config == 1)); then
@@ -798,13 +798,13 @@ while ((time_s <= ETIME)); do
             if ((OCEAN_INPUT == 1)); then
               if ((OCEAN_FORMAT == 99)); then
                 conf="$(echo "$conf" | \
-                    sed -e "/!--OCEAN_RESTART_IN_BASENAME--/a OCEAN_RESTART_IN_BASENAME = \"${mem_bdy}/init.d${dfmt}_$(datetime_scale $time)\",")"
+                    sed -e "/!--OCEAN_RESTART_IN_BASENAME--/a OCEAN_RESTART_IN_BASENAME = \"${mem_bdy}/init.d${dfmt}\",")"
               fi
             fi
             if ((LAND_INPUT == 1)); then
               if ((LAND_FORMAT == 99)); then
                 conf="$(echo "$conf" | \
-                    sed -e "/!--LAND_RESTART_IN_BASENAME--/a LAND_RESTART_IN_BASENAME = \"${mem_bdy}/init.d${dfmt}_$(datetime_scale $time)\",")"
+                    sed -e "/!--LAND_RESTART_IN_BASENAME--/a LAND_RESTART_IN_BASENAME = \"${mem_bdy}/init.d${dfmt}\",")"
               fi
             fi
             echo "$conf" >> $CONFIG_DIR/${conf_file}
