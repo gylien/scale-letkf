@@ -16,6 +16,9 @@ cd "$(dirname "$0")"
 myname="$(basename "$0")"
 job='fcst'
 
+RCSGRP=${RCSGRP:-"regular-flat"}
+GNAME=${GNAME:-`id -ng`}
+
 #===============================================================================
 # Configuration
 
@@ -157,7 +160,7 @@ NPIN=`expr 255 / \( $PPN \) + 1`
 
 cat > $jobscrp << EOF
 #!/bin/sh -l
-#PJM -L rscgrp=regular-flat
+#PJM -L rscgrp=${RCSGRP}
 #PJM -L node=${NNODES}
 #PJM -L elapse=${TIME_LIMIT}
 #PJM --mpi "proc=$((NNODES*PPN))"
@@ -172,9 +175,9 @@ for inode in \$(cat \$I_MPI_HYDRA_HOST_FILE); do
  done
 done
 
-module load hdf5/1.8.17
-module load netcdf/4.4.1
-module load netcdf-fortran/4.4.3
+module load hdf5/1.10.5
+module load netcdf/4.7.0
+module load netcdf-fortran/4.4.5
 
 ulimit -s unlimited
 

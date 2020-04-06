@@ -12,11 +12,6 @@ fp_suffix='<FP_SUFFIX>'
 EXPNAME=ope${fp_suffix}
 EXPDOMAIN=1
 
-GNAME=$(id -ng)
-UNAME=$(id -nu)
-
-USERNAME=c24140
-
 #===============================================================================
 
 DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF

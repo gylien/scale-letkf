@@ -12,10 +12,6 @@ fp_suffix='<FP_SUFFIX>'
 
 EXPNAME=ope${fp_suffix}
 
-
-GNAME=$(id -ng)
-UNAME=$(id -nu)
-
 #===============================================================================
 
 DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
@@ -23,7 +19,7 @@ SCALEDIR="$DIR/../.."                                                # Directory
 TOPDIR="$SCALEDIR/.."
 
 OUTPUT="${TOPDIR}/result/${EXPNAME}/"
-EXP3=d3
+EXP3=d3_1500m
 EXP2=d2
 
 OUTDIR="${OUTPUT}/${EXP3}/ref_<PARENT_REF_TIME>"

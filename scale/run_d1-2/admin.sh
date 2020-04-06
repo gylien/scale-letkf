@@ -43,7 +43,7 @@ if [ "$PRESET" = 'OFP' ]; then
    NNODES=`expr \( $NMEM  \) \* 7` ### D2
  else
    NNODES=`expr \( $NMEM + 2 \) \* 7` ### D2
-    while [ $NNODES -gt 256 ] ;do
+    while [ $NNODES -gt 1024 ] ;do
       NNODES=`expr $NNODES \/ 2`
     done
   fi

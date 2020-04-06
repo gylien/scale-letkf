@@ -14,6 +14,9 @@ STIME=$1
 . config.main || exit $?
 . src/func_util.sh || exit $?
 
+RCSGRP=${RCSGRP:-"regular-flat"}
+GNAME=${GNAME:-`id -ng`}
+
 RUNDIR="${TMP}/../sno_grads_${STIME}"
 OUTDIR=${OUTDIR[1]}
 
@@ -148,12 +151,12 @@ jobsh="${RUNDIR}/job_sno.sh"
 
 cat << EOF >> $jobsh
 #!/bin/sh
-#PJM -L rscgrp=regular-flat
+#PJM -L rscgrp=${RCSGRP}
 #PJM -L node=${SNO_NODE}
 #PJM -L elapse="00:30:00"
 #PJM --mpi proc=${NP_TOTAL}
 #PJM --omp thread=1
-#PJM -g $(echo $(id -ng))
+#PJM -g ${GNAME}
 
 rm -f machinefile
 for inode in \$(cat \$I_MPI_HYDRA_HOST_FILE); do
@@ -161,14 +164,14 @@ for inode in \$(cat \$I_MPI_HYDRA_HOST_FILE); do
     echo "\$inode" >> machinefile
   done
 done
-module load hdf5/1.8.17
-module load netcdf/4.4.1
-module load netcdf-fortran/4.4.3
+module load hdf5/1.10.5
+module load netcdf/4.7.0
+module load netcdf-fortran/4.4.5
 
 export FORT_FMT_RECL=400
 
 export HFI_NO_CPUAFFINITY=1
-export I_MPI_PIN_PROCESSOR_EXCLUDE_LIST=0,1,68,69,136,137,204,205
+###export I_MPI_PIN_PROCESSOR_EXCLUDE_LIST=0,1,68,69,136,137,204,205
 export I_MPI_HBW_POLICY=hbw_preferred,,
 export I_MPI_FABRICS_LIST=tmi
 unset KMP_AFFINITY

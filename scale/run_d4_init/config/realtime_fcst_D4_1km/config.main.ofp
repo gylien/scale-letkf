@@ -19,9 +19,6 @@ OUTPUT="${TOPDIR}/result/ope${fp_suffix}"
 EXP4=d4_1km
 EXP3=d3
 
-
-GNAME=hp150019
-
 #===============================================================================
 # Location of model/data files
 

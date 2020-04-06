@@ -4,36 +4,23 @@
 # SNO is executed by a bulk job
 #
 
-mydir=`dirname $0`
-POSTDIR=`cd $mydir ; pwd`
-
-cd $POSTDIR/..
+STIME=<STIME>
 
 . config.main || exit $?
-. src/func_util.sh || exit $?
 
 
-PARENT_REF_TIME=$1
-STIME=$2
-FCSTLEN=$3
 
-RCSGRP=${RCSGRP:-"regular-flat"}
-GNAME=${GNAME:-`id -ng`}
-
-time_int=600 ### plot interval
-
-ntime=`expr $FCSTLEN \/ $time_int`
-
-RUNDIR="${TMP}/../sno_grads_d3_ref_${PARENT_REF_TIME}_${STIME}"
-
-# Which domain do you want to convert?
-DOM=3 ### fixed
-
-OUTDIR="${OUTPUT}/${EXP3}/ref_${PARENT_REF_TIME}"
-
-cd $POSTDIR
+PARENT_REF_TIME=<PARENT_REF_TIME>
+FCSTLEN=<FCSTLEN>
+RUNDIR="${TMP}/../run_sno_ref_${PARENT_REF_TIME}_${STIME}"
+OUTDIR=${OUTPUT}/${EXP3}/ref_${PARENT_REF_TIME}
+PLOTDIR_SRC=${DIR}/run_d3/plot
+PLOTDIR=${RUNDIR}/plot
 
 PPN=64 # Process per node
+
+# Which domain do you want to convert?
+DOM=3 
 
 # Output file (X & Y process number) for each member
 NP_OFILE_X=1
@@ -42,20 +29,20 @@ NP_OFILE_Y=1
 # Do not edit!
 NP_OFILE=$((${NP_OFILE_X} * ${NP_OFILE_Y})) # Output file (process number) for each member
 
-#SNO_MEMBERS=${MEMBER}
-SNO_MEMBERS=1
-#SNO_MEM_L=$(seq -f %04g ${SNO_MEMBERS})" mean mdet" # All members + mean + mdet
+SNO_MEMBERS=${MEMBER}
+#SNO_MEMBERS=1
+SNO_MEM_L=$(seq -f %04g ${SNO_MEMBERS})" mean mdet" # All members + mean + mdet
 #SNO_MEM_L=$(seq -f %04g ${SNO_MEMBERS})" mean" # All members + mean
-SNO_MEM_L="mean"
+#SNO_MEM_L="mdet"
 
 # Total SNO processes  
 NP_TOTAL=$((${SNO_MEMBERS} * ${NP_OFILE}))
 
 # Convert variables (Other variables will NOT be included in converted files)
-#VARS='"U", "V", "W", "T", "RH" , "QV",  "QC", "QI", "QR", "QS", "QG","QHYD", "PREC", "MSLP", "SFC_TEMP","U10", "V10", "T2"'
-VARS='"T","PREC", "MSLP", "SFC_TEMP","U10", "V10", "T2"'
-
-#VARS='"Uprs", "Vprs", "Gprs", "Tprs" , "QVprs", "QHYDprs", "PREC", "MSLP", "SFC_TEMP","U10", "V10", "T2"'
+#VARS='"U", "V", "W", "T", "QV", "QHYD", "PRES","RAIN", "CAPE"'
+#VARS='"U", "V", "W", "T", "QV", "QHYD", "PRES","RAIN"'
+#VARS='"U", "V", "W", "T", "RH", "QV", "QC", "QR", "QI", "QS", "QG", "QHYD", "DENS", "RHOT", "PRES", "RAIN", "MSLP", "T2", "U10", "V10"'
+VARS='"U", "V", "W", "QR", "QS", "QG", "DENS", "RAIN"'
 
 TOPO=0 # Process topography file? # 1: Yes, 0: No
 if (( TOPO > 0 )) ; then
@@ -73,7 +60,8 @@ fi
 ###############################
 
 # Path for SNO binary
-SNOBIN_ORG=${TOPDIR}/scale_develop/bin/sno
+SNOBIN_ORG=${SCALEDIR}/../scale_develop/bin/sno
+#SNOBIN_ORG=${SCALEDIR}/bin/sno
 SNOBIN=${RUNDIR}/sno
 if [ ! -e ${SNOBIN_ORG} ] ; then
   echo "No SNO binary!"
@@ -88,18 +76,22 @@ rm -rf ${RUNDIR}
 mkdir -p ${RUNDIR}/conf
 mkdir -p ${RUNDIR}/log
 
+cp -r ${PLOTDIR_SRC} ${PLOTDIR}
+### use # as delimiter when '/' is included in target strings 
+sed -i -e "s#<cdir_base_fcst>#${OUTPUT}/${EXP3}/#g" ${PLOTDIR}/common_d3.h
+sed -i -e "s/<MEMBER>/${MEMBER}/g" ${PLOTDIR}/auto.sh
+sed -i -e "s#<OUTDIR>#${OUTDIR}#g" ${PLOTDIR}/auto.sh
+
 # copy binary 
 cp ${SNOBIN_ORG} ${SNOBIN}
 
-conf_bulk="${RUNDIR}/conf/bulk_sno.conf"
+conf_bulk="${RUNDIR}/conf/balk_sno.conf"
 
 cnt=0
 for mem in  ${SNO_MEM_L} # member loop
 do 
   cnt=$((${cnt} + 1))
   echo $mem
-
-  mkdir -p ${RUNDIR}/grads/${mem}
 
   SNO_OUTPUT=${OUTDIR}/${STIME}/fcst_sno_np$(printf %05d ${NP_OFILE})/${mem}
   SNO_BASENAME_IN="${OUTDIR}/${STIME}/fcst/${mem}/history"
@@ -111,9 +103,26 @@ do
     SNO_BASENAME_OUT="${SNO_OUTPUT}/topo"
   fi
 
+
+#echo $SNO_OUTPUT
+#SNO_DIR=`dirname $SNO_OUTPUT`
+#echo `ls $SNO_DIR`
+#error_out=`mkdir -p ${SNO_OUTPUT}`
+
+#echo `ls $SNO_DIR`
+#echo $error_out
+#if [ ! $error_out ] ;then
+# echo 'error'
+#else
+# echo 'OK'
+#fi
+#exit 0
+
+
   if [ ! -e ${SNO_OUTPUT} ] ; then
-    mkdir -p ${SNO_OUTPUT}
+    mkdir -p ${SNO_OUTPUT} 
   fi
+
 
   conf="${RUNDIR}/conf/sno_${mem}.conf"
 
@@ -131,12 +140,18 @@ cat << EOF >> $conf
  vars         = ${VARS},
  nprocs_x_out = ${NP_OFILE_X},
  nprocs_y_out = ${NP_OFILE_Y},
- output_grads = .true.,
- output_gradsctl = .false.,
- output_single = .true.,
- dirpath_out="grads/${mem}",
+ output_grads = .false.,
 /
 
+&PARAM_SNOPLGIN_HGRIDOPE
+ SNOPLGIN_hgridope_type="LATLON",
+ SNOPLGIN_hgridope_lat_start = 33.8,
+ SNOPLGIN_hgridope_lat_end = 35.6,
+ SNOPLGIN_hgridope_dlat = 0.01,
+ SNOPLGIN_hgridope_lon_start = 133.85,
+ SNOPLGIN_hgridope_lon_end = 136.05,
+ SNOPLGIN_hgridope_dlon = 0.01,
+/
 
 EOF
 
@@ -150,27 +165,27 @@ jobsh="${RUNDIR}/job_sno.sh"
 
 cat << EOF >> $jobsh
 #!/bin/sh
-#PJM -L rscgrp=${RCSGRP}
+#PJM -L rscgrp=regular-flat
 #PJM -L node=${SNO_NODE}
-#PJM -L elapse="00:30:00"
+#PJM -L elapse="01:30:00"
 #PJM --mpi proc=${NP_TOTAL}
 #PJM --omp thread=1
-#PJM -g ${GNAME}
+#PJM -g $(echo $(id -ng))
 
 rm -f machinefile
 for inode in \$(cat \$I_MPI_HYDRA_HOST_FILE); do
- for ippn in \$(seq ${PPN}); do
+  for ippn in \$(seq ${PPN}); do
     echo "\$inode" >> machinefile
   done
 done
-module load hdf5
-module load netcdf
-module load netcdf-fortran
+module load hdf5/1.8.17
+module load netcdf/4.4.1
+module load netcdf-fortran/4.4.3
 
 export FORT_FMT_RECL=400
 
 export HFI_NO_CPUAFFINITY=1
-#export I_MPI_PIN_PROCESSOR_EXCLUDE_LIST=0,1,68,69,136,137,204,205
+export I_MPI_PIN_PROCESSOR_EXCLUDE_LIST=0,1,68,69,136,137,204,205
 export I_MPI_HBW_POLICY=hbw_preferred,,
 export I_MPI_FABRICS_LIST=tmi
 unset KMP_AFFINITY
@@ -188,50 +203,19 @@ echo "[\$(date "+%Y/%m/%d %H:%M:%S")] Start SNO"
 mpirun -np ${NP_OFILE} ${SNOBIN} ${conf_bulk}.\${PJM_BULKNUM}
 echo "[\$(date "+%Y/%m/%d %H:%M:%S")] End SNO"
 
+cd $PLOTDIR
+./auto.sh "${PARENT_REF_TIME}" "${STIME}" "${FCSTLEN}" \${PJM_BULKNUM}
+
 EOF
 
-echo 'convert...'
+cd ${PLOTDIR}
+./compile_rain.sh
+./compile_dbz.sh
+./compile_uvw.sh
+cd -
+
 cd ${RUNDIR}
 pjsub --bulk --sparam 1-${cnt} job_sno.sh 
-cd $POSTDIR
-
-jobid=$(grep 'pjsub Job' post.log.${PARENT_REF_TIME}.${STIME} | cut -d ' ' -f6)
-job_end_check_PJM $jobid
-res=$?
-
-STIMEf="${STIME:0:4}-${STIME:4:2}-${STIME:6:2} ${STIME:0:2}"
-export LANG=en_us
-tstamp=`date -d "$STIMEf" +%H:%mZ%d%b%Y | tr '[a-z]' '[A-Z]'`
-
-echo 'merge...'
-for mem in  ${SNO_MEM_L} ;do # member loop
-cp $POSTDIR/ctl/*.ctl $RUNDIR/grads/${mem}/
-cd $RUNDIR/grads/$mem
-sed -i -e "s/<--DATE-->/$tstamp/g" *.ctl
-sed -i -e "s/<--NT-->/$ntime/g" *.ctl
-grads -bcl "$POSTDIR/merge.gs ${ntime}" 
-mkdir -p $OUTDIR/$STIME/fcstgp/$mem
-cp history.ctl $OUTDIR/$STIME/fcstgp/$mem
-cp history.grd $OUTDIR/$STIME/fcstgp/$mem
-done
-
-
-cd $POSTDIR/plot_grads
-[ -f plot.lock ] && echo 'wait...'
-while [ -f plot.lock ] ;do
- sleep 60
-done
-
-echo 'plot...'
-echo $STIME > plot.lock 
- [ ! -z "`ls out/`" ] && rm out/*
- grads -bcl "plot_driver_d3_10min.gs $OUTDIR/$STIME/fcstgp/$mem/history.ctl 1 25 1" &> plot.log 
- mkdir -p $OUTDIR/$STIME/fcstgpi/$mem 
- mv out/*.png $OUTDIR/$STIME/fcstgpi/$mem/
- rm plot.lock
-
-echo 'done.'
-
-cd $POSTDIR
+cd -
 
 

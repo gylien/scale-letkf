@@ -12,6 +12,8 @@ cd $POSTDIR/..
 #STIME=20191104120000
 STIME=$1
 
+RCSGRP=${RCSGRP:-"regular-flat"}
+GNAME=${GNAME:-`id -ng`}
 
 . config.main || exit $?
 . src/func_util.sh || exit $?
@@ -141,12 +143,12 @@ jobsh="${RUNDIR}/job_sno.sh"
 
 cat << EOF >> $jobsh
 #!/bin/sh
-#PJM -L rscgrp=regular-flat
+#PJM -L rscgrp=${RCSGRP}
 #PJM -L node=${SNO_NODE}
 #PJM -L elapse="00:30:00"
 #PJM --mpi proc=${NP_TOTAL}
 #PJM --omp thread=1
-#PJM -g $(echo $(id -ng))
+#PJM -g ${GNAME}
 
 rm -f machinefile
 for inode in \$(cat \$I_MPI_HYDRA_HOST_FILE); do
@@ -161,7 +163,7 @@ module load netcdf-fortran
 export FORT_FMT_RECL=400
 
 export HFI_NO_CPUAFFINITY=1
-export I_MPI_PIN_PROCESSOR_EXCLUDE_LIST=0,1,68,69,136,137,204,205
+###export I_MPI_PIN_PROCESSOR_EXCLUDE_LIST=0,1,68,69,136,137,204,205
 export I_MPI_HBW_POLICY=hbw_preferred,,
 export I_MPI_FABRICS_LIST=tmi
 unset KMP_AFFINITY

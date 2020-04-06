@@ -10,11 +10,7 @@ PRESET='OFP'                           # 'OFP', 'K', 'K_rankdir' or 'K_micro'
 EXPNAME=ope
 EXPDOMAIN=1
 
-GNAME=$(id -ng)
-UNAME=$(id -nu)
-
 USERNAME=c24140
-
 
 ENABLE_MONITOR=1
 

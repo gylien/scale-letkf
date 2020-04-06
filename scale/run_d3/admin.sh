@@ -43,7 +43,7 @@ if [ "$PRESET" = 'OFP' ]; then
    NNODES=`expr \( $NMEM  \) \* 16` ### D2
  else
    NNODES=`expr \( $NMEM + 2 \) \* 16` ### D2
-    while [ $NNODES -gt 256 ] ;do
+    while [ $NNODES -gt 1024 ] ;do
       NNODES=`expr $NNODES \/ 2`
     done
   fi
@@ -220,6 +220,7 @@ cd -
 #-------------------------------------------------------------------------------
 
 echo 'exec d4 init...'
+
 spinup_d3=3600
 intv_d4=3600
 fcstlen_d4=5400
