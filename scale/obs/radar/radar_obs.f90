@@ -1488,7 +1488,7 @@ function obs_da_time_compare(utime_obs)
 
 if (int(abssec_obs) - int(abssec) .gt. timeslot_sec/2 )then
   obs_da_time_compare = 1
-elseif (int(abssec_obs) - int(abssec) .le. timeslot_sec/2 )then
+elseif (int(abssec) - int(abssec_obs) .ge. timeslot_sec/2 )then
   obs_da_time_compare = -1
 else
   obs_da_time_compare = 0
