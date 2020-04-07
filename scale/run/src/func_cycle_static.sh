@@ -1078,3 +1078,309 @@ echo
 }
 
 #===============================================================================
+
+setting () {
+#-------------------------------------------------------------------------------
+# define steps
+
+nsteps=5
+stepname[1]='Run SCALE pp'
+stepexecdir[1]="$TMPRUN/scale_pp"
+stepexecname[1]="scale-rm_pp_ens"
+stepname[2]='Run SCALE init'
+stepexecdir[2]="$TMPRUN/scale_init"
+stepexecname[2]="scale-rm_init_ens"
+stepname[3]='Run ensemble forecasts'
+stepexecdir[3]="$TMPRUN/scale"
+stepexecname[3]="scale-rm_ens"
+stepname[4]='Run observation operator'
+stepexecdir[4]="$TMPRUN/obsope"
+stepexecname[4]="obsope"
+stepname[5]='Run LETKF'
+stepexecdir[5]="$TMPRUN/letkf"
+stepexecname[5]="letkf"
+
+#-------------------------------------------------------------------------------
+# usage help string
+
+USAGE="
+[$myname] Run data assimilation cycles.
+
+Configuration files:
+  config.main
+  config.cycle
+
+Steps:
+$(for i in $(seq $nsteps); do echo "  ${i}. ${stepname[$i]}"; done)
+
+Usage: $myname [STIME ETIME ISTEP FSTEP CONF_MODE TIME_LIMIT]
+
+  STIME       Time of the first cycle (format: YYYY[MMDDHHMMSS])
+  ETIME       Time of the last  cycle (format: YYYY[MMDDHHMMSS])
+               (default: same as STIME)
+  ISTEP       The initial step in the first cycle from which this script starts
+               (default: the first step)
+  FSTEP       The final step in the last cycle by which this script ends
+               (default: the last step)
+  CONF_MODE   Mode of creating runtime configuration files: 'dynamic' or 'static'
+               (default: 'dynamic')
+  TIME_LIMIT  Requested time limit (only used when using a job scheduler)
+               (default: 30 minutes)
+"
+
+#if [ "$1" == '-h' ] || [ "$1" == '--help' ]; then
+#  echo "$USAGE" >&2
+#  exit 1
+#fi
+
+#-------------------------------------------------------------------------------
+# set parameters from command line
+
+STIME=${1:-$STIME}; shift
+ETIME=${1:-$ETIME}; shift
+ISTEP=${1:-$ISTEP}; shift
+FSTEP=${1:-$FSTEP}; shift
+CONF_MODE=${1:-$CONF_MODE}; shift
+TIME_LIMIT="${1:-$TIME_LIMIT}"
+
+#if [ -z "$STIME" ]; then
+#  echo "[Error] $FUNCNAME: Insufficient arguments." >&2
+#  echo "$USAGE" >&2
+#  exit 1
+#fi
+
+#-------------------------------------------------------------------------------
+# assign default values to and standardize the parameters
+
+STIME=$(datetime $STIME)
+ETIME=$(datetime ${ETIME:-$STIME})
+ISTEP=${ISTEP:-1}
+FSTEP=${FSTEP:-$nsteps}
+CONF_MODE=${CONF_MODE:-"dynamic"}
+TIME_LIMIT=${TIME_LIMIT:-"0:30:00"}
+
+#-------------------------------------------------------------------------------
+# error detection
+
+#if ((MACHINE_TYPE == 10 && ONLINE_STGOUT != 0)); then
+#  echo "[Error] $myname: When \$MACHINE_TYPE = 10, \$ONLINE_STGOUT needs to be 0." >&2
+#  exit 1
+#fi
+
+if [ "$CONF_MODE" != 'static' ] && ((DOMNUM > 1)); then
+  echo "[Error] Online nesting with multiple domains is only allowed when the static-config mode is used (\$CONF_MODE = 'static')." 1>&2
+  exit 1
+fi
+
+if ((RUN_LEVEL == 0)); then
+  if ((ENABLE_PARAM_USER == 1)) && [ ! -e "$SCRP_DIR/config.nml.scale_user" ]; then
+    echo "[Error] $myname: When \$ENABLE_PARAM_USER = 1, 'config.nml.scale_user' file is required." >&2
+    exit 1
+  fi
+  if ((BDY_FORMAT == 4)) && [ ! -e "$SCRP_DIR/config.nml.grads_boundary" ]; then
+    echo "[Error] $myname: When \$BDY_FORMAT = 4, 'config.nml.grads_boundary' file is required." >&2
+    exit 1
+  fi
+
+  if ((MAKEINIT == 1)); then
+    if [ -d "${OUTDIR}/${STIME}/anal" ]; then
+      if [ -n "$(ls ${OUTDIR}/${STIME}/anal 2> /dev/null)" ]; then
+        echo "[Error] $myname: Initial ensemble is to be generated (\$MAKEINIT = 1) at \"${OUTDIR}/${STIME}/anal/\", but existing data are found there;" >&2
+        echo "        Set \$MAKEINIT = 0 or remove \"${OUTDIR}/${STIME}/anal/*\" before running this job." >&2
+        exit 1
+      fi
+    fi
+  fi
+fi
+
+#... more detections...
+
+#-------------------------------------------------------------------------------
+# common variables
+
+OUT_CYCLE_SKIP=${OUT_CYCLE_SKIP:-1}
+
+CYCLEFLEN=$WINDOW_E     # Model forecast length in a cycle (second)
+if [ -z "$FCSTOUT" ] || ((FCSTOUT >= LTIMESLOT)); then
+  CYCLEFOUT=$LTIMESLOT  # Model forecast output interval (second)
+elif ((LTIMESLOT % FCSTOUT == 0)); then
+  CYCLEFOUT=$FCSTOUT
+else
+  echo "[Error] If \$FCSTOUT < \$LTIMESLOT, \$LTIMESLOT needs to be an exact multiple of \$FCSTOUT" >&2
+  exit 1
+fi
+
+if ((BDY_FORMAT >= 1)); then
+  if ((BDYCYCLE_INT % BDYINT != 0)); then
+    echo "[Error] \$BDYCYCLE_INT needs to be an exact multiple of \$BDYINT" >&2
+    exit 1
+  fi
+  BDY_STARTFRAME_MAX=$((BDYCYCLE_INT / BDYINT))
+  if [ -z "$PARENT_REF_TIME" ]; then
+    PARENT_REF_TIME=$STIME
+    for bdy_startframe in $(seq $BDY_STARTFRAME_MAX); do
+      if ((BDY_FORMAT == 1)) && [ -s "$DATA_BDY_SCALE/${PARENT_REF_TIME}/hist/${BDY_MEAN}/history${SCALE_SFX_0}" ]; then
+        break
+      elif ((BDY_FORMAT == 2 && BDY_ROTATING == 1)) && [ -s "$DATA_BDY_WRF/${PARENT_REF_TIME}/${BDY_MEAN}/wrfout_${PARENT_REF_TIME}" ]; then
+        break
+      elif ((BDY_FORMAT == 2 && BDY_ROTATING != 1)) && [ -s "$DATA_BDY_WRF/${BDY_MEAN}/wrfout_${PARENT_REF_TIME}" ]; then
+        break
+      elif ((BDY_FORMAT == 4 && BDY_ROTATING == 1)) && [ -s "$DATA_BDY_GRADS/${PARENT_REF_TIME}/${BDY_MEAN}/atm_${PARENT_REF_TIME}.grd" ]; then
+        break
+      elif ((BDY_FORMAT == 4 && BDY_ROTATING != 1)) && [ -s "$DATA_BDY_GRADS/${BDY_MEAN}/atm_${PARENT_REF_TIME}.grd" ]; then
+        break
+      elif ((bdy_startframe == BDY_STARTFRAME_MAX)); then
+        echo "[Error] Cannot find boundary files." >&2
+        exit 1
+      fi
+      PARENT_REF_TIME=$(datetime $PARENT_REF_TIME -${BDYINT} s)
+    done
+  fi
+fi
+
+#-------------------------------------------------------------------------------
+}
+
+#===============================================================================
+
+print_setting () {
+#-------------------------------------------------------------------------------
+
+for vname in DIR DOMAIN @INDIR @OUTDIR @DATA_TOPO DATA_TOPO_BDY_SCALE @DATA_LANDUSE DATA_BDY_SCALE \
+             DATA_BDY_SCALE_PREP DATA_BDY_WRF DATA_BDY_NICAM OBS OBSNCEP DET_RUN TOPO_FORMAT \
+             LANDUSE_FORMAT LANDUSE_UPDATE BDY_FORMAT BDY_ENS BDYINT BDYCYCLE_INT PARENT_REF_TIME \
+             ENABLE_PARAM_USER OCEAN_INPUT OCEAN_FORMAT LAND_INPUT LAND_FORMAT OBSNUM WINDOW_S WINDOW_E \
+             LCYCLE LTIMESLOT MEMBER NNODES NNODES_APPAR PPN PPN_APPAR THREADS @SCALE_NP \
+             STIME ETIME ISTEP FSTEP CONF_MODE FCSTOUT MAKEINIT OUT_OPT TOPOOUT_OPT \
+             LANDUSEOUT_OPT BDYOUT_OPT OBSOUT_OPT LOG_OPT LOG_TYPE; do
+  if [ "${vname:0:1}" = '@' ]; then
+    for d in $(seq $DOMNUM); do
+      vname_d="${vname:1}[$d]"
+      printf '  %-20s = %s\n' "$vname_d" "${!vname_d}"
+    done
+  else
+    printf '  %-20s = %s\n' $vname "${!vname}"
+  fi
+done
+
+#-------------------------------------------------------------------------------
+}
+
+#===============================================================================
+
+archive_log () {
+#-------------------------------------------------------------------------------
+
+if ((LOG_TYPE >= 3)); then
+  time=$STIME
+  atime=$(datetime $time $LCYCLE s)
+  while ((time <= ETIME)); do
+    for d in $(seq $DOMNUM); do
+      if ((LOG_OPT <= 2)) && [ -d "${OUTDIR[$d]}/${time}/log/scale_pp" ]; then
+        if ((TAR_THREAD > 1)); then
+          while (($(jobs -p | wc -l) >= TAR_THREAD)); do
+            sleep 1s
+          done
+          if ((LOG_TYPE == 3)); then
+            ( tar -C ${OUTDIR[$d]}/${time}/log -cf ${OUTDIR[$d]}/${time}/log/scale_pp.tar scale_pp && rm -fr ${OUTDIR[$d]}/${time}/log/scale_pp ) &
+          elif ((LOG_TYPE == 4)); then
+            ( tar -C ${OUTDIR[$d]}/${time}/log -czf ${OUTDIR[$d]}/${time}/log/scale_pp.tar.gz scale_pp && rm -fr ${OUTDIR[$d]}/${time}/log/scale_pp ) &
+          fi
+        else
+          if ((LOG_TYPE == 3)); then
+            tar -C ${OUTDIR[$d]}/${time}/log -cf ${OUTDIR[$d]}/${time}/log/scale_pp.tar scale_pp && rm -fr ${OUTDIR[$d]}/${time}/log/scale_pp
+          elif ((LOG_TYPE == 4)); then
+            tar -C ${OUTDIR[$d]}/${time}/log -czf ${OUTDIR[$d]}/${time}/log/scale_pp.tar.gz scale_pp && rm -fr ${OUTDIR[$d]}/${time}/log/scale_pp
+          fi
+        fi
+      fi
+
+      if ((LOG_OPT <= 2)) && [ -d "${OUTDIR[$d]}/${time}/log/scale_init" ]; then
+        if ((TAR_THREAD > 1)); then
+          while (($(jobs -p | wc -l) >= TAR_THREAD)); do
+            sleep 1s
+          done
+          if ((LOG_TYPE == 3)); then
+            ( tar -C ${OUTDIR[$d]}/${time}/log -cf ${OUTDIR[$d]}/${time}/log/scale_init.tar scale_init && rm -fr ${OUTDIR[$d]}/${time}/log/scale_init ) &
+          elif ((LOG_TYPE == 4)); then
+            ( tar -C ${OUTDIR[$d]}/${time}/log -czf ${OUTDIR[$d]}/${time}/log/scale_init.tar.gz scale_init && rm -fr ${OUTDIR[$d]}/${time}/log/scale_init ) &
+          fi
+        else
+          if ((LOG_TYPE == 3)); then
+            tar -C ${OUTDIR[$d]}/${time}/log -cf ${OUTDIR[$d]}/${time}/log/scale_init.tar scale_init && rm -fr ${OUTDIR[$d]}/${time}/log/scale_init
+          elif ((LOG_TYPE == 4)); then
+            tar -C ${OUTDIR[$d]}/${time}/log -czf ${OUTDIR[$d]}/${time}/log/scale_init.tar.gz scale_init && rm -fr ${OUTDIR[$d]}/${time}/log/scale_init
+          fi
+        fi
+      fi
+
+      if ((LOG_OPT <= 3)) && [ -d "${OUTDIR[$d]}/${time}/log/scale" ]; then
+        if ((TAR_THREAD > 1)); then
+          while (($(jobs -p | wc -l) >= TAR_THREAD)); do
+            sleep 1s
+          done
+          if ((LOG_TYPE == 3)); then
+            ( tar -C ${OUTDIR[$d]}/${time}/log -cf ${OUTDIR[$d]}/${time}/log/scale.tar scale && rm -fr ${OUTDIR[$d]}/${time}/log/scale ) &
+          elif ((LOG_TYPE == 4)); then
+            ( tar -C ${OUTDIR[$d]}/${time}/log -czf ${OUTDIR[$d]}/${time}/log/scale.tar.gz scale && rm -fr ${OUTDIR[$d]}/${time}/log/scale ) &
+          fi
+        else
+          if ((LOG_TYPE == 3)); then
+            tar -C ${OUTDIR[$d]}/${time}/log -cf ${OUTDIR[$d]}/${time}/log/scale.tar scale && rm -fr ${OUTDIR[$d]}/${time}/log/scale
+          elif ((LOG_TYPE == 4)); then
+            tar -C ${OUTDIR[$d]}/${time}/log -czf ${OUTDIR[$d]}/${time}/log/scale.tar.gz scale && rm -fr ${OUTDIR[$d]}/${time}/log/scale
+          fi
+        fi
+      fi
+
+      if ((LOG_OPT <= 4)) && [ -d "${OUTDIR[$d]}/${atime}/log/obsope" ]; then
+        if ((TAR_THREAD > 1)); then
+          while (($(jobs -p | wc -l) >= TAR_THREAD)); do
+            sleep 1s
+          done
+          if ((LOG_TYPE == 3)); then
+            ( tar -C ${OUTDIR[$d]}/${atime}/log -cf ${OUTDIR[$d]}/${atime}/log/obsope.tar obsope && rm -fr ${OUTDIR[$d]}/${atime}/log/obsope ) &
+          elif ((LOG_TYPE == 4)); then
+            ( tar -C ${OUTDIR[$d]}/${atime}/log -czf ${OUTDIR[$d]}/${atime}/log/obsope.tar.gz obsope && rm -fr ${OUTDIR[$d]}/${atime}/log/obsope ) &
+          fi
+        else
+          if ((LOG_TYPE == 3)); then
+            tar -C ${OUTDIR[$d]}/${atime}/log -cf ${OUTDIR[$d]}/${atime}/log/obsope.tar obsope && rm -fr ${OUTDIR[$d]}/${atime}/log/obsope
+          elif ((LOG_TYPE == 4)); then
+            tar -C ${OUTDIR[$d]}/${atime}/log -czf ${OUTDIR[$d]}/${atime}/log/obsope.tar.gz obsope && rm -fr ${OUTDIR[$d]}/${atime}/log/obsope
+          fi
+        fi
+      fi
+
+      if ((LOG_OPT <= 4)) && [ -d "${OUTDIR[$d]}/${atime}/log/letkf" ]; then
+        if ((TAR_THREAD > 1)); then
+          while (($(jobs -p | wc -l) >= TAR_THREAD)); do
+            sleep 1s
+          done
+          if ((LOG_TYPE == 3)); then
+            ( tar -C ${OUTDIR[$d]}/${atime}/log -cf ${OUTDIR[$d]}/${atime}/log/letkf.tar letkf && rm -fr ${OUTDIR[$d]}/${atime}/log/letkf ) &
+          elif ((LOG_TYPE == 4)); then
+            ( tar -C ${OUTDIR[$d]}/${atime}/log -czf ${OUTDIR[$d]}/${atime}/log/letkf.tar.gz letkf && rm -fr ${OUTDIR[$d]}/${atime}/log/letkf ) &
+          fi
+        else
+          if ((LOG_TYPE == 3)); then
+            tar -C ${OUTDIR[$d]}/${atime}/log -cf ${OUTDIR[$d]}/${atime}/log/letkf.tar letkf && rm -fr ${OUTDIR[$d]}/${atime}/log/letkf
+          elif ((LOG_TYPE == 4)); then
+            tar -C ${OUTDIR[$d]}/${atime}/log -czf ${OUTDIR[$d]}/${atime}/log/letkf.tar.gz letkf && rm -fr ${OUTDIR[$d]}/${atime}/log/letkf
+          fi
+        fi
+      fi
+    done # [ d in $(seq $DOMNUM) ]
+
+    time=$(datetime $time $LCYCLE s)
+    atime=$(datetime $time $LCYCLE s)
+  done
+  if ((TAR_THREAD > 1)); then
+    wait
+  fi
+fi
+
+#-------------------------------------------------------------------------------
+}
+
+#===============================================================================

@@ -31,10 +31,10 @@ job='fcst'
 . config.main || exit $?
 . config.${job} || exit $?
 
-. src/func_distribute.sh || exit $?
+#. src/func_distribute.sh || exit $?
 . src/func_datetime.sh || exit $?
 . src/func_util.sh || exit $?
-. src/func_${job}.sh || exit $?
+. src/func_${job}_static.sh || exit $?
 
 #-------------------------------------------------------------------------------
 

@@ -33,10 +33,9 @@ job='cycle'
 . config.main || exit $?
 . config.${job} || exit $?
 
-. src/func_distribute.sh || exit $?
 . src/func_datetime.sh || exit $?
 . src/func_util.sh || exit $?
-. src/func_${job}.sh || exit $?
+. src/func_${job}_static.sh || exit $?
 
 echo "[$(datetime_now)] ### 1" >&2
 
@@ -68,19 +67,9 @@ echo "[$(datetime_now)] ### 3" >&2
 #===============================================================================
 # Determine the distibution schemes
 
-declare -a node_m
-declare -a name_m
-declare -a mem2node
-declare -a mem2proc
-declare -a proc2node
-declare -a proc2group
-declare -a proc2grpproc
-
-#if ((RUN_LEVEL <= 2)) && ((ISTEP == 1)); then
 if ((RUN_LEVEL <= 2)); then
   safe_init_tmpdir $NODEFILE_DIR || exit $?
 fi
-#distribute_da_cycle "$NODELIST_TYPE" $NODEFILE_DIR || exit $? # TEST
 
 echo "[$(datetime_now)] ### 4" >&2
 

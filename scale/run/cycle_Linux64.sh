@@ -20,10 +20,11 @@ job='cycle'
 . config.main || exit $?
 . config.${job} || exit $?
 
-. src/func_distribute.sh || exit $?
 . src/func_datetime.sh || exit $?
 . src/func_util.sh || exit $?
-. src/func_${job}.sh || exit $?
+
+. src/func_common_static.sh || exit $?
+. src/func_${job}_static.sh || exit $?
 
 #-------------------------------------------------------------------------------
 
@@ -31,10 +32,6 @@ echo "[$(datetime_now)] Start $myname $@"
 
 setting "$@" || exit $?
 
-if [ "$CONF_MODE" = 'static' ]; then
-  . src/func_common_static.sh || exit $?
-  . src/func_${job}_static.sh || exit $?
-fi
 
 echo
 print_setting || exit $?
@@ -56,14 +53,6 @@ safe_init_tmpdir $TMP || exit $?
 # Determine the distibution schemes
 
 echo "[$(datetime_now)] Determine the distibution schemes"
-
-declare -a node_m
-declare -a name_m
-declare -a mem2node
-declare -a mem2proc
-declare -a proc2node
-declare -a proc2group
-declare -a proc2grpproc
 
 safe_init_tmpdir $NODEFILE_DIR || exit $?
 #distribute_da_cycle - $NODEFILE_DIR || exit $? # TEST
