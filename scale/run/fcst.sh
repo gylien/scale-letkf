@@ -72,7 +72,7 @@ declare -a proc2grpproc
 if ((RUN_LEVEL <= 2)); then
   safe_init_tmpdir $NODEFILE_DIR || exit $?
 fi
-distribute_fcst "$MEMBERS" $CYCLE "$NODELIST_TYPE" $NODEFILE_DIR || exit $?
+#distribute_fcst "$MEMBERS" $CYCLE "$NODELIST_TYPE" $NODEFILE_DIR || exit $?
 
 if ((CYCLE == 0)); then
   CYCLE=$cycle_auto
@@ -130,6 +130,26 @@ s_flag=1
 e_flag=0
 time=$STIME
 loop=0
+
+fmember=0
+for iname in $MEMBERS; do
+  fmember=$((fmember+1))
+  name_m[$fmember]=$iname
+done
+
+totalnp=$((PPN*NNODES))
+SCALE_NP_TOTAL=0
+for d in `seq $DOMNUM`; do
+  SCALE_NP_TOTAL=$((SCALE_NP_TOTAL+SCALE_NP[$d]))
+done
+
+CYCLE=$((fmember*SCALE_NP_TOTAL/totalnp))
+if (( CYCLE < 1 )) ; then
+  CYCLE=1
+fi
+
+repeat_mems=$((fmember*SCALE_NP_TOTAL/totalnp))
+nitmax=$((fmember*SCALE_NP_TOTAL/totalnp))
 
 #-------------------------------------------------------------------------------
 while ((time <= ETIME)); do
