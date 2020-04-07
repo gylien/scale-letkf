@@ -30,36 +30,7 @@ for d in $(seq $DOMNUM); do
   fi
 done
 
-#-------------------------------------------------------------------------------
-# executable files
 
-cat >> ${STAGING_DIR}/${STGINLIST} << EOF
-${COMMON_DIR}/pdbash|pdbash
-${COMMON_DIR}/datetime|datetime
-${ENSMODEL_DIR}/scale-rm_pp_ens|scale-rm_pp_ens
-${ENSMODEL_DIR}/scale-rm_init_ens|scale-rm_init_ens
-${ENSMODEL_DIR}/scale-rm_ens|scale-rm_ens
-EOF
-
-if [ "$JOBTYPE" = 'cycle' ]; then
-  cat >> ${STAGING_DIR}/${STGINLIST} << EOF
-${OBSUTIL_DIR}/obsope|obsope
-${LETKF_DIR}/letkf|letkf
-EOF
-fi
-
-#-------------------------------------------------------------------------------
-# database
-
-cat >> ${STAGING_DIR}/${STGINLIST_CONSTDB} << EOF
-${SCALEDIR}/scale-rm/test/data/rad/cira.nc|dat/rad/cira.nc
-${SCALEDIR}/scale-rm/test/data/rad/PARAG.29|dat/rad/PARAG.29
-${SCALEDIR}/scale-rm/test/data/rad/PARAPC.29|dat/rad/PARAPC.29
-${SCALEDIR}/scale-rm/test/data/rad/rad_o3_profs.txt|dat/rad/rad_o3_profs.txt
-${SCALEDIR}/scale-rm/test/data/rad/VARDATA.RM29|dat/rad/VARDATA.RM29
-${SCALEDIR}/scale-rm/test/data/rad/MIPAS/|dat/rad/MIPAS/
-${SCALEDIR}/scale-rm/test/data/land/|dat/land/
-EOF
 
 ## H08
 #if [ "$JOBTYPE" = 'cycle' ]; then

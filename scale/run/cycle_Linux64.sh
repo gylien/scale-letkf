@@ -72,12 +72,8 @@ echo "RUN_LEVEL=4" >> $TMP/config.main
 echo "PARENT_REF_TIME=$PARENT_REF_TIME" >> $TMP/config.main
 
 safe_init_tmpdir $STAGING_DIR || exit $?
-if [ "$CONF_MODE" = 'static' ]; then
-  staging_list_static || exit $?
-  config_file_list $TMPS/config || exit $?
-else
-  staging_list || exit $?
-fi
+staging_list_static || exit $?
+config_file_list $TMPS/config || exit $?
 
 #-------------------------------------------------------------------------------
 # Add shell scripts and node distribution files into the staging list
@@ -88,10 +84,6 @@ ${SCRP_DIR}/config.${job}|config.${job}
 ${SCRP_DIR}/${job}.sh|${job}.sh
 ${SCRP_DIR}/src/|src/
 EOF
-
-if [ "$CONF_MODE" != 'static' ]; then
-  echo "${SCRP_DIR}/${job}_step.sh|${job}_step.sh" >> ${STAGING_DIR}/${STGINLIST}
-fi
 
 #===============================================================================
 # Stage in
@@ -165,9 +157,7 @@ echo
 
 backup_exp_setting $job $TMP $jobid ${job}_job.sh 'o e'
 
-if [ "$CONF_MODE" = 'static' ]; then
-  config_file_save $TMPS/config || exit $?
-fi
+config_file_save $TMPS/config || exit $?
 
 archive_log
 

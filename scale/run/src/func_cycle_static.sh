@@ -19,6 +19,7 @@ staging_list_common_static cycle
 
 mkdir -p ${TMPROOT}/topo
 mkdir -p ${TMPROOT}/landuse
+mkdir -p ${TMPROOT}/dat
 
 mtot=$((MEMBER+1))
 mmean=$((MEMBER+1))
@@ -41,6 +42,24 @@ done
 
 repeat_mems=$((mtot*SCALE_NP_TOTAL/totalnp))
 nitmax=$((mtot*SCALE_NP_TOTAL/totalnp))
+
+#-------------------------------------------------------------------------------
+# executable files
+
+cp ${COMMON_DIR}/pdbash ${TMPROOT}/pdbash
+cp ${COMMON_DIR}/datetime ${TMPROOT}/datetime
+cp ${ENSMODEL_DIR}/scale-rm_pp_ens ${TMPROOT}/scale-rm_pp_ens
+cp ${ENSMODEL_DIR}/scale-rm_init_ens ${TMPROOT}/scale-rm_init_ens
+cp ${ENSMODEL_DIR}/scale-rm_ens ${TMPROOT}/scale-rm_ens
+
+cp ${OBSUTIL_DIR}/obsope ${TMPROOT}/obsope
+cp ${LETKF_DIR}/letkf ${TMPROOT}/letkf
+
+#-------------------------------------------------------------------------------
+# database
+
+cp -r ${SCALEDIR}/scale-rm/test/data/rad ${TMPROOT}/dat/rad
+cp -r ${SCALEDIR}/scale-rm/test/data/land ${TMPROOT}/dat/land
 
 #-------------------------------------------------------------------------------
 # time-variant outputs
@@ -1384,3 +1403,63 @@ fi
 }
 
 #===============================================================================
+
+obstime () {
+#-------------------------------------------------------------------------------
+# Determine the observation time slots
+#  *Require source 'func_datetime.sh'
+#
+# Usage: obstime TIME
+#
+#   TIME  Forecast start time
+#
+# Other input variables:
+#   $LTIMESLOT
+#   $WINDOW_S
+#   $WINDOW_E
+#   $LCYCLE
+#
+# Return variables:
+#   $slot_s
+#   $slot_e
+#   $slot_b
+#   $time_sl[1...$slot_e]
+#   $timefmt_sl[1...$slot_e]
+#-------------------------------------------------------------------------------
+
+if (($# < 1)); then
+  echo "[Error] $FUNCNAME: Insufficient arguments." >&2
+  exit 1
+fi
+
+local TIME="$1"
+
+#-------------------------------------------------------------------------------
+
+local otime=$(datetime $TIME)               # HISTORY_OUTPUT_STEP0 = .true.,
+#local otime=$(datetime $TIME $LTIMESLOT s)  # HISTORY_OUTPUT_STEP0 = .false.,
+local otime_s=$(datetime $TIME $WINDOW_S s)
+local otime_e=$(datetime $TIME $WINDOW_E s)
+local otime_a=$(datetime $TIME $LCYCLE s)
+local is=0
+slot_s=0
+while ((otime <= otime_e)); do
+  is=$((is+1))
+  time_sl[$is]=$otime
+  timefmt_sl[$is]="$(datetime_fmt ${otime})"
+  if ((slot_s == 0 && otime >= otime_s)); then
+    slot_s=$is
+  fi
+  if ((otime == otime_a)); then
+    slot_b=$is
+  fi
+otime=$(datetime $otime $LTIMESLOT s)
+done
+slot_e=$is
+
+#-------------------------------------------------------------------------------
+}
+
+#===============================================================================
+
+
