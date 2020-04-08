@@ -1346,8 +1346,9 @@ subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, stggrd)
 
 #ifdef GPR
   do iv3dsim = 1, OBSSIM_NUM_3D_VARS
-    if (OBSSIM_3D_VARS_LIST(iv3dsim) == id_gpr_obs) then
 
+    !if( any( OBSSIM_3D_VARS_LIST == id_gpr_obs ) )then
+    if( OBSSIM_3D_VARS_LIST(iv3dsim) == id_gpr_obs )then
       ! make list
       n1 = 1
       n2 = nlev * nlon * nlat
@@ -1361,6 +1362,9 @@ subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, stggrd)
                 rlat_gpr  (n1:n2), &
                 rlev_gpr  (n1:n2), &
                 elm_gpr   (n1:n2) )
+    endif
+
+    if (OBSSIM_3D_VARS_LIST(iv3dsim) == id_gpr_obs) then
 
       do j = 1, nlat
         rj = real(j + JHALO, r_size)
@@ -1388,20 +1392,15 @@ subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, stggrd)
 
       end do ! [ j = 1, nlat ]
 
-      tmpqc_gpr = iqc_good
-!debug 
-!tmpqc_gpr=20
-!tmpqc_gpr(128998)=iqc_good
-!debug 
-
       CALL Trans_XtoY_GPR(n1,n2,elm_gpr,ri_gpr,rj_gpr,rk_gpr,rlon_gpr,rlat_gpr,rlev_gpr,v3dgh,v2dgh,v1dgh,tmpobs_gpr,tmpobs_rh,tmpqc_gpr,MPI_COMM_d)
 
       do j = 1, nlat
         do i = 1, nlon
           do k = 1, nlev
             n = (j-1)*nlon*nlev + (i-1)*nlev + k
-            if (tmpqc_gpr(n) == iqc_ref_low) tmpqc_gpr(n) = iqc_good ! when process the observation operator, we don't care if reflectivity is too small
             if( tmpqc_gpr(n) == 0 )then
+              v3dgsim(k,i,j,iv3dsim) = real(tmpobs_gpr(n), r_sngl)
+            elseif( tmpqc_gpr(n) == iqc_ref_low )then ! do not care if reflectivitiy is too small for obssim
               v3dgsim(k,i,j,iv3dsim) = real(tmpobs_gpr(n), r_sngl)
             else
               v3dgsim(k,i,j,iv3dsim) = real(undef, r_sngl)
@@ -1410,16 +1409,22 @@ subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, stggrd)
         enddo ! [ i = 1, nlon ]
       enddo ! [ j = 1, nlat ]
 
-!debug
-!if(PRC_myrank.eq.57)then
-!write(6,*) v3dgsim(30,24,39,iv3dsim)
-!write(6,*) v3dgsim(1:nlev,1,1,iv3dsim)
-!endif
-!debug
-
-      deallocate( tmpobs_gpr, tmpobs_rh, tmpqc_gpr, ri_gpr, rj_gpr, rk_gpr, rlon_gpr, rlat_gpr, rlev_gpr, elm_gpr, stat=tmperr )
-
+    elseif (OBSSIM_3D_VARS_LIST(iv3dsim) == id_gpr_clutter) then
+      do j = 1, nlat
+        do i = 1, nlon
+          do k = 1, nlev
+            n = (j-1)*nlon*nlev + (i-1)*nlev + k
+            v3dgsim(k,i,j,iv3dsim) = real(tmpqc_gpr(n), r_sngl)
+          end do ! [ k = 1, nlev ]
+        enddo ! [ i = 1, nlon ]
+      enddo ! [ j = 1, nlat ]
     endif
+
+    if( OBSSIM_3D_VARS_LIST(iv3dsim) == id_gpr_clutter  )then
+    !if( any( OBSSIM_3D_VARS_LIST == id_gpr_obs ) )then
+      deallocate( tmpobs_gpr, tmpobs_rh, tmpqc_gpr, ri_gpr, rj_gpr, rk_gpr, rlon_gpr, rlat_gpr, rlev_gpr, elm_gpr, stat=tmperr )
+    endif
+
   enddo
 
 #endif /* GPR */

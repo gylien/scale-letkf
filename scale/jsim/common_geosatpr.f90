@@ -127,20 +127,38 @@
     real(r_size),parameter :: sat_lat_e = 0.D0*d2r  !< subsatellite latitude (rad)
     real(r_size),parameter :: sat_lev_e = 35786E+3  !< height of satellite (m)
 
-    integer,parameter :: ndiv = 2 ! (ndiv*2+1)**2 
-    real(r_size),parameter :: bwidth = 0.032*d2r ! beam width (rad)
+    real(r_size),parameter :: drange = 500.d0    ! range resolution (m)
+
+    !
+    !integer,parameter :: ndiv = 2 ! (ndiv*2+1)**2 
+    !real(r_size),parameter :: bwidth = 0.032*d2r ! beam width (rad)
+    !real(r_size),parameter :: bsigma = (bwidth**2)/(8.*log(2.)) ! sigma**2 (rad^2)
+    !real(r_size),parameter :: bound = bwidth ! upper bound to integrate in gpr coordinate (rad)
+    !real(r_size),parameter :: dr = bound/ndiv ! -bwidth < theta,phi < bwidth (rad)
+
+    ! fixed dr 
+    real(r_size),parameter :: bwidth_1km = 0.0016*d2r ! beam width (rad)
+    real(r_size),parameter :: bwidth_3km = 0.0048*d2r ! beam width (rad)
+    real(r_size),parameter :: bwidth_5km = 0.008*d2r ! beam width (rad)
+    real(r_size),parameter :: bwidth_10km = 0.016*d2r ! beam width (rad)
+    real(r_size),parameter :: bwidth_20km = 0.032*d2r ! beam width (rad)
+    !real(r_size),parameter :: bwidth = bwidth_10km
+    real(r_size),parameter :: bwidth = bwidth_20km
     real(r_size),parameter :: bsigma = (bwidth**2)/(8.*log(2.)) ! sigma**2 (rad^2)
-    real(r_size),parameter :: bound = bwidth ! upper bound to integrate in gpr coordinate (rad)
-    real(r_size),parameter :: dr = bound/ndiv ! -bwidth < theta,phi < bwidth (rad)
+    real(r_size),parameter :: bound = sqrt(bsigma)*2 ! upper bound in a FOV (rad)
+    real(r_size),parameter :: dr = bwidth_3km ! increment (rad)
+    integer,parameter :: ndiv = bound / dr
 
     ! #############################################################################
     ! ##########################  Configure Radar Sensor  #########################
     ! #############################################################################
     logical,parameter :: attenuation = .false.
-    integer,parameter :: mxfreq_radar = 1           ! # of channels
+    integer,parameter :: mxfreq_radar = 1         ! # of channels
     real(r_size),parameter :: min_echo = 20.d0    ! minimal detactable echo [dBZ]
     real(r_size),parameter :: freq_radar = 13.8   ! Channel frequencies [GHz]
     real(r_size),parameter :: k2 = 0.925          ! Radar constant |k^2| defaults
     real(r_size),parameter :: view_angle_radar = 12.13    ! viewing angle [deg] 12.13 is derived from mean of 1/mu (0 ~ 17)
+    real(r_size),parameter :: lambda = 2.997925/freq_radar/10.d0 ! [m]
+    real(r_size),parameter :: radar_fact = k2 * (pi**5) / (lambda**4) ! Z --> sigma
 
   end module common_geosatpr

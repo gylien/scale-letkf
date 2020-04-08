@@ -727,6 +727,15 @@ SUBROUTINE set_letkf_obs
                                          obsda%val(n), &
                                          obsda%qc(n)
 #endif
+      write (6, '(2I6,2F8.2,4F12.4,I3)') obs(iof)%elm(iidx), &
+                                         obs(iof)%typ(iidx), &
+                                         obs(iof)%lon(iidx), &
+                                         obs(iof)%lat(iidx), &
+                                         obs(iof)%lev(iidx), &
+                                         obs(iof)%dat(iidx), &
+                                         obs(iof)%err(iidx), &
+                                         obsda%val(n), &
+                                         obsda%qc(n)
     ENDIF
 
 
@@ -889,8 +898,8 @@ SUBROUTINE set_letkf_obs
   ! 14: cnt_undef    
   ! 15: cnt_ref_mem_high
 
-  allocate( cnt_all(15,0:MEM_NP-1) ) 
-  allocate( cnt_glb(15) )
+  allocate( cnt_all(16,0:MEM_NP-1) ) 
+  allocate( cnt_glb(16) )
   cnt_all = 0
   cnt_glb = 0
 
@@ -916,6 +925,7 @@ SUBROUTINE set_letkf_obs
       if( obsda%qc(n) == iqc_out_h     ) cnt_all(13,myrank_d)  = cnt_all(13,myrank_d) + 1
       if( obsda%qc(n) == iqc_undef     ) cnt_all(14,myrank_d)  = cnt_all(14,myrank_d) + 1
       if( obsda%qc(n) == iqc_ref_no_no ) cnt_all(15,myrank_d)  = cnt_all(15,myrank_d) + 1
+      if( obsda%qc(n) == iqc_ref_clutter)cnt_all(16,myrank_d)  = cnt_all(16,myrank_d) + 1
 
 
       write (6, '(2I6,2F8.2,4F12.4,I3)') obs(iof)%elm(iidx), &
@@ -936,7 +946,7 @@ SUBROUTINE set_letkf_obs
   enddo
 
   write(*,*) '==========================================='
-  write(*,*) ' (OKZK) GPR OBS COUNT W/ QC'
+  write(*,*) ' (OKZK) GPR OBS QC COUNT'
   write(*,*) '-------------------------------------------'
   write(*,*) ' TOTAL         ',cnt_glb( 1)
   write(*,*) ' IQC_GOOD      ',cnt_glb( 2)
@@ -954,6 +964,7 @@ SUBROUTINE set_letkf_obs
   write(*,*) ' IQC_TIME      ',cnt_glb(12)
   write(*,*) ' IQC_OUT_H     ',cnt_glb(13)
   write(*,*) ' IQC_UNDEF     ',cnt_glb(14)
+  write(*,*) ' IQC_REC_CLTR  ',cnt_glb(16)
   write(*,*) '==========================================='
 
   deallocate ( cnt_good_rh_d )

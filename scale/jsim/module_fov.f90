@@ -40,7 +40,76 @@
   !  ! Undef the ground
 
   !end subroutine radar_fov
+  !-----------------------------------------------------------------------------
+  !> beam pattern (gaussian)
+  subroutine beampattern_gauss(rad,w)
+    implicit none
+    real(r_size),intent(in) :: rad
+    real(r_size),intent(out) :: w
+    w = exp(rad*rad/(-2.d0*bsigma))
+    w = w * w
+    return
+  end subroutine beampattern_gauss
+  !-----------------------------------------------------------------------------
+  !> beam pattern (uniform)
+  subroutine beampattern_uniform(rad,w)
+    implicit none
+    real(r_size),intent(in) :: rad
+    real(r_size),intent(out) :: w
+    if( rad == 0.d0 )then
+      w = 1.d0
+    else
+      w = (sin(rad)/rad)**2
+    endif
+    w = w * w ! 2-way
+    return
+  end subroutine beampattern_uniform
+  !-----------------------------------------------------------------------------
+  !> calculate zenith angle
+  subroutine inc_scale(lon,lat,alpha)
+    implicit none
 
+    real(r_size),parameter :: pi_half = 4.d0 * atan(1.d0) * 0.50
+    real(r_size),intent(in)  :: lon  !! [rad]
+    real(r_size),intent(in)  :: lat  !! [rad]
+    real(r_size),intent(inout):: alpha  !! [rad]
+
+    real(r_size) :: arcA, arcB, angC, angO, dOD, dOA, dAD
+
+    ! zenith angle
+    arcA = pi_half - lat
+    arcB = pi_half - sat_lat_e
+    angC = abs(lon - sat_lon_e)
+    angO = acos(cos(arcA)*cos(arcB)+sin(arcA)*sin(arcB)*cos(angC))
+    dOD = sat_lev_e+Rearth
+    dOA = Rearth
+    dAD = sqrt(dOD**2+dOA**2-2.d0*dOA*dOD*cos(angO))
+    alpha = asin(dOD/dAD*sin(angO))
+
+    return
+  end subroutine inc_scale
+  !-----------------------------------------------------------------------------
+  !> convert satellite coordinate --> model coordinate
+  subroutine phys_gpr1d(lon_s,lat_s,lev_s)
+    implicit none
+
+    real(r_size),intent(in) :: lon_s ! satellite coordinate (rad)
+    real(r_size),intent(in) :: lat_s ! satellite coordinate (rad)
+    real(r_size),intent(out) :: lev_s ! satellite coordinate (m)
+
+    ! internal work
+    real(r_size) :: r1,r2,r3
+
+    r1 =  (sat_lev_e+Rearth)*cos(lon_s)*cos(lat_s)
+    r2 = ((sat_lev_e+Rearth)*cos(lon_s)*cos(lat_s))**2
+    r3 =  (sat_lev_e+Rearth)**2-Rearth**2
+
+    if(r2<=r3) stop 'error in phys_gpr1d'
+
+    lev_s = r1 - sqrt(r2-r3)
+
+    return
+  end subroutine phys_gpr1d
   !>---------------------------------------------------------------------
   !> convert model coordinate --> satellite coordinate
   !> reference: Coordination Group for Meteorological Satellites,

@@ -74,6 +74,7 @@ MODULE common_obs_scale
 ! GeoSat/PR (GPR) observations
 !
   INTEGER,PARAMETER :: id_gpr_obs=5001
+  INTEGER,PARAMETER :: id_gpr_clutter=5002
 
   INTEGER,PARAMETER :: elem_uid(nid_obs)= &
      (/id_u_obs, id_v_obs, id_t_obs, id_tv_obs, id_q_obs, id_rh_obs, &
@@ -154,6 +155,7 @@ MODULE common_obs_scale
   INTEGER,PARAMETER :: iqc_ref_low=11
   INTEGER,PARAMETER :: iqc_ref_mem=12
   INTEGER,PARAMETER :: iqc_ref_no_no=13
+  INTEGER,PARAMETER :: iqc_ref_clutter=14
   INTEGER,PARAMETER :: iqc_radar_vhi=19
   INTEGER,PARAMETER :: iqc_out_vhi=20
   INTEGER,PARAMETER :: iqc_out_vlo=21
@@ -2977,15 +2979,14 @@ SUBROUTINE Trans_XtoY_GPR(n1,n2,elm,ri,rj,rk,rlon,rlat,rlev,v3d,v2d,v1d,yobs,yob
   INTEGER,INTENT(OUT) :: qc(n1:n2)
   INTEGER,INTENT(IN) :: MPI_COMM_d
 
-!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< WORKING SPACE (2017/03/08)
   !< Joint-simulator
 ! output
 ! bulk_dsd
-  !real(r_size) :: re
+!  real(r_size) :: re
 ! get_others
-  integer :: ic
+!  integer :: ic
 ! re_all
-  real(r_size) :: n0 ! intercept [1/m**4]
+!  real(r_size) :: n0 ! intercept [1/m**4]
 ! opt_micro_radar
   integer :: mxfreq   ! maximum num. of frequency
   real(r_size) :: atm_ext   ! atmos. gas extinction
@@ -3001,36 +3002,39 @@ SUBROUTINE Trans_XtoY_GPR(n1,n2,elm,ri,rj,rk,rlon,rlat,rlev,v3d,v2d,v1d,yobs,yob
       pbck_gce    ! backscattering ceoff.
   real(r_size) :: kexttot_s,salbtot_s,asymtot_s,sbacktot_s
 ! simulator_radar
-  integer :: ii, jj, nf       ! looping indice
+  integer :: nf       ! looping indice
   integer :: ierr             ! alloc statistics
 !for FOV convolution
   real(r_size) :: sbacktot_l(nlevh,nlonh,nlath)
-  integer :: n_ct, n_dt  !number of pixels from the center points
-  integer :: i_dt, j_ct  !loop indices
-  real(r_size) :: xa,ya       !physical distance from the center points [km]
   real(r_size),parameter :: lne = 0.43429448d0 ! = log10(2.71828183)
 !for radar constant
   real(r_size) :: freqhzd, epsreal, epsimag  !dielectric constant parameters
   real(r_size) :: kradar ! radar constant |K^2| 
 ! 1D optical properties
-  real(r_size),dimension(nln) :: &
-     kext1D,sback1D
+!  real(r_size),dimension(nln) :: &
+!     kext1D,sback1D
 ! 1D atmospheric variables
-  real(r_size),dimension(nln) :: &
-     dh1D
-! radar_fov
-  integer :: isv, iev, jsv, jev, ksv, kev
+!  real(r_size),dimension(nln) :: &
+!     dh1D
 ! relative humidity
   real(r_size) :: rh ! relative humidity [-]
     
   !< radar simulator (FOV)
-  integer :: qc1,qc2
+  integer :: qc1
+  real(r_size) :: pr,ps
   real(r_size) :: sbacktot_g(nlev, nlong,nlatg)
   real(r_size) :: hgt_g     (nlevh,nlong,nlatg)
   real(r_size) :: theta0,phi0,r0,dtheta,dphi
   real(r_size) :: lon,lat,lev
   real(r_size) :: rad
-  real(r_size) :: x,w,wtot
+  real(r_size) :: sb,w,wtot,ds,dv,r
+
+  !< main lobe surface clutter
+  real(r_size) :: uv10m_l(nlonh,nlath)
+  real(r_size) :: uv10m_g(nlong,nlatg)
+  real(r_size) :: uv
+  real(r_size) :: alpha
+  real(r_size) :: nrcs
 
 #if defined(GPRavrg) || defined(GPRfrac)
   integer,parameter :: ij_avrg = 3
@@ -3038,11 +3042,17 @@ SUBROUTINE Trans_XtoY_GPR(n1,n2,elm,ri,rj,rk,rlon,rlat,rlev,v3d,v2d,v1d,yobs,yob
   integer :: i0,j0,k0
 #endif /* GPRavrg || GPRfrac */
 
-  integer :: i,j,k,n,nn
+  integer :: i,j,k,nn
   integer :: ishift,jshift,proc_i,proc_j
   real(r_size) :: rig,rjg,rkg
 
-  real(r_size) :: rigtmp,rjgtmp
+REAL(r_dble) :: rrtimer00,rrtimer
+!rrtimer00 = MPI_WTIME()
+!write(*,*) 'ndiv',ndiv
+!write(*,*) 'bwidth',bwidth
+!write(*,*) 'bsigma',bsigma
+!write(*,*) 'bound',bound
+!write(*,*) 'dr',dr
 
   ! define array <-- error? somehow nlonh cannot be declared in statement part
   is=1+IHALO ; ie=nlon+IHALO ; js=1+JHALO ; je=nlat+JHALO ; ks=1+KHALO ; ke=nlev+KHALO
@@ -3104,6 +3114,11 @@ SUBROUTINE Trans_XtoY_GPR(n1,n2,elm,ri,rj,rk,rlon,rlat,rlev,v3d,v2d,v1d,yobs,yob
     atmos_stag(k1-1,i,j)%omega = 0.0
     atmos_stag(ke,i,j)%omega   = 0.0
   enddo ; enddo
+  !++ uv10m [m/s]
+  do j = js, je ; do i = is, ie
+    uv10m_l(i,j) = sqrt(v2d(i,j,iv2dd_u10m)**2 + v2d(i,j,iv2dd_v10m)**2)
+  enddo ; enddo
+  
 
 !!< ONCE
 !!<-----------------------------------------------------------------------
@@ -3185,6 +3200,12 @@ SUBROUTINE Trans_XtoY_GPR(n1,n2,elm,ri,rj,rk,rlon,rlat,rlev,v3d,v2d,v1d,yobs,yob
 
   enddo ; enddo ; enddo ! k,i,j
 
+!if(prc_myrank==0)then
+!rrtimer = MPI_WTIME()
+!WRITE(6,'(A,F18.10)') '###### Trans_XtoY_GPR:JS:',rrtimer-rrtimer00
+!rrtimer00=rrtimer
+!endif
+
 !!<-----------------------------------------------------------------------
 !!< call simulator_radar
 
@@ -3194,65 +3215,102 @@ SUBROUTINE Trans_XtoY_GPR(n1,n2,elm,ri,rj,rk,rlon,rlat,rlev,v3d,v2d,v1d,yobs,yob
 
   ishift = proc_i * nlon
   jshift = proc_j * nlat
+
+  !-- sbacktot
   sbacktot_g(:,:,:) = 0.d0
   sbacktot_g(1:nlev,1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = sbacktot_l(ks:ke,is:ie,js:je)
   call MPI_ALLREDUCE(MPI_IN_PLACE, sbacktot_g, nlev*nlong*nlatg, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)
+
+  !-- hgt
   hgt_g(:,:,:) = 0.d0
   hgt_g(1:nlevh,1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = v3d(1:nlevh,is:ie,js:je,iv3dd_hgt)
   call MPI_ALLREDUCE(MPI_IN_PLACE, hgt_g, nlevh*nlong*nlatg, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)
+
+  !-- uv10m
+  uv10m_g(:,:) = 0.d0
+  uv10m_g(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = uv10m_l(is:ie, js:je)
+  call MPI_ALLREDUCE(MPI_IN_PLACE, uv10m_g, nlong*nlatg, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)
+
 #endif /* GPRsatellite || GPRavrg */
+
+!if(prc_myrank==0)then
+!rrtimer = MPI_WTIME()
+!WRITE(6,'(A,F18.10)') '###### Trans_XtoY_GPR:MPI:',rrtimer-rrtimer00
+!rrtimer00=rrtimer
+!endif
+if(myrank == 0) write(*,*) 'bound',bound
+if(myrank == 0) write(*,*) 'dr',dr
+if(myrank == 0) write(*,*) 'ndiv',ndiv
 
   do nn = n1, n2
     if( elm(nn) /= id_gpr_obs ) cycle
-    if( qc(nn) == iqc_good )then
+if( rk(nn) > 1 + KHALO ) cycle
 
 #ifdef GPRsatellite
       ! beam center @gpr coordinate
       call phys_scale2gpr(rlon(nn)*d2r,rlat(nn)*d2r,rlev(nn),theta0,phi0,r0)
-!debug1 call phys_gpr2scale(theta0,phi0,r0,lon,lat,lev)
-!debug1 write(*,'(A,3F9.3,A,3F9.3)') 'check',rlon(nn),rlat(nn),rlev(nn),'->',lon/d2r,lat/d2r,lev
-!debug1--> phys_scale2gpr, gpr2scale OK
-!debug2 call phys2ij(rlon(nn),rlat(nn),rig,rjg)
-!debug2 call phys2ijkz_g(hgt_g,rig-IHALO,rjg-JHALO,rlev(nn),rkg,qc1)
-!debug2 call rij_l2g(PRC_myrank,ri(nn),rj(nn),rigtmp,rjgtmp)
-!debug2 write(*,'(A,3F9.3,A,3F9.3)') 'check',rig,rjg,rkg,' -> ',rigtmp,rjgtmp,rk(nn)
-!debug2--> phys2ij, phys2ijkz_g OK
-!debug3 call rij_l2g(PRC_myrank,ri(nn),rj(nn),rigtmp,rjgtmp)
-!debug3 rig=rigtmp-IHALO
-!debug3 rjg=rjgtmp-JHALO
-!debug3 rkg=rk(nn)-KHALO
-!debug3 call itpl_3d_g(sbacktot_g,rkg,rig,rjg,sbacktot_s)
-!debug3--> itpl_3d_g OK
-
 
       ! integrate sigma
       sbacktot_s = 0.d0
       wtot = 0.d0
+      pr = 0.d0
+      ps = 0.d0
       do i=-ndiv,ndiv ; do j=-ndiv,ndiv
+        !--- beam position at FOV
         dtheta = i*dr
         dphi = j*dr
-        rad = dtheta**2 + dphi**2
-        if( sqrt(rad) > bound ) cycle
+        rad = sqrt(dtheta**2 + dphi**2)
+        if( rad > bound ) cycle
+        !--- beam pattern
+        w = exp(rad*rad/(-2.d0*bsigma))
+        w = w * w ! 2-way
+        !call beampattern_uniform(rad,w)
+        !if( w == 0.d0 ) cycle
+        !--- beam position on earth surface (X)
         call phys_gpr2scale(theta0+dtheta,phi0+dphi,r0,lon,lat,lev)
         lon = lon / d2r ! rad -> deg
         lat = lat / d2r ! rad -> deg
+        !--- beam position in model coordinate
         call phys2ij(lon,lat,rig,rjg)
         rig = rig - IHALO
         rjg = rjg - JHALO
         call phys2ijkz_g(hgt_g,rig,rjg,lev,rkg,qc1)
         rkg = rkg - KHALO
-        if( qc1 == iqc_out_vhi .or. qc1 == iqc_out_vlo )then
-          cycle
-        else if( qc1 == iqc_out_h)then
+
+        if( qc1 == iqc_out_h )then
           goto 1113 ! needs careful consideration
+        elseif( qc1 == iqc_out_vhi )then
+          cycle
+        elseif( qc1 == iqc_out_vlo )then
+          !! Ps
+          call itpl_2d_g(uv10m_g,rig,rjg,uv)
+          !--- distance from satellite to surface
+          call phys_gpr1d(theta0+dtheta,phi0+dphi,r)
+          if( r < r0 - drange * 0.50 ) cycle
+          !--- incident angle @ X
+          call inc_scale(lon*d2r,lat*d2r,alpha)
+          !--- scattering area
+          dS = abs(cos(phi0+dphi)) * dr * dr / r / r / cos(alpha)
+          !--- nrcs
+          call nrcs_wpt84(alpha,uv,nrcs)
+          ps = ps + nrcs * w * dS
+!if(myrank == 0) write(*,'(A,5E20.5)') '-',ps,rad,w,dS,nrcs
+        else
+          !! Pr
+          call itpl_3d_g(sbacktot_g,rkg,rig,rjg,sb)
+          dv = abs(cos(phi0+dphi)) * dr * dr * drange / r0 / r0
+          pr = pr + sb * w * dv * 0.001d0 ! sb: 1/km -> 1/m
+if(myrank == 0) write(*,'(A,4E20.5)') '+',pr,sb,w,dv
+          !! dBZ
+          sbacktot_s = sbacktot_s + sb * w
+          wtot = wtot + w
         endif
-        call itpl_3d_g(sbacktot_g,rkg,rig,rjg,x)
-        w = exp(rad/(-2.d0*bsigma))*cos(phi0+dphi)
-        sbacktot_s = sbacktot_s + x * w
-        wtot = wtot + w
+
       enddo ; enddo
 
+
  1113 continue
+
     
       if( wtot>0.d0 .and. qc1/=iqc_out_h )then
         sbacktot_s = sbacktot_s / wtot
@@ -3265,8 +3323,6 @@ SUBROUTINE Trans_XtoY_GPR(n1,n2,elm,ri,rj,rk,rlon,rlat,rlev,v3d,v2d,v1d,yobs,yob
 #elif defined(GPRavrg)
       ! get i,j in global coordinate (w/o HALO)
       call rij_l2g(PRC_myrank,ri(nn),rj(nn),rig,rjg)
-!debug call rij_g2l(PRC_myrank,rig,rjg,ritmp,rjtmp)
-!debug write(*,'(A,I,7F9.2)')'check',nn,ri(nn),rj(nn),ritmp+IHALO,rjtmp+JHALO,rig,rjg,rk(nn)
 
       i0 = CEILING(rig)-IHALO
       j0 = CEILING(rjg)-JHALO
@@ -3285,11 +3341,11 @@ SUBROUTINE Trans_XtoY_GPR(n1,n2,elm,ri,rj,rk,rlon,rlat,rlev,v3d,v2d,v1d,yobs,yob
         sbacktot_s = sbacktot_s / n_avrg
       endif
 #else
-
       call itpl_3d(sbacktot_l(:,:,:),rk(nn),ri(nn),rj(nn),sbacktot_s)
 #endif /* GPRavrg */
 
       ! sigma --> dBZ conversion via Radar Equation
+      ! Units: dbz [mm6/m3], 2.997d2/freq_radar = wave length [mm], sbacktot_s [1/km]
       if( sbacktot_s <= 0.d0 )then
         dbz = MIN_GPR_REF_DBZ + LOW_GPR_REF_SHIFT
       else
@@ -3298,37 +3354,115 @@ SUBROUTINE Trans_XtoY_GPR(n1,n2,elm,ri,rj,rk,rlon,rlat,rlev,v3d,v2d,v1d,yobs,yob
                         log10(kradar) - 5.d0*log10(const_pi) + 3.d0)
       endif
 
+
+#ifdef GPRmoist
       ! Relative humidity
       CALL itpl_3d(v3d(:,:,:,iv3dd_rh),rk(nn),ri(nn),rj(nn),rh) ! [%]
+#endif /* GPRmoist */
 
       ! Quality Control
-      if( dbz < MIN_GPR_REF_DBZ )then
+      if( k < k1 )then
+        qc(nn) = iqc_obs_bad
+      elseif( pr < ps )then
+      !elseif( pr*radar_fact < ps )then
+        qc(nn) = iqc_ref_clutter 
+      elseif( dbz < MIN_GPR_REF_DBZ )then
         dbz = MIN_GPR_REF_DBZ + LOW_GPR_REF_SHIFT
         qc(nn) = iqc_ref_low
-      elseif( k < k1 )then
-        qc(nn) = iqc_obs_bad
       else
         qc(nn) = iqc_good
       endif
 
+if(myrank == 0) write(*,*) '***',ps,pr,dbz
+!yobs(nn) = nrcs
+!yobs(nn) = ps* 10e25
+!yobs(nn) = pr * 10e25
       yobs(nn) = dbz
       yobs_tmp(nn) = rh
 
-!!DEBUG_OKA======================================
-      qc(nn) = iqc_good
-!!DEBUG_OKA======================================
-
-    endif ! qc check
+!if(prc_myrank==0)then
+!rrtimer = MPI_WTIME()
+!WRITE(6,'(A,2I,F18.10)') '###### Trans_XtoY_GPR:FOV:',nn,qc(nn),rrtimer-rrtimer00
+!rrtimer00=rrtimer
+!endif
 
   enddo ! nn loop
 
   deallocate(hgt_lay,hgt_lev,topo,atmos,rho,atmos_stag)
 
-
-!>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> WORKING SPACE (2017/03/08)
   RETURN
 END SUBROUTINE Trans_XtoY_GPR
+!-----------------------------------------------------------------------------
+!> Calc. normalized radar cross section (NRCS) for ocean surface
+!> F.J.Wentz, S.Peteherych, L.A.Thomas, A Model Function for Ocean Radar Cross
+!Sections at 14.6 GHz,
+!>     JGR, 90, C3, 3689-3704, 1984.
+!> K.Watanabe, K.Okamoto, S.Shige, System Design of the Next Generation
+!Spaceborne Precipitation Radar,
+!>     517th URSI-F Meeting, 2007.
+subroutine NRCS_WPT84( alpha,uv10,sgm )
+  use common_geosatpr
+  implicit none
 
+  real(r_size),intent(in)   :: alpha !! incidence angle (rad)
+  real(r_size),intent(in)   :: uv10  !! 10m UV (m/s)
+  real(r_size),intent(out)  :: sgm   !! ocean NRCS
+
+  real(r_size) :: alp0(0:30),alp1(0:30),alp2(0:30),a0(0:30),a1(0:30),a2(0:30)
+  real(r_size) :: a0_itpl,alp0_itpl, ri
+  integer :: i
+  real(r_size) :: angI
+
+  angI = alpha/d2r ! rad -> deg
+
+  alp0(0) =-0.580  ; alp1(0) =0.000   ; alp2(0) =0.000  ; a0(0) =42.65795188 ; a1(0) =0.000 ; a2(0) =0.000
+  alp0(1) =-0.500  ; alp1(1) =0.000   ; alp2(1) =0.000  ; a0(1) =34.67368505 ; a1(1) =0.000 ; a2(1) =0.000
+  alp0(2) =-0.410  ; alp1(2) =0.000   ; alp2(2) =0.010  ; a0(2) =25.70395783 ; a1(2) =0.000 ; a2(2) =0.000
+  alp0(3) =-0.300  ; alp1(3) =0.000   ; alp2(3) =0.020  ; a0(3) =16.59586907 ; a1(3) =0.000 ; a2(3) =0.010
+  alp0(4) =-0.180  ; alp1(4) =0.000   ; alp2(4) =0.030  ; a0(4) =9.33254301  ; a1(4) =0.000 ; a2(4) =0.020
+  alp0(5) =-0.040  ; alp1(5) =0.000   ; alp2(5) =0.050  ; a0(5) =4.67735141  ; a1(5) =0.000 ; a2(5) =0.030
+  alp0(6) =0.120   ; alp1(6) =0.000   ; alp2(6) =0.070  ; a0(6) =2.18776162  ; a1(6) =0.000 ; a2(6) =0.040
+  alp0(7) =0.290   ; alp1(7) =0.000   ; alp2(7) =0.090  ; a0(7) =1.00000000  ; a1(7) =0.000 ; a2(7) =0.060
+  alp0(8) =0.460   ; alp1(8) =0.000   ; alp2(8) =0.110  ; a0(8) =0.45708819  ; a1(8) =0.000 ; a2(8) =0.080
+  alp0(9) =0.640   ; alp1(9) =0.000   ; alp2(9) =0.120  ; a0(9) =0.20417379  ; a1(9) =0.000 ; a2(9) =0.110
+  alp0(10)=0.820   ; alp1(10)=-0.010  ; alp2(10)=0.130  ; a0(10)=0.09120108  ; a1(10)=0.020 ; a2(10)=0.130
+  alp0(11)=1.000   ; alp1(11)=-0.030  ; alp2(11)=0.140  ; a0(11)=0.04073803  ; a1(11)=0.060 ; a2(11)=0.150
+  alp0(12)=1.170   ; alp1(12)=-0.060  ; alp2(12)=0.140  ; a0(12)=0.01862087  ; a1(12)=0.110 ; a2(12)=0.180
+  alp0(13)=1.340   ; alp1(13)=-0.100  ; alp2(13)=0.140  ; a0(13)=0.00851138  ; a1(13)=0.180 ; a2(13)=0.210
+  alp0(14)=1.500   ; alp1(14)=-0.130  ; alp2(14)=0.140  ; a0(14)=0.00398107  ; a1(14)=0.230 ; a2(14)=0.230
+  alp0(15)=1.640   ; alp1(15)=-0.160  ; alp2(15)=0.130  ; a0(15)=0.00194984  ; a1(15)=0.290 ; a2(15)=0.260
+  alp0(16)=1.770   ; alp1(16)=-0.190  ; alp2(16)=0.120  ; a0(16)=0.00097724  ; a1(16)=0.340 ; a2(16)=0.290
+  alp0(17)=1.890   ; alp1(17)=-0.230  ; alp2(17)=0.110  ; a0(17)=0.00051286  ; a1(17)=0.410 ; a2(17)=0.310
+  alp0(18)=2.000   ; alp1(18)=-0.260  ; alp2(18)=0.090  ; a0(18)=0.00028840  ; a1(18)=0.460 ; a2(18)=0.340
+  alp0(19)=2.080   ; alp1(19)=-0.290  ; alp2(19)=0.070  ; a0(19)=0.00017783  ; a1(19)=0.520 ; a2(19)=0.370
+  alp0(20)=2.130   ; alp1(20)=-0.320  ; alp2(20)=0.040  ; a0(20)=0.00012023  ; a1(20)=0.570 ; a2(20)=0.410
+  alp0(21)=2.160   ; alp1(21)=-0.360  ; alp2(21)=0.000  ; a0(21)=0.00008511  ; a1(21)=0.640 ; a2(21)=0.460
+  alp0(22)=2.190   ; alp1(22)=-0.390  ; alp2(22)=-0.060 ; a0(22)=0.00006310  ; a1(22)=0.690 ; a2(22)=0.520
+  alp0(23)=2.210   ; alp1(23)=-0.420  ; alp2(23)=-0.130 ; a0(23)=0.00004898  ; a1(23)=0.750 ; a2(23)=0.590
+  alp0(24)=2.230   ; alp1(24)=-0.450  ; alp2(24)=-0.210 ; a0(24)=0.00003802  ; a1(24)=0.810 ; a2(24)=0.670
+  alp0(25)=2.240   ; alp1(25)=-0.490  ; alp2(25)=-0.290 ; a0(25)=0.00003020  ; a1(25)=0.870 ; a2(25)=0.750
+  alp0(26)=2.250   ; alp1(26)=-0.520  ; alp2(26)=-0.370 ; a0(26)=0.00002399  ; a1(26)=0.930 ; a2(26)=0.830
+  alp0(27)=2.260   ; alp1(27)=-0.550  ; alp2(27)=-0.450 ; a0(27)=0.00001905  ; a1(27)=0.980 ; a2(27)=0.910
+  alp0(28)=2.260   ; alp1(28)=-0.580  ; alp2(28)=-0.530 ; a0(28)=0.00001585  ; a1(28)=1.040 ; a2(28)=0.990
+  alp0(29)=2.260   ; alp1(29)=-0.620  ; alp2(29)=-0.610 ; a0(29)=0.00001288  ; a1(29)=1.100 ; a2(29)=1.070
+  alp0(30)=2.260   ; alp1(30)=-0.650  ; alp2(30)=-0.690 ; a0(30)=0.00001047  ; a1(30)=1.160 ; a2(30)=1.150
+
+  if(angI==0.d0)then
+    a0_itpl = a0(0)
+    alp0_itpl = alp0(0)
+  elseif(angI<=60.d0)then
+    ri=abs(angI)/2.d0
+    i=ceiling(ri)
+    a0_itpl   = (a0  (i)-a0  (i-1)) * (ri-i+1) + a0  (i-1)
+    alp0_itpl = (alp0(i)-alp0(i-1)) * (ri-i+1) + alp0(i-1)
+  else
+    write(*,'(A,F8.3,A)') 'Too large incidence angle ',angI,' in calculating NRCS' ; stop
+  endif
+
+  sgm=a0_itpl*(uv10**alp0_itpl)
+
+  return
+end subroutine NRCS_WPT84
 !-----------------------------------------------------------------------
 ! Interpolation (global) for GPR
 !-----------------------------------------------------------------------
@@ -3425,7 +3559,7 @@ SUBROUTINE phys2ijkz_g(z_full,ri,rj,rlev,rk,qc)
 !
 ! rlev -> rk
 !
-  if (ri < 1.0d0 .or. ri > nlong .or. rj < 1.0d0 .or. rj > nlatg) then
+  if (ri <= 1.0d0 .or. ri > nlong .or. rj <= 1.0d0 .or. rj > nlatg) then
     !write (6,'(A)') 'warning: observation is outside of the horizontal domain'
     rk = undef
     qc = iqc_out_h
@@ -3462,7 +3596,7 @@ SUBROUTINE phys2ijkz_g(z_full,ri,rj,rlev,rk,qc)
     qc = iqc_out_vhi
     RETURN
   END IF
-  IF(rlev < zlev(ks)) THEN
+  IF(rlev <= zlev(ks)) THEN
     call itpl_2d_g(z_full(ks,:,:),ri,rj,ztmp)
     !write(6,'(A,F8.1,A,F8.1)') 'warning: observation is too low: zbottom=', ztmp, ', lev=', rlev
     rk = undef
@@ -3474,10 +3608,36 @@ SUBROUTINE phys2ijkz_g(z_full,ri,rj,rlev,rk,qc)
   ! find rk
   !
   DO k=ks+1,nlev+KHALO
-    IF(zlev(k) > rlev) EXIT ! assuming ascending order of zlev
+    IF(zlev(k) >= rlev) EXIT ! assuming ascending order of zlev
+    !IF(zlev(k) > rlev) EXIT ! assuming ascending order of zlev
   END DO
   ak = (rlev - zlev(k-1)) / (zlev(k) - zlev(k-1))
   rk = REAL(k-1,r_size) + ak
+
+
+  !
+  ! debug
+  !
+  if( rk > nlev+KHALO )then
+    rk = undef
+    qc = iqc_out_vhi
+  else if( rk <= 1+KHALO )then
+    rk = undef
+    qc = iqc_out_vlo
+  endif
+
+!IF(rlev <= zlev(ks)) THEN
+!write(*,*) 'see?'
+!else
+!write(*,*) rlev,zlev(ks),rlev-zlev(ks)
+!endif
+!
+!if(rk <= 1+KHALO)then
+!write(*,*) rk,ks,rlev,zlev(ks)
+!do k=ks+1,nlev+KHALO
+!write(*,*) rlev,k,zlev(k)
+!enddo
+!endif
 
   RETURN
 END SUBROUTINE phys2ijkz_g
@@ -3488,8 +3648,6 @@ SUBROUTINE get_nobs_GPR(cfile,nn)
   CHARACTER(*),INTENT(IN) :: cfile
   INTEGER,INTENT(OUT) :: nn
   INTEGER,PARAMETER :: nrec=8
-  REAL(r_sngl) :: wk(nrec)
-  INTEGER :: ios
   INTEGER :: iunit
   LOGICAL :: ex
   INTEGER :: sz
@@ -3534,7 +3692,6 @@ SUBROUTINE read_obs_GPR(cfile,obs)
   CHARACTER(*),INTENT(IN) :: cfile
   TYPE(obs_info),INTENT(INOUT) :: obs
   REAL(r_sngl) :: wk(8)
-  REAL(r_size) :: x, y
   INTEGER :: n,iunit
 
 !  call obs_info_allocate(obs)
