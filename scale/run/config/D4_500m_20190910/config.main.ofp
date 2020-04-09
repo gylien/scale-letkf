@@ -16,7 +16,7 @@ RSCGRP="debug-flat"
 DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
 
 
-EXP4=D4_500m_20190910_THIN
+EXP4=D4_500m_20190910_TEST0409
 
 
 OUTDIR="/work/hp150019/share/honda/SCALE-LETKF/AIP_D4_VERIFY/${EXP4}"

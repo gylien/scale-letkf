@@ -414,7 +414,7 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
           !=====================================================================
           case (obsfmt_radar, obsfmt_pawr_toshiba, obsfmt_pawr_jrc)
           !---------------------------------------------------------------------
-            if (obs(iof)%lev(n) > RADAR_ZMAX) then
+            if ( obs(iof)%lev(n) > RADAR_ZMAX .or. obs(iof)%lev(n) < RADAR_ZMIN ) then
               obsda%qc(nn) = iqc_radar_vhi
               if (LOG_LEVEL >= 3) then
                 write(6,'(A,F8.1,A,I5)') '[Warning] radar observation is too high: lev=', obs(iof)%lev(n), ', elem=', obs(iof)%elm(n)
