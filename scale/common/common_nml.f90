@@ -309,6 +309,7 @@ MODULE common_nml
   REAL(r_size) :: LOW_REF_SHIFT = 0.0d0
 
   real(r_size) :: RADAR_ZMAX = 99.0d3          !Height limit of radar data to be used
+  real(r_size) :: RADAR_ZMIN = -99.0d3         !Height limit of radar data to be used
 
   REAL(r_size) :: RADAR_PRH_ERROR = 0.1d0      !Obserational error for pseudo RH observations.
 
@@ -1032,6 +1033,7 @@ subroutine read_nml_letkf_radar
     MIN_RADAR_REF_DBZ, &
     LOW_REF_SHIFT, &
     RADAR_ZMAX, &
+    RADAR_ZMIN, &
     RADAR_PRH_ERROR, &
     INTERPOLATION_TECHNIQUE, &
     METHOD_REF_CALC, &
