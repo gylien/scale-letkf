@@ -46,9 +46,6 @@ int jitdt_read_toshiba(int n_type, char *jitdt_place, mppawr_header hd[n_type],
 
   ierr = jitget(jitdt_place, fname, buf, bsize, n_type);
 
-  printf(" *** CHECK *** bsize \n", (float)(t.tv_sec-t0.tv_sec) + (float)(t.tv_usec-t0.tv_usec)/1000000.0);
-
-
   gettimeofday(&t, NULL);
   printf("......jitdt_read_toshiba:jitget:%15.6f\n", (float)(t.tv_sec-t0.tv_sec) + (float)(t.tv_usec-t0.tv_usec)/1000000.0);
   t0 = t;
@@ -60,6 +57,7 @@ int jitdt_read_toshiba(int n_type, char *jitdt_place, mppawr_header hd[n_type],
 
   for(i_type = 0; i_type < n_type; i_type++){
     bsize[i_type] = ungzip_toshiba_mpr(bufsize, bsize[i_type], buf + i_type * bufsize);
+    if(bsize[i_type] == 0) return -8;   
     ierr = decode_toshiba_mpr(bsize[i_type], buf + i_type * bufsize, opt_verbose, hd + i_type, az[i_type], el[i_type], rtdat[i_type]);
     if(ierr != 0) return ierr;
   }

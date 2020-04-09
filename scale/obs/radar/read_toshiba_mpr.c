@@ -95,8 +95,7 @@ int read_toshiba_mpr(char *in_file,
     return -9;
   }
 
-//  is_gzip = strstr(in_file, ".gz\0");
-  if(is_gzip != NULL) bsize = ungzip_toshiba_mpr(bufsize, bsize, buf);
+  if(is_gzip == "true") bsize = ungzip_toshiba_mpr(bufsize, bsize, buf);
 
   ierr = decode_toshiba_mpr(bsize, buf, opt_verbose, hd, az, el, rtdat);
   if(ierr != 0) return ierr;
