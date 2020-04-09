@@ -1197,9 +1197,9 @@ subroutine set_dafcst( ncycle, dafcst_slist, dafcst_list_last, dafcst_list_sum )
   implicit none
 
   integer, intent(in) :: ncycle
-  logical, intent(out) :: dafcst_slist( ncycle, NUM_DACYCLE_FCST_MEM )
-  integer, intent(out) :: dafcst_list_last( NUM_DACYCLE_FCST_MEM )
-  integer, intent(out) :: dafcst_list_sum( NUM_DACYCLE_FCST_MEM )
+  logical, intent(out) :: dafcst_slist( ncycle, ncycle )
+  integer, intent(out) :: dafcst_list_last( ncycle )
+  integer, intent(out) :: dafcst_list_sum( ncycle )
   integer :: n, nf, mem_f
   integer :: time_nowdate_org(6)
 
