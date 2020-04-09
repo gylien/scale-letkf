@@ -227,9 +227,9 @@ program dacycle
 
   if (myrank == 0) write (6, '(A,I7)') 'Total cycle numbers:', lastcycle
   
-  allocate( dafcst_slist( lastcycle, NUM_DACYCLE_FCST_MEM ) )
-  allocate( dafcst_list_last( NUM_DACYCLE_FCST_MEM ) )
-  allocate( dafcst_list_sum( NUM_DACYCLE_FCST_MEM ) )
+  allocate( dafcst_slist( lastcycle, lastcycle ) )
+  allocate( dafcst_list_last( lastcycle ) )
+  allocate( dafcst_list_sum( lastcycle ) )
   call set_dafcst( lastcycle, dafcst_slist, dafcst_list_last, dafcst_list_sum )
 
   ! Set forecast length (TIME_NSTEP) and initial step (scycle_dafcst) 
