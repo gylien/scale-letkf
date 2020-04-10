@@ -84,9 +84,8 @@ program dacycle
     TIME_DOOCEAN_step, &
     TIME_DOresume, &
     TIME_DOend, &
-    TIME_DOATMOS_restart, &
-    TIME_DTSEC_ATMOS_RESTART, &
-    TIME_DSTEP_ATMOS_RESTART
+    TIME_DOATMOS_DA, &
+    TIME_DTSEC_ATMOS_DA
   use mod_atmos_admin, only: &
     ATMOS_do
   use mod_atmos_driver, only: &
@@ -219,7 +218,7 @@ program dacycle
   call mpi_timer('INITIALIZE', 1, barrier=MPI_COMM_WORLD)
 
   icycle = 0
-  lastcycle = int( TIME_DTSEC * real( TIME_NSTEP, kind=DP ) / TIME_DTSEC_ATMOS_RESTART )
+  lastcycle = int( TIME_DTSEC * real( TIME_NSTEP, kind=DP ) / TIME_DTSEC_ATMOS_DA )
   fcst_cnt = 0
   fcst_cnt_mem = 0
   dafcst_step = -1
@@ -236,9 +235,9 @@ program dacycle
   ! for each dacycle-forecast member
   if ( .not. myrank_use_da ) then 
     fmem_idx = int( myrank_da / nprocs_d ) + 1
-    TIME_NSTEP = int( ( TIME_DTSEC_ATMOS_RESTART * real( dafcst_list_last(fmem_idx), kind=DP ) + &
+    TIME_NSTEP = int( ( TIME_DTSEC_ATMOS_DA * real( dafcst_list_last(fmem_idx), kind=DP ) + &
                         DACYCLE_RUN_FCST_TIME ) / TIME_DTSEC )     
-    dafcst_step_max = int( DACYCLE_RUN_FCST_TIME / TIME_DTSEC_ATMOS_RESTART )
+    dafcst_step_max = int( DACYCLE_RUN_FCST_TIME / TIME_DTSEC_ATMOS_DA )
   endif
 
   if ( ICYC_DACYCLE_RUN_ANALYSIS == 1 ) then
@@ -326,7 +325,7 @@ program dacycle
 
     ! restart output before LETKF
     if (DIRECT_TRANSFER) then
-!      if (LOG_LEVEL >= 3 .and. TIME_DOATMOS_restart .and. myrank_da == 0) then
+!      if (LOG_LEVEL >= 3 .and. TIME_DOATMOS_DA .and. myrank_da == 0) then
 !        write (6, '(A,I6,A)') '[Info] Cycle #', icycle, ': Use direct transfer; skip writing restart files before LETKF'
 !      end if
     else
@@ -348,14 +347,14 @@ program dacycle
     call MONITOR_write('MAIN', TIME_NOWSTEP)
     call FILE_HISTORY_write
 
-    if (TIME_DOATMOS_restart) then
+    if (TIME_DOATMOS_DA) then
       icycle = icycle + 1
     endif
 
     !-------------------------------------------------------------------------
     ! LETKF section start
     !-------------------------------------------------------------------------
-    if (TIME_DOATMOS_restart .and. myrank_use_da .and. icycle >= icycle_init ) then
+    if (TIME_DOATMOS_DA .and. myrank_use_da .and. icycle >= icycle_init ) then
 
       call mpi_timer('SCALE', 1, barrier=MPI_COMM_da)
       if ( myrank_da == 0 ) then
@@ -387,7 +386,7 @@ program dacycle
       ! LETKF setups
       !-----------------------------------------------------------------------
 
-      call timelabel_update(TIME_DTSEC_ATMOS_RESTART)
+      call timelabel_update(TIME_DTSEC_ATMOS_DA)
 
       if ( icycle == icycle_init ) then
         call set_common_obs_scale
@@ -613,13 +612,13 @@ program dacycle
         call write_pawr_direct( trim(fstimelabel(1:15)), 2 )
       endif
 
-    end if ! [ TIME_DOATMOS_restart .and. myrank_use_da]
+    end if ! [ TIME_DOATMOS_DA .and. myrank_use_da]
     !-------------------------------------------------------------------------
     ! LETKF section end
     !-------------------------------------------------------------------------
 
     !! Send/receive an analysis member (mean or mdet) !!
-    if ( TIME_DOATMOS_restart .and. DACYCLE_RUN_FCST ) then
+    if ( TIME_DOATMOS_DA .and. DACYCLE_RUN_FCST ) then
 
       ! Draw figure using forecast results
       if ( .not. myrank_use_da .and. ( dafcst_step >= 0 ) ) then 
@@ -674,7 +673,7 @@ program dacycle
       ! Send/receive analysis
       call send_recv_analysis_direct( fcst_cnt )
       call send_recv_analysis_others( fcst_cnt )
-!      if ( myrank_use_da .and. TIME_DOATMOS_restart ) then
+!      if ( myrank_use_da .and. TIME_DOATMOS_DA ) then
 !        call mpi_timer('SEND ANALYSIS', 1, barrier=MPI_COMM_da)
 !      endif
 
@@ -700,7 +699,7 @@ program dacycle
         endif
       endif
 
-    endif ! [ TIME_DOATMOS_restart .and. DACYCLE_RUN_FCST ]
+    endif ! [ TIME_DOATMOS_DA .and. DACYCLE_RUN_FCST ]
 
 
 
