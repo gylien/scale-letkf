@@ -1993,7 +1993,7 @@ end subroutine write_grd_all_mpi
 !-------------------------------------------------------------------------------
 subroutine plot_dafcst_mpi(timelabel, ref3d, step)
   use mod_admin_time, only: &
-    TIME_DTSEC_ATMOS_RESTART
+    TIME_DTSEC_ATMOS_DA
   use scale_atmos_grid_cartesC, only: &
      CZ => ATMOS_GRID_CARTESC_CZ
 !  use scale_atmos_hydrometeor, only: &
@@ -2037,7 +2037,7 @@ subroutine plot_dafcst_mpi(timelabel, ref3d, step)
   if (present(step)) then
     fcst_ = .true.
     header = "fcst"
-    write(ftsec,'(I4.4)')  step * int(TIME_DTSEC_ATMOS_RESTART)
+    write(ftsec,'(I4.4)')  step * int(TIME_DTSEC_ATMOS_DA)
     footer_fcst = "_FT" // ftsec // "s"
   end if
 

@@ -1189,7 +1189,7 @@ subroutine set_dafcst( ncycle, dafcst_slist, dafcst_list_last, dafcst_list_sum )
     TIME_NOWDATE, &
     TIME_gettimelabel
   use mod_admin_time, only: &
-    TIME_DTSEC_ATMOS_RESTART
+    TIME_DTSEC_ATMOS_DA
   use common_scale, only: &
     advance_nowdate
   use scale_precision, only: &
@@ -1223,7 +1223,7 @@ subroutine set_dafcst( ncycle, dafcst_slist, dafcst_list_last, dafcst_list_sum )
   mem_f = 0
   do n = 1, ncycle
 
-    call advance_nowdate( TIME_NOWDATE, TIME_DTSEC_ATMOS_RESTART )
+    call advance_nowdate( TIME_NOWDATE, TIME_DTSEC_ATMOS_DA )
     call TIME_gettimelabel( timelabel )
 
     if ( ( n >= ICYC_DACYCLE_RUN_FCST ) .and. ( nf < MAX_DACYCLE_RUN_FCST ) ) then
@@ -1254,7 +1254,7 @@ subroutine set_dafcst( ncycle, dafcst_slist, dafcst_list_last, dafcst_list_sum )
 
     if ( NUM_DACYCLE_FCST_MEM > 0 ) then
       do n = 1, ncycle
-        call advance_nowdate( TIME_NOWDATE, TIME_DTSEC_ATMOS_RESTART )
+        call advance_nowdate( TIME_NOWDATE, TIME_DTSEC_ATMOS_DA )
         call TIME_gettimelabel( timelabel )
   
         write(6,'(i9,1x,a15,1x,' // trim(str) // 'l3)') n, timelabel(1:15), dafcst_slist(n,1:NUM_DACYCLE_FCST_MEM)
