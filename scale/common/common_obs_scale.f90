@@ -159,6 +159,7 @@ MODULE common_obs_scale
   integer, allocatable, save :: obsdep_qc(:)       ! 
   real(r_size), allocatable, save :: obsdep_omb(:) ! 
   real(r_size), allocatable, save :: obsdep_oma(:) ! 
+  real(r_size), allocatable, save :: obsdep_ombm(:,:) ! 
 
   REAL(r_size),SAVE :: MIN_RADAR_REF
   REAL(r_size),SAVE :: RADAR_REF_THRES
@@ -1361,6 +1362,7 @@ END SUBROUTINE itpl_3d
 subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
   use scale_prc, only: &
       PRC_myrank
+  use common_nml, only: MEMBER 
 
   implicit none
 
@@ -1444,6 +1446,7 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
     allocate (obsdep_qc (obsdep_nobs))
     allocate (obsdep_omb(obsdep_nobs))
     allocate (obsdep_oma(obsdep_nobs))
+    allocate (obsdep_ombm(obsdep_nobs,MEMBER))
   end if
 
   oqc = -1
@@ -1570,6 +1573,11 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
         end if                             !
         obsdep_oma(n) = ohx(n)
       end if
+
+
+!!! ensemble perturbation output
+      obsdep_ombm(n,:)=obsda_sort%ensval(:,nn)
+
 
       if (LOG_LEVEL >= 3) then
         write (6, '(2I6,2F8.2,4F12.4,I3)') &
@@ -2342,7 +2350,7 @@ SUBROUTINE write_obs_da(cfile,obsda,im,append)
   RETURN
 END SUBROUTINE write_obs_da
 
-subroutine write_obs_dep(cfile, nobs, set, idx, qc, omb, oma)
+subroutine write_obs_dep(cfile, nobs, set, idx, qc, omb, oma, ombm)
   implicit none
   character(*), intent(in) :: cfile
   integer, intent(in) :: nobs
@@ -2351,13 +2359,16 @@ subroutine write_obs_dep(cfile, nobs, set, idx, qc, omb, oma)
   integer, intent(in) :: qc(nobs)
   real(r_size), intent(in) :: omb(nobs)
   real(r_size), intent(in) :: oma(nobs)
+  real(r_size), intent(in) :: ombm(nobs,MEMBER)
 
   real(r_sngl) :: wk(11)
+  real(r_sngl) :: wk_ext(MEMBER)
   integer :: n, iunit
 
   iunit=92
 
   open (iunit, file=cfile, form='unformatted', access='sequential')
+
   do n = 1, nobs
     wk(1) = real(obs(set(n))%elm(idx(n)), r_sngl)
     wk(2) = real(obs(set(n))%lon(idx(n)), r_sngl)
@@ -2370,6 +2381,7 @@ subroutine write_obs_dep(cfile, nobs, set, idx, qc, omb, oma)
     wk(9) = real(qc(n), r_sngl)
     wk(10) = real(omb(n), r_sngl)
     wk(11) = real(oma(n), r_sngl)
+    wk_ext(1:MEMBER) = real(ombm(n,1:MEMBER), r_sngl)
     select case (nint(wk(1)))
     case (id_u_obs)
       wk(4) = wk(4) * 0.01 ! Pa -> hPa
@@ -2393,8 +2405,10 @@ subroutine write_obs_dep(cfile, nobs, set, idx, qc, omb, oma)
       wk(6) = wk(6) * 0.01 ! Pa -> hPa
     end select
     write (iunit) wk
+    write (iunit) wk_ext
   end do
   close (iunit)
+
 
   return
 end subroutine write_obs_dep
