@@ -5,7 +5,11 @@ time_end_fmt=`cat ../../admin_cycle.time`
 time_end=`date -d "$time_end_fmt" +%Y%m%d%H%M%S`
 time_start=`date -d "-6 day $time_end_fmt" +%Y%m%d%H%M%S`
 
-BASEDIR=/work/hp150019/share/SCALE-LETKF-rt/result/ope/d1
+wkdir="$( cd "$( dirname "$0" )" && pwd )"
+
+cd ${wkdir}
+
+BASEDIR=$wkdir/../../../result/ope/d1
 RECDIR=./data
 
 vars_u=( X X U V T Q PS ) 
@@ -51,7 +55,7 @@ for step in anal gues ;do
  tac ./data/$recfile  > ./data_inv/$recfile
 done
  cd ./draw
- dclfrt draw_${vars_l[$varnum]}.f90
+ dclfrt draw_${vars_l[$varnum]}_num.f90
  ./a.out
  cd -
 done

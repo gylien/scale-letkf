@@ -6,19 +6,19 @@ integer,parameter::nrec=20
 real(4)::bias_a(nrec)
 real(4)::rmse_a(nrec)
 character*5::cdate(nrec)
+
 integer::ndata(nrec)
 
 real(4)::bias_g(nrec)
 real(4)::rmse_g(nrec)
 
+character*30::cfile_a='../data_inv/ps_anal.txt'
+character*30::cfile_g='../data_inv/ps_gues.txt'
 
-character*30::cfile_a='../data_inv/q_anal.txt'
-character*30::cfile_g='../data_inv/q_gues.txt'
+character*30::ctitle1='PS'
+character*30::ctitle2='(hPa)'
 
-character*30::ctitle1='Q'
-character*30::ctitle2='(g/kg)'
-
-character*30::psfile='../figs/q_letkf'
+character*30::psfile='../figs/ps_letkf'
 
 real(4),parameter::xmax_window=6.0 !!! day
 real(4),parameter::vmin_rmse=0.0
@@ -27,11 +27,12 @@ real(4),parameter::btic_rmse=1.0
 real(4),parameter::vmin_bias=-2.0
 real(4),parameter::vmax_bias= 2.0
 real(4),parameter::btic_bias=1.0
-real(4),parameter::vmin_num= 0.0
-real(4),parameter::vmax_num=2000.0
-real(4),parameter::btic_num=1000.0
+real(4),parameter::vmin_num=700.0
+real(4),parameter::vmax_num=1100.0
+real(4),parameter::btic_num=200.0
 
-real(4),parameter::factor=1000.0
+
+real(4),parameter::factor=0.01
 
 
 end module setup
@@ -145,7 +146,7 @@ iout=2
 
       do il=1,nls
        xloc=real(int(xmin))+0.25* real(il-1)
-       write(*,*) il,xloc
+!       write(*,*) il,xloc
        ithck=1
        if (il.le.nrec.and.cdate(il).ne.'') ithck=3
        call uulinz (2,(/xloc,xloc/),(/vmin_rmse,vmax_rmse/),3,40+ithck)
@@ -209,7 +210,7 @@ bmtics=btic_bias
 
       do il=1,nls
        xloc=real(int(xmin))+0.25* real(il-1)
-       write(*,*) il,xloc
+!       write(*,*) il,xloc
        ithck=1
        if (il.le.nrec.and.cdate(il).ne.'') ithck=3
        call uulinz (2,(/xloc,xloc/),(/vmin,vmax/),3,40+ithck)
@@ -228,11 +229,11 @@ bmtics=btic_bias
       call uzrset ('RSIZET1',0.004)
 
 
-!      call uzlset ('LABELXB',.TRUE.)
       call uzlset ('LABELXB',.FALSE.)
       call uzlset ('LABELXT',.FALSE.)
 
       call uziset ('ICENTXB',0) !!! centering
+
 !      call uxaxdv ('B',astics,amtics)
 !      call uxaxdv ('T',astics,amtics)
 
@@ -253,9 +254,8 @@ bmtics=btic_bias
 
       call uysttl ('L','BIAS',0.0)
       call sglset ('LCLIP',.FALSE.) ! Cliping
-
-
-
+     
+      
 vmin=vmin_num
 vmax=vmax_num
 bstics=btic_num
@@ -296,13 +296,13 @@ bmtics=btic_num
       call uzrset ('RSIZET2',0.010)
       call uzrset ('RSIZET1',0.004)
 
-
       call uzlset ('LABELXB',.TRUE.)
       call uzlset ('LABELXT',.FALSE.)
 
       call uziset ('ICENTXB',0) !!! centering
 !      call uxaxdv ('B',astics,amtics)
 !      call uxaxdv ('T',astics,amtics)
+      call uziset ('IROTCYL',1)
 
 !      call ucxacl ('B', 20190401, 6)
 !      call ucxacl ('T', 20190401, 6)
@@ -322,12 +322,9 @@ bmtics=btic_num
       call uysttl ('L','# of obs',0.0)
       call sglset ('LCLIP',.FALSE.) ! Cliping
      
-      
-
 
 
       call grcls
-
 
 
 

@@ -11,27 +11,25 @@ integer::ndata(nrec)
 real(4)::bias_g(nrec)
 real(4)::rmse_g(nrec)
 
+character*30::cfile_a='../data_inv/v_anal.txt'
+character*30::cfile_g='../data_inv/v_gues.txt'
 
-character*30::cfile_a='../data_inv/q_anal.txt'
-character*30::cfile_g='../data_inv/q_gues.txt'
+character*30::ctitle1='V'
+character*30::ctitle2='(m/s)'
 
-character*30::ctitle1='Q'
-character*30::ctitle2='(g/kg)'
-
-character*30::psfile='../figs/q_letkf'
+character*30::psfile='../figs/v_letkf'
 
 real(4),parameter::xmax_window=6.0 !!! day
 real(4),parameter::vmin_rmse=0.0
 real(4),parameter::vmax_rmse=4.0
 real(4),parameter::btic_rmse=1.0
-real(4),parameter::vmin_bias=-2.0
-real(4),parameter::vmax_bias= 2.0
-real(4),parameter::btic_bias=1.0
-real(4),parameter::vmin_num= 0.0
-real(4),parameter::vmax_num=2000.0
-real(4),parameter::btic_num=1000.0
+real(4),parameter::vmin_bias=-1.0
+real(4),parameter::vmax_bias= 1.0
+real(4),parameter::btic_bias=0.5
+real(4),parameter::vmin_num=10000.0
+real(4),parameter::vmax_num=30000.0
+real(4),parameter::btic_num=10000.0
 
-real(4),parameter::factor=1000.0
 
 
 end module setup
@@ -86,10 +84,10 @@ open(12,file=trim(cfile_g),form='formatted')
  end do
 close(12)
 
-bias_a(1:nrec)=bias_a(nrec:1:-1) * factor
-rmse_a(1:nrec)=rmse_a(nrec:1:-1) * factor
-bias_g(1:nrec)=bias_g(nrec:1:-1) * factor
-rmse_g(1:nrec)=rmse_g(nrec:1:-1) * factor
+bias_a(1:nrec)=bias_a(nrec:1:-1)
+rmse_a(1:nrec)=rmse_a(nrec:1:-1)
+bias_g(1:nrec)=bias_g(nrec:1:-1)
+rmse_g(1:nrec)=rmse_g(nrec:1:-1)
 ndata(1:nrec) =ndata(nrec:1:-1)
 cdate(1:nrec) =cdate(nrec:1:-1)
 
@@ -145,7 +143,7 @@ iout=2
 
       do il=1,nls
        xloc=real(int(xmin))+0.25* real(il-1)
-       write(*,*) il,xloc
+!       write(*,*) il,xloc
        ithck=1
        if (il.le.nrec.and.cdate(il).ne.'') ithck=3
        call uulinz (2,(/xloc,xloc/),(/vmin_rmse,vmax_rmse/),3,40+ithck)
@@ -209,7 +207,7 @@ bmtics=btic_bias
 
       do il=1,nls
        xloc=real(int(xmin))+0.25* real(il-1)
-       write(*,*) il,xloc
+!       write(*,*) il,xloc
        ithck=1
        if (il.le.nrec.and.cdate(il).ne.'') ithck=3
        call uulinz (2,(/xloc,xloc/),(/vmin,vmax/),3,40+ithck)
@@ -228,11 +226,10 @@ bmtics=btic_bias
       call uzrset ('RSIZET1',0.004)
 
 
-!      call uzlset ('LABELXB',.TRUE.)
       call uzlset ('LABELXB',.FALSE.)
       call uzlset ('LABELXT',.FALSE.)
-
       call uziset ('ICENTXB',0) !!! centering
+
 !      call uxaxdv ('B',astics,amtics)
 !      call uxaxdv ('T',astics,amtics)
 
@@ -253,7 +250,8 @@ bmtics=btic_bias
 
       call uysttl ('L','BIAS',0.0)
       call sglset ('LCLIP',.FALSE.) ! Cliping
-
+     
+      
 
 
 vmin=vmin_num
@@ -287,7 +285,7 @@ bmtics=btic_num
       ! **** x ,y axis ****
 
       call uzinit
-      call UYSFMT('(I4)')
+      call UYSFMT('(I5)')
       call uziset ('INDEXT2',5)
       call uziset ('INDEXL1',5)
       call uziset ('INNER',-1)
@@ -327,7 +325,6 @@ bmtics=btic_num
 
 
       call grcls
-
 
 
 
