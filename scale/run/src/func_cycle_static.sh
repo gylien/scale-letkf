@@ -985,11 +985,22 @@ while ((time <= ETIME)); do
       RESTART_OUT_ADDITIONAL_EFF_MEMBER="0,"
     fi
     if ((SPRD_OUT == 1)); then
+      mkdir -p ${OUTDIR[$d]}/${time}/anal/sprd
+      mkdir -p ${OUTDIR[$d]}/${time}/gues/sprd
+      RESTART_OUT_ADDITIONAL_BASENAME=
+      RESTART_OUT_ADDITIONAL_EFF_MEMBER=
       RESTART_OUT_ADDITIONAL_COPIES=$((RESTART_OUT_ADDITIONAL_COPIES+2))
-      RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"${OUTDIR[$d]}/${atime}/anal/sprd/init\", "
-      RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"${OUTDIR[$d]}/${atime}/gues/sprd/init\", "
+      RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"${OUTDIR[$d]}/${time}/anal/sprd/init\", "
+      RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"${OUTDIR[$d]}/${time}/gues/sprd/init\", "
       RESTART_OUT_ADDITIONAL_EFF_MEMBER="${RESTART_OUT_ADDITIONAL_EFF_MEMBER}${mmean}, ${mmean}, "
+  
+      GUES_SPRD_OUT_BASENAME="${OUTDIR[$d]}/${time}/gues/sprd/init_"
+      ANAL_SPRD_OUT_BASENAME="${OUTDIR[$d]}/${time}/anal/sprd/init_"
+    else
+      GUES_SPRD_OUT_BASENAME=""
+      ANAL_SPRD_OUT_BASENAME=""
     fi
+
 #      if ((RTPS_INFL_OUT == 1)); then
 #        RESTART_OUT_ADDITIONAL_COPIES=$((RESTART_OUT_ADDITIONAL_COPIES+1))
 #        RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"rtpsinfl.d${dfmt}\", "
@@ -1188,8 +1199,8 @@ EOF
     GUES_SPRD_OUT_FREQ=0
     ANAL_SPRD_OUT_FREQ=0
   else
-    GUES_SPRD_OUT_FREQ=100000
-    ANAL_SPRD_OUT_FREQ=100000
+    GUES_SPRD_OUT_FREQ=1
+    ANAL_SPRD_OUT_FREQ=1
   fi
   RTPS_INFL_OUT_TF='.false.'
   if ((RTPS_INFL_OUT == 1)); then
@@ -1304,11 +1315,13 @@ EOF
             -e "/!--GUES_OUT_BASENAME--/a GUES_OUT_BASENAME = \"${GUES_OUT_BASENAME}\"," \
             -e "/!--GUES_MEAN_OUT_FREQ--/a GUES_MEAN_OUT_FREQ = ${GUES_MEAN_OUT_FREQ}," \
             -e "/!--GUES_SPRD_OUT_FREQ--/a GUES_SPRD_OUT_FREQ = ${GUES_SPRD_OUT_FREQ}," \
+            -e "/!--GUES_SPRD_OUT_BASENAME--/a GUES_SPRD_OUT_BASENAME = \"${GUES_SPRD_OUT_BASENAME}\"," \
             -e "/!--ANAL_OUT_BASENAME--/a ANAL_OUT_BASENAME = \"${ANAL_OUT_BASENAME}\"," \
             -e "/!--ANAL_OUT_FREQ--/a ANAL_OUT_FREQ = 100000," \
             -e "/!--ANAL_MEAN_OUT_FREQ--/a ANAL_MEAN_OUT_FREQ = ${ANAL_MEAN_OUT_FREQ}," \
             -e "/!--ANAL_MDET_OUT_FREQ--/a ANAL_MDET_OUT_FREQ = ${ANAL_MDET_OUT_FREQ}," \
             -e "/!--ANAL_SPRD_OUT_FREQ--/a ANAL_SPRD_OUT_FREQ = ${ANAL_SPRD_OUT_FREQ}," \
+            -e "/!--ANAL_SPRD_OUT_BASENAME--/a ANAL_SPRD_OUT_BASENAME = \"${ANAL_SPRD_OUT_BASENAME}\"," \
             -e "/!--GUES_ANAL_POSTFIX_TIMELABEL--/a GUES_ANAL_POSTFIX_TIMELABEL = ${GUES_ANAL_POSTFIX_TIMELABEL_TF}," \
             -e "/!--LETKF_TOPO_IN_BASENAME--/a LETKF_TOPO_IN_BASENAME = \"${DATA_TOPO}/const/topo/topo\"," \
             -e "/!--INFL_ADD_IN_BASENAME--/a INFL_ADD_IN_BASENAME = \"${OUTDIR[$d]}/const/addi/init\"," \

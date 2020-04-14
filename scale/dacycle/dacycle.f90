@@ -332,7 +332,9 @@ program dacycle
     else
       call ADMIN_restart_write
     end if
-    call ADMIN_restart_write_additional !!!!!! To do: control additional restart outputs for gues_mean, gues_sprd, and anal_sprd
+    if ( myrank_use_da .and. myrank_e == mmean_rank_e ) then
+      call ADMIN_restart_write_additional !!!!!! To do: control additional restart outputs for gues_mean, gues_sprd, and anal_sprd
+    endif
 
     ! calc tendencies and diagnostices
     if( ATMOS_do .AND. TIME_DOATMOS_step ) call ATMOS_driver_calc_tendency( force = .false. )
@@ -504,8 +506,9 @@ program dacycle
         call write_pawr_direct( trim(fstimelabel(1:15)), 1 )
       endif
 
-      if (gues_sprd_out_now) then
-        call write_enssprd(trim(GUES_SPRD_OUT_BASENAME) // trim(timelabel_anal), gues3d, gues2d)
+      if ( gues_sprd_out_now ) then
+        call TIME_gettimelabel(fstimelabel)
+        call write_enssprd(trim(GUES_SPRD_OUT_BASENAME) // trim(fstimelabel), gues3d, gues2d)
       end if
 
       call mpi_timer('GUES_MEAN', 1, barrier=MPI_COMM_da)
@@ -535,8 +538,9 @@ program dacycle
       call ensmean_grd(MEMBER, nens, nij1, anal3d, anal2d)
       ! write analysis mean later in write_ens_mpi
 
-      if (anal_sprd_out_now) then
-        call write_enssprd(trim(ANAL_SPRD_OUT_BASENAME) // trim(timelabel_anal), anal3d, anal2d)
+      if ( anal_sprd_out_now ) then
+        call TIME_gettimelabel(fstimelabel)
+        call write_enssprd(trim(ANAL_SPRD_OUT_BASENAME) // trim(fstimelabel), anal3d, anal2d)
       end if
 
       call mpi_timer('ANAL_MEAN', 1, barrier=MPI_COMM_da)
