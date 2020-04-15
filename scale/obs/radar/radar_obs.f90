@@ -1180,6 +1180,12 @@ subroutine read_obs_radar_toshiba(cfile, obs)
       obs%lat(n) = grid_lat_ze(idx)
       obs%lev(n) = grid_z_ze(idx)
       obs%dat(n) = grid_ze(idx)
+      ! Add RADAR_BIAS_CONST_DBZ in dBZ
+      if ( RADAR_BIAS_COR_RAIN .and. grid_ze(idx) > MIN_RADAR_REF ) then 
+        obs%dat(n) = grid_ze(idx) * RADAR_BIAS_RAIN_CONST
+      elseif ( RADAR_BIAS_COR_CLR .and. grid_ze(idx) < MIN_RADAR_REF )  then
+        obs%dat(n) = grid_ze(idx) * RADAR_BIAS_CLR_CONST
+      endif
       obs%err(n) = OBSERR_RADAR_REF
       obs%typ(n) = 22
       obs%dif(n) = 0.0d0
@@ -1193,7 +1199,12 @@ subroutine read_obs_radar_toshiba(cfile, obs)
         obs_ref%lon(n_ref) = grid_lon_ze(idx)
         obs_ref%lat(n_ref) = grid_lat_ze(idx)
         obs_ref%lev(n_ref) = grid_z_ze(idx)
-        obs_ref%dat(n_ref) = grid_ze(idx)
+        if ( RADAR_BIAS_COR_RAIN ) then
+          ! Add RADAR_BIAS_CONST_DBZ in dBZ
+          obs_ref%dat(n_ref) = grid_ze(idx) * RADAR_BIAS_RAIN_CONST
+        else
+          obs_ref%dat(n_ref) = grid_ze(idx)
+        end if
       end if
     end if
 
@@ -1419,6 +1430,12 @@ subroutine read_obs_radar_jrc(cfile, obs)
           obs%lat(n) = real(lat1d(j), kind=r_size)
           obs%lev(n) = real(z1d(k), kind=r_size)
           obs%dat(n) = real(zh3d(i,j,k) * sf_zh, kind=r_size)
+          ! Add RADAR_BIAS_CONST_DBZ in dBZ
+          if ( RADAR_BIAS_COR_RAIN .and. obs%dat(n) > MIN_RADAR_REF ) then
+            obs%dat(n) = real(zh3d(i,j,k) * sf_zh, kind=r_size) * RADAR_BIAS_RAIN_CONST
+          elseif ( RADAR_BIAS_COR_CLR .and. obs%dat(n) < MIN_RADAR_REF ) then
+            obs%dat(n) = real(zh3d(i,j,k) * sf_zh, kind=r_size) * RADAR_BIAS_CLR_CONST
+          endif
           obs%err(n) = OBSERR_RADAR_REF
           obs%typ(n) = 22
           obs%dif(n) = 0.0_r_size

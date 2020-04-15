@@ -330,6 +330,11 @@ MODULE common_nml
   integer :: RADAR_THIN_HORI = 1 ! Thinning horizontal interval (# of grids)
   integer :: RADAR_THIN_VERT = 1 ! Thinning vertical interval (# of grids)
 
+  logical :: RADAR_BIAS_COR_RAIN = .false. ! Simple bias correction for radar obs (rain)
+  logical :: RADAR_BIAS_COR_CLR = .false. ! Simple bias correction for radar obs (clear sky)
+  real(r_size) :: RADAR_BIAS_RAIN_CONST_DBZ = 0.0_r_size ! Simply bias correction for radar obs (rain)
+  real(r_size) :: RADAR_BIAS_CLR_CONST_DBZ = 0.0_r_size ! Simply bias correction for radar obs (clear sky)
+
   !---PARAM_LETKF_H08
   logical :: H08_REJECT_LAND = .false. ! true: reject Himawari-8 radiance over the land
   logical :: H08_RTTOV_CLD = .true. ! true: all-sky, false: CSR in RTTOV fwd model
@@ -1043,6 +1048,10 @@ subroutine read_nml_letkf_radar
     RADAR_SO_SIZE_VERT, &
     RADAR_THIN_HORI, &
     RADAR_THIN_VERT, &
+    RADAR_BIAS_COR_RAIN, &
+    RADAR_BIAS_COR_CLR, &
+    RADAR_BIAS_RAIN_CONST_DBZ, &
+    RADAR_BIAS_CLR_CONST_DBZ, &
     RADAR_MAX_ABS_VR, &
     USE_METHOD3_REF_MELT
 
