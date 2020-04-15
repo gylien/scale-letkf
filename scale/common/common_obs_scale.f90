@@ -153,6 +153,8 @@ MODULE common_obs_scale
 
   REAL(r_size),SAVE :: MIN_RADAR_REF
   REAL(r_size),SAVE :: RADAR_REF_THRES
+  real(r_size), save :: RADAR_BIAS_RAIN_CONST
+  real(r_size), save :: RADAR_BIAS_CLR_CONST
 
 CONTAINS
 
@@ -241,6 +243,8 @@ subroutine set_common_obs_scale
 
   MIN_RADAR_REF = 10.0d0 ** (MIN_RADAR_REF_DBZ/10.0d0)
   RADAR_REF_THRES = 10.0d0 ** (RADAR_REF_THRES_DBZ/10.0d0)
+  RADAR_BIAS_RAIN_CONST = 10.0d0 ** ( RADAR_BIAS_RAIN_CONST_DBZ / 10.0d0 )
+  RADAR_BIAS_CLR_CONST = 10.0d0 ** ( RADAR_BIAS_CLR_CONST_DBZ / 10.0d0 )
 
   return
 end subroutine set_common_obs_scale
