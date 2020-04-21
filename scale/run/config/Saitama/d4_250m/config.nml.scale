@@ -30,11 +30,11 @@
  TIME_DT_ATMOS_PHY_SF_UNIT  = "SEC",
  TIME_DT_ATMOS_PHY_BL       = 5.0D0,
  TIME_DT_ATMOS_PHY_BL_UNIT  = "SEC",
- TIME_DT_OCEAN              = 5.D0,
+ TIME_DT_OCEAN              = 2.D0,
  TIME_DT_OCEAN_UNIT         = "SEC",
- TIME_DT_LAND               = 5.D0,
+ TIME_DT_LAND               = 2.D0,
  TIME_DT_LAND_UNIT          = "SEC",
- TIME_DT_URBAN              = 5.D0,
+ TIME_DT_URBAN              = 2.D0,
  TIME_DT_URBAN_UNIT         = "SEC",
 !--TIME_DT_ATMOS_RESTART--
  TIME_DT_ATMOS_RESTART_UNIT = "SEC",
@@ -215,7 +215,7 @@
 #################################################
 
 &PARAM_ATMOS_VARS
- ATMOS_VARS_CHECKRANGE = .true.,
+ ATMOS_VARS_CHECKRANGE = .false.,
 /
 
 &PARAM_ATMOS_REFSTATE
@@ -291,7 +291,7 @@
 #################################################
 
 &PARAM_OCEAN_VARS
- OCEAN_VARS_CHECKRANGE = .true.,
+ OCEAN_VARS_CHECKRANGE = .false.,
 /
 
 &PARAM_OCEAN_DYN_SLAB
