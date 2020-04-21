@@ -635,6 +635,14 @@ subroutine cld_mfasis_fwd(nchannels,&
 
   use rttov_unix_env, only : rttov_exit
 
+  ! The rttov_emis_atlas_data type must be imported separately
+  use mod_rttov_emis_atlas, only : &
+        rttov_emis_atlas_data, &
+        atlas_type_ir, atlas_type_mw
+         
+  ! The rttov_brdf_atlas_data type must be imported separately
+  use mod_rttov_brdf_atlas, only : rttov_brdf_atlas_data
+
   use common, only : r_size
   use scale_const, only: &
         Rdry    => CONST_Rdry, &
@@ -645,7 +653,8 @@ subroutine cld_mfasis_fwd(nchannels,&
         H08_RTTOV_MinQ, &
         H08_RTTOV_CFRAC_CNST, &
         H08_RTTOV_CLD, &
-        H08_RTTOV_NTHREAD
+        H08_RTTOV_NTHREAD, &
+        H08_NOWDATE
   implicit none
 
 #include "rttov_direct.interface"
@@ -658,6 +667,16 @@ subroutine cld_mfasis_fwd(nchannels,&
 #include "rttov_print_profile.interface"
 #include "rttov_print_radiance_quality.interface"
 #include "rttov_skipcommentline.interface"
+
+! Use emissivity atlas
+#include "rttov_setup_emis_atlas.interface"
+#include "rttov_get_emis.interface"
+#include "rttov_deallocate_emis_atlas.interface"
+
+! Use BRDF atlas
+#include "rttov_setup_brdf_atlas.interface"
+#include "rttov_get_brdf.interface"
+#include "rttov_deallocate_brdf_atlas.interface"
 
   ! RTTOV variables/structures
   !====================
@@ -674,7 +693,11 @@ subroutine cld_mfasis_fwd(nchannels,&
 
   integer(kind=jpim)               :: errorstatus              ! Return error status of RTTOV subroutine calls
 
+  integer(kind=jpim) :: atlas_type
   integer(kind=jpim) :: alloc_status
+
+  type(rttov_emis_atlas_data)      :: emis_atlas               ! Data structure for emissivity atlas
+  type(rttov_brdf_atlas_data)      :: brdf_atlas               ! Data structure for BRDF atlas
 
   ! variables for input
   !====================
@@ -904,6 +927,47 @@ subroutine cld_mfasis_fwd(nchannels,&
     call rttov_exit(errorstatus)
   endif
 
+
+
+! example_atlas_fwd.F90
+!
+  ! Initialise the RTTOV emissivity atlas
+  ! (this loads the default IR/MW atlases: use the atlas_id argument to select
+  ! alternative atlases)
+  atlas_type = atlas_type_ir ! IR atlas
+  CALL rttov_setup_emis_atlas(          &
+              errorstatus,              &
+              opts,                     &
+              H08_NOWDATE(2),           &
+              atlas_type,               & ! Selects MW (1) or IR (2)
+              emis_atlas,               &
+              path = '/work/hp150019/share/honda/RTTOV12.3_HDF/emis_data', & ! The default path to atlas data
+              coefs = coefs) ! This is mandatory for the CNRM MW atlas, ignored by TELSEM2;
+                             ! if supplied for IR atlases they are initialised
+                             ! for this sensor
+                             ! and this makes the atlas much faster to access
+  IF (errorstatus /= errorstatus_success) THEN
+    WRITE(*,*) 'error initialising emissivity atlas'
+    CALL rttov_exit(errorstatus)
+  ENDIF
+
+
+
+    ! Initialise the RTTOV BRDF atlas
+    CALL rttov_setup_brdf_atlas(        &
+                errorstatus,            &
+                opts,                   &
+                H08_NOWDATE(2),         &
+                brdf_atlas,             &
+                path='/work/hp150019/share/honda/RTTOV12.3_HDF/brdf_data', &  ! The default path to atlas data
+                coefs = coefs) ! If supplied the BRDF atlas is initialised for this sensor and
+                               ! this makes the atlas much faster to access
+    IF (errorstatus /= errorstatus_success) THEN
+      WRITE(*,*) 'error initialising BRDF atlas'
+      CALL rttov_exit(errorstatus)
+    ENDIF
+
+
   ! --------------------------------------------------------------------------
   ! 4. Build the list of profile/channel indices in chanprof
   ! --------------------------------------------------------------------------
@@ -1061,19 +1125,54 @@ subroutine cld_mfasis_fwd(nchannels,&
   ! 6. Specify surface emissivity and reflectance
   ! --------------------------------------------------------------------------
 
-  ! In this example we have no values for input emissivities
-  emissivity(:) % emis_in = 0._jprb
+  ! Use emissivity atlas
+  CALL rttov_get_emis(             &
+            errorstatus,           &
+            opts,                  &
+            chanprof,              &
+            profiles,              &
+            coefs,                 &
+            emis_atlas,            &
+            emissivity(:) % emis_in)
+  IF (errorstatus /= errorstatus_success) THEN
+    WRITE(*,*) 'error reading emissivity atlas'
+    CALL rttov_exit(errorstatus)
+  ENDIF
 
-  ! Calculate emissivity within RTTOV where the input emissivity value is
-  ! zero or less (all channels in this case)
+  ! Calculate emissivity within RTTOV where the atlas emissivity value is
+  ! zero or less
   calcemis(:) = (emissivity(:) % emis_in <= 0._jprb)
 
-  ! In this example we have no values for input reflectances
-  reflectance(:) % refl_in = 0._jprb
+ ! Use BRDF atlas
+  CALL rttov_get_brdf(              &
+            errorstatus,            &
+            opts,                   &
+            chanprof,               &
+            profiles,               &
+            coefs,                  &
+            brdf_atlas,             &
+            reflectance(:) % refl_in)
+  IF (errorstatus /= errorstatus_success) THEN
+    WRITE(*,*) 'error reading BRDF atlas'
+    CALL rttov_exit(errorstatus)
+  ENDIF
 
-  ! Calculate BRDF within RTTOV where the input BRDF value is zero or less
-  ! (all channels in this case)
+  ! Calculate BRDF within RTTOV where the atlas BRDF value is zero or less
   calcrefl(:) = (reflectance(:) % refl_in <= 0._jprb)
+
+!  ! In this example we have no values for input emissivities
+!  emissivity(:) % emis_in = 0._jprb
+
+!  ! Calculate emissivity within RTTOV where the input emissivity value is
+!  ! zero or less (all channels in this case)
+!  calcemis(:) = (emissivity(:) % emis_in <= 0._jprb)
+
+!  ! In this example we have no values for input reflectances
+!  reflectance(:) % refl_in = 0._jprb
+
+!  ! Calculate BRDF within RTTOV where the input BRDF value is zero or less
+!  ! (all channels in this case)
+!  calcrefl(:) = (reflectance(:) % refl_in <= 0._jprb)
 
   ! Use default cloud top BRDF for simple cloud in VIS/NIR channels
   reflectance(:) % refl_cloud_top = 0._jprb

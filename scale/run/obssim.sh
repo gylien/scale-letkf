@@ -11,16 +11,31 @@ EXP=test03km
 RTTOV_THREADS=4
 RTTOV_ITMAX=3
 
+RSCGRP='debug-flat'
+RSCGRP='regular-flat'
+#RSCGRP='regular-cache'
+
+SMEM=1 # 
+EMEM=${SMEM} # mean # DEBUG
+SMEM=1
+EMEM=200
+SMEM=201
+EMEM=400
+SMEM=401
+EMEM=600
+SMEM=601
+EMEM=800
+SMEM=801
+EMEM=1000
+MEM_L=`seq ${SMEM} ${EMEM}`
+
+
+
 #
 LETKF_RUN="$(pwd)"
-if ((MICRO == 1)) ; then
-  SWDIR="/scratch/$(id -ng)/${USER}/obssim"
-  MODE="micro"
-else
-  SWDIR="$(pwd)/../tmp_obssim" # Not scratch
-  MODE="large"
-  rm -rf $SWDIR
-fi
+SWDIR="$(pwd)/../tmp_obssim_${SMEM}_${EMEM}" # Not scratch
+MODE="large"
+rm -rf $SWDIR
 
 OBSSIM_BIN="${LETKF_RUN}/../obs/obssim"
 RUNSH=$SWDIR/OBSSIM.sh
@@ -41,9 +56,12 @@ tstart='2016-06-01 12:00:00'
 tend=$tstart
 
 OBSSIM_TIME_START=2
-#OBSSIM_TIME_END=5
-#OBSSIM_TIME_START=3
+OBSSIM_TIME_START=3
+OBSSIM_TIME_START=4
 OBSSIM_TIME_START=5
+OBSSIM_TIME_END=5
+#OBSSIM_TIME_START=3
+#OBSSIM_TIME_START=5
 #OBSSIM_TIME_START=1
 OBSSIM_TIME_END=$OBSSIM_TIME_START
 
@@ -75,13 +93,6 @@ TYPE=fcst
 #FHEAD=init
 OBSSIM_IN_TYPE=history
 FHEAD=history
-
-SMEM=1 # 
-EMEM=${SMEM} # mean # DEBUG
-#EMEM=1 
-SMEM=1
-EMEM=1
-MEM_L=`seq ${SMEM} ${EMEM}`
 
 
 
@@ -176,11 +187,15 @@ cat << EOF >> $RUNSH
 #PJM -L rscgrp=${RSCGRP}
 #PJM -N VIS_OBSSIM
 #PJM -L node=$NNODE_TOTAL
-#PJM -L elapse=00:30:00
+#PJM -L elapse=01:00:00
 #PJM --mpi proc=$NP_TOTAL
 #PJM --omp thread=${RTTOV_THREADS}
 #PJM -g $(echo $(id -ng))
 #PJM -s
+
+module unload impi
+module unload intel
+module load intel/2018.1.163
 
 module load hdf5/1.8.17
 module load netcdf/4.4.1
@@ -212,11 +227,11 @@ EOF
 ctime="$tstart"
 STIME=$(date -ud "$ctime" '+%Y%m%d%H%M%S')
 
-if (( MICRO != 1 )) ; then
-  echo "#PJM --stgin-dir \"${SWDIR} ./ recursive=10\"" >> ${RUNSH}
-  echo "#PJM --stgout-dir \"./out/${EXP}/${TYPE} $OUTDIR/${STIME}/obssim recursive=10\"" >> ${RUNSH}
-#  echo "#PJM --stgout-dir \"./out ${SWDIR}/out recursive=10\"" >> ${RUNSH}
-fi
+#if (( MICRO != 1 )) ; then
+#  echo "#PJM --stgin-dir \"${SWDIR} ./ recursive=10\"" >> ${RUNSH}
+#  echo "#PJM --stgout-dir \"./out/${EXP}/${TYPE} $OUTDIR/${STIME}/obssim recursive=10\"" >> ${RUNSH}
+##  echo "#PJM --stgout-dir \"./out ${SWDIR}/out recursive=10\"" >> ${RUNSH}
+#fi
 
 
 #-- copy init file
@@ -247,13 +262,8 @@ while (($(date -ud "$ctime" '+%s') <= $(date -ud "$tend" '+%s'))); do # -- time
      MEM=$(printf '%04d' $MEM)
   fi
 
-  if (( MICRO == 1 )) ; then
-#    ONAME=${SWDIR}/out/${EXP}/${TYPE}/Him8_${HTIME}_${MEM}.dat
-    ONAME=${SWDIR}/out/${EXP}/${TYPE}/Him8_${HTIME}_${MEM}
-  else
-#    ONAME=./out/${EXP}/${TYPE}/Him8_${HTIME}_${MEM}.dat
-    ONAME=./out/${EXP}/${TYPE}/Him8_${HTIME}_${MEM}
-  fi
+#  ONAME=./out/${EXP}/${TYPE}/Him8_${HTIME}_${MEM}
+  ONAME=${INDIR}/${HTIME}/obssim/Him8_${HTIME}_${MEM}
 
   #-- copy bin & RTTOV coef files
 
@@ -285,24 +295,18 @@ while (($(date -ud "$ctime" '+%s') <= $(date -ud "$tend" '+%s'))); do # -- time
     mkdir -p ${DAT_DIR}
   fi
 
-  cp ${ORG_DIR}/${FHEAD}.pe*[0,1].nc ${DAT_DIR}/ &
-  cp ${ORG_DIR}/${FHEAD}.pe*[2,3].nc ${DAT_DIR}/ &
-  cp ${ORG_DIR}/${FHEAD}.pe*[4,5].nc ${DAT_DIR}/ &
-  cp ${ORG_DIR}/${FHEAD}.pe*[6,7].nc ${DAT_DIR}/ 
-  wait
+#  cp ${ORG_DIR}/${FHEAD}.pe*[0,1].nc ${DAT_DIR}/ &
+#  cp ${ORG_DIR}/${FHEAD}.pe*[2,3].nc ${DAT_DIR}/ &
+#  cp ${ORG_DIR}/${FHEAD}.pe*[4,5].nc ${DAT_DIR}/ &
+#  cp ${ORG_DIR}/${FHEAD}.pe*[6,7].nc ${DAT_DIR}/ 
+#  wait
 
   # copy common parts of obssim.conf 
 #  RUNCONF=${SWDIR}/obssim_$(printf %03d $VCODE_CNT).conf
   RUNCONF=${SWDIR}/obssim.conf.$VCODE_CNT
-  if (( MICRO == 1 )) ; then
-    LRUNCONF=${SWDIR}/obssim_$(printf %03d $VCODE_CNT).conf
-    LDAT_DIR=$DAT_DIR
-    LDAT_TOPO=$DAT_DIR
-  else
-    LRUNCONF=./obssim_$(printf %03d $VCODE_CNT).conf
-    LDAT_DIR=./dat/${EXP}/${HTIME}/${TYPE}/${MEM}
-    LDAT_TOPO=./dat
-  fi
+  LRUNCONF=./obssim_$(printf %03d $VCODE_CNT).conf
+  LDAT_DIR=./dat/${EXP}/${HTIME}/${TYPE}/${MEM}
+  LDAT_TOPO=./dat
 
   rm -f $RUNCONF
   cat ${RUNCONF_COMMON} | \
@@ -315,8 +319,8 @@ while (($(date -ud "$ctime" '+%s') <= $(date -ud "$tend" '+%s'))); do # -- time
 cat << EOF >> $RUNCONF
 &PARAM_OBSSIM
  OBSSIM_IN_TYPE = "${OBSSIM_IN_TYPE}",
- OBSSIM_RESTART_IN_BASENAME = "${LDAT_DIR}/init",
- OBSSIM_HISTORY_IN_BASENAME = "${LDAT_DIR}/history",
+! OBSSIM_RESTART_IN_BASENAME = "${LDAT_DIR}/init",
+ OBSSIM_HISTORY_IN_BASENAME = "${ORG_DIR}/history",
  OBSSIM_TOPO_IN_BASENAME = "${LDAT_TOPO}/topo/topo",
  OBSSIM_TIME_START = ${OBSSIM_TIME_START},
  OBSSIM_TIME_END = ${OBSSIM_TIME_END},
