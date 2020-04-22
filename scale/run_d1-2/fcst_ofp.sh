@@ -14,7 +14,7 @@ cd "$(dirname "$0")"
 myname="$(basename "$0")"
 job='fcst'
 
-RCSGRP=${RCSGRP:-"regular-flat"}
+RSCGRP=${RSCGRP:-"regular-flat"}
 GNAME=${GNAME:-`id -ng`}
 
 #===============================================================================
@@ -140,7 +140,7 @@ echo "[$(datetime_now)] Create a job script '$jobscrp'"
 
 cat > $jobscrp << EOF
 #!/bin/sh
-#PJM -L rscgrp=${RCSGRP}
+#PJM -L rscgrp=${RSCGRP}
 #PJM -L node=${NNODES}
 #PJM -L elapse=${TIME_LIMIT}
 #PJM --mpi proc=$((NNODES*PPN))
@@ -148,6 +148,8 @@ cat > $jobscrp << EOF
 #PJM --omp thread=${THREADS}
 #PJM -g ${GNAME}
 ##PJM -j
+#PJM -s
+
 rm -f machinefile
 for inode in \$(cat \$I_MPI_HYDRA_HOST_FILE); do
   for ippn in \$(seq $PPN); do

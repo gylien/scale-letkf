@@ -26,7 +26,7 @@ outf = 'out/'name'_'tfilename
 'set grads off'
 
 
-'domain.gs'
+'domain_d2.gs'
 'set z 1'
 
 'set gxout shaded'
@@ -39,26 +39,31 @@ else
 endif
 'cbarn.gs 0.8 0 5.5 0.7 0.8 1'
 
+
+'sMSLP=smth9(MSLP)'
+'sMSLP=smth9(sMSLP)'
+'sMSLP=smth9(sMSLP)'
+
 'set gxout contour'
 'set cint 2'
 'set cstyle 3'
 'set ccolor 21'
 'set cthick 4'
 'set clab off'
-'d MSLP*0.01'
+'d sMSLP*0.01'
 'set gxout contour'
 'set cint 4'
 'set cstyle 1'
 'set ccolor 21'
 'set cthick 4'
 'set clab off'
-'d MSLP*0.01'
+'d sMSLP*0.01'
 'set cint 8'
 'set ccolor 21'
 'set cstyle 1'
 'set cthick 4'
 'set clab on'
-'d MSLP*0.01'
+'d sMSLP*0.01'
 
 
 'set string 1 c 5'

@@ -122,7 +122,8 @@ PPN=64              # Number of processes per node
 
 THREADS=1          # Number of threads per process
 
-SCALE_NP=1024  #D3    # Number of processes to run SCALE
+#SCALE_NP=1024  #D3    # Number of processes to run SCALE
+SCALE_NP=256  #D3    # Number of processes to run SCALE
 #SCALE_NP=64  #D3    # Number of processes to run SCALE
 
 BGJOB_INT='0.1s'   # Interval of multiple background job submissions

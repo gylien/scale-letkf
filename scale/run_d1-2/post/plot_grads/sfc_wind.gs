@@ -25,7 +25,7 @@ outf = 'out/'name'_'tfilename
 'c'
 'set grads off'
 
-'domain.gs'
+'domain_d2.gs'
 'set z 1'
 
 'set gxout shade2'

@@ -21,20 +21,14 @@ while (it <= tend)
 
 
   'sfc_prcp.gs'
-  'sfc_wind.gs'
-*  '1500m_dbz.gs'
-*  '5000m_dbz.gs'
-*  '850_theq_wind_JMA.gs'
+  'sfc_uvt.gs'
+  '1000m_prcp.gs'
+  '1000m_uvw.gs'
+  '3000m_prcp.gs'
+  '3000m_uvw.gs'
+  '5000m_prcp.gs'
+  '5000m_uvw.gs'
 
-*  'sfc_temp.gs'
-*  'sfc_accuprcp.gs'
-*  'sfc_accusnow.gs'
-*  '850_rh_temp_wind.gs'
-*  '700_vvel_hgt.gs'
-*  '500_vort_gph.gs'
-*  '300_wspd_gph.gs'
-*  'olr.gs'
-*  'max_ref.gs'
 
   it = it + tskip
 endwhile

@@ -16,7 +16,7 @@ cd "$(dirname "$0")"
 myname="$(basename "$0")"
 job='fcst'
 
-RCSGRP=${RCSGRP:-"regular-flat"}
+RSCGRP=${RSCGRP:-"regular-flat"}
 GNAME=${GNAME:-`id -ng`}
 
 #===============================================================================
@@ -160,7 +160,7 @@ NPIN=`expr 255 / \( $PPN \) + 1`
 
 cat > $jobscrp << EOF
 #!/bin/sh -l
-#PJM -L rscgrp=${RCSGRP}
+#PJM -L rscgrp=${RSCGRP}
 #PJM -L node=${NNODES}
 #PJM -L elapse=${TIME_LIMIT}
 #PJM --mpi "proc=$((NNODES*PPN))"

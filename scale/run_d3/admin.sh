@@ -40,9 +40,11 @@ FP_SUFFIX='_single'
 
 if [ "$PRESET" = 'OFP' ]; then
  if [ "$MEMBERS" = "mdet" ];then
-   NNODES=`expr \( $NMEM  \) \* 16` ### D2
+#   NNODES=`expr \( $NMEM  \) \* 16` ### D3
+   NNODES=`expr \( $NMEM  \) \* 4` ### D3
  else
-   NNODES=`expr \( $NMEM + 2 \) \* 16` ### D2
+#   NNODES=`expr \( $NMEM + 2 \) \* 16` ### D3
+   NNODES=`expr \( $NMEM + 2 \) \* 4` ### D3
     while [ $NNODES -gt 1024 ] ;do
       NNODES=`expr $NNODES \/ 2`
     done
@@ -51,9 +53,9 @@ if [ "$PRESET" = 'OFP' ]; then
  script_suffix='_ofp'
 elif [ "$PRESET" = 'OBCX' ]; then
  if [ "$MEMBERS" = "mdet" ];then
-   NNODES=`expr \( $NMEM  \) \* 64` ### D2
+   NNODES=`expr \( $NMEM  \) \* 16` ### D3
  else
-   NNODES=`expr \( $NMEM + 2 \) \* 64` ### D2
+   NNODES=`expr \( $NMEM + 2 \) \* 16` ### D3
     while [ $NNODES -gt 256 ] ;do
       NNODES=`expr $NNODES \/ 2`
     done

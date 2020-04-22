@@ -36,12 +36,12 @@ outf = 'out/'name'_'tfilename
 'cbarn.gs 0.8 0 5.5 0.7 0.8 1'
 
 'set gxout contour'
-'set cint 9'
+'set clev 70 80 90'
 'set ccolor 16'
 'set cthick 2'
 'set clopts 1'
 'set cstyle 1'
-'set clab masked'
+'set clab on'
 'd T2-273.15'
 
 

@@ -1,7 +1,5 @@
 name = 'sfc_prcp'
 
-convert = 'convert'
-
 'settime.gs'
 rcl = sublin(result, 1)
 tt = subwrd(rcl, 1)
@@ -11,7 +9,6 @@ trun = subwrd(rcl, 4)
 'setrgb.gs'
 
 outf = 'out/'name'_'tfilename
-*'enable print 'outf'.gmf'
 
 
 'set mpdset hires'
@@ -38,26 +35,25 @@ else
 endif
 'cbarn.gs 0.8 0 5.5 0.7 0.8 1'
 
+*** rh model 1st level (not R2m --TORI AEZU--)
+'srh=smth9(rh)'
+'srh=smth9(srh)'
+'srh=smth9(srh)'
+
 'set gxout contour'
-'set cint 2'
-'set cstyle 3'
-'set ccolor 21'
-'set cthick 4'
-'set clab off'
-'d MSLP*0.01'
-'set gxout contour'
-'set cint 4'
+'set clevs 70'
+'set ccolor 4'
+'set cthick 2'
 'set cstyle 1'
-'set ccolor 21'
-'set cthick 4'
-'set clab off'
-'d MSLP*0.01'
-'set cint 8'
-'set ccolor 21'
-'set cstyle 1'
-'set cthick 4'
 'set clab on'
-'d MSLP*0.01'
+'d srh'
+'set gxout contour'
+'set ccolor 4'
+'set clevs 90'
+'set cthick 4'
+'set cstyle 1'
+'set clab on'
+'d srh'
 
 
 'set string 1 c 5'
@@ -68,16 +64,4 @@ endif
 'gxprint 'outf'_tmp.png'
 '!convert -trim +repage 'outf'_tmp.png 'outf'.png'
 '!rm -f 'outf'_tmp.png'
-
-
-*'print'
-*'disable print'
-
-*'!gxeps -cR -i 'outf'.gmf'
-*'!'convert' -density 400x382 -trim +antialias +matte 'outf'.eps 'outf'_tmp.png'
-*'!'convert' -resize 25% 'outf'_tmp.png 'outf'_tmp2.png'
-*'!'pngquant' --force --quality 60-75 'outf'_tmp2.png -o 'outf'.png'
-*'!rm -f 'outf'.gmf'
-*'!rm -f 'outf'_tmp.png'
-*'!rm -f 'outf'_tmp2.png'
 

@@ -1,6 +1,6 @@
 #!/bin/bash -l
 
-TMPDIR="../tmp/scale-letkf_exp_d1"
+TMPDIR="../tmp/scale-letkf_d1"
 STIME=$1
 logfile=$TMPDIR/out/$STIME/log/scale/0001_LOG.pe000000
 

@@ -195,9 +195,10 @@ job_end_check_PJM $jobid
 res=$?
 
 
+
 STIMEf="${STIME:0:4}-${STIME:4:2}-${STIME:6:2} ${STIME:0:2}"
 export LANG=en_us
-tstamp=`date -d "$STIMEf" +%H:%mZ%d%b%Y | tr '[a-z]' '[A-Z]'`
+tstamp=`date -d "$STIMEf" +%H:%MZ%d%b%Y | tr '[a-z]' '[A-Z]'`
 
 echo 'merge...'
 for mem in  ${SNO_MEM_L} ;do # member loop
@@ -223,6 +224,7 @@ echo $STIME > plot.lock
  grads -bcl "plot_driver_d2_1h.gs $OUTDIR/$STIME/fcstgp/$mem/history.ctl 1 25 1" &> plot_driver_1h.log 
  mkdir -p $OUTDIR/$STIME/fcstgpi/$mem 
  mv out/*.png $OUTDIR/$STIME/fcstgpi/$mem/
+ mv out_d3/*.png $OUTDIR/$STIME/fcstgpi/$mem/
  rm plot.lock
 
 echo 'done.'

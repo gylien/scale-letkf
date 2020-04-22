@@ -14,7 +14,7 @@ cd "$(dirname "$0")"
 myname="$(basename "$0")"
 job='cycle'
 
-RCSGRP=${RCSGRP:-"regular-flat"}
+RSCGRP=${RSCGRP:-"regular-flat"}
 GNAME=${GNAME:-`id -ng`}
 
 #===============================================================================
@@ -149,6 +149,8 @@ cat > $jobscrp << EOF
 #PJM --omp thread=${THREADS}
 #PJM -g ${GNAME}
 ##PJM -j
+#PJM -s
+#PJM -S
 
 rm -f machinefile
 for inode in \$(cat \$I_MPI_HYDRA_HOST_FILE); do

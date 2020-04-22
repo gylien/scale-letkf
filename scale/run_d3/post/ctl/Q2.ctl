@@ -1,0 +1,11 @@
+DSET ^Q2.grd
+TITLE SCALE-RM data output
+OPTIONS BIG_ENDIAN
+UNDEF -0.99999E+31
+XDEF   192 LINEAR    138.32     0.0135
+YDEF   192 LINEAR     34.81     0.0108
+ZDEF     1 LINEAR    1    1
+TDEF <--NT-->  LINEAR  <--DATE-->   10MN
+VARS     1
+Q2    0   99 2m humidity 
+ENDVARS 
