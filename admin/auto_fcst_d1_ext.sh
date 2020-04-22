@@ -43,7 +43,7 @@ while [ "$RUN_TIME" != "$RUN_TIME_END" ] ;do
     if [ -s $INITSRC/$TIMEf/anal/mean/init.pe000000.nc ] ;then
      now="$(date -u +'%Y-%m-%d %H:%M:%S')"
      echo "$now $RUN_TIME start " 
-     nohup ./admin_fcst_d1_ext.sh "$RUN_TIME" &> admin_fcst.log.${TIMEf} &
+     nohup ./admin_fcst_d1_ext.sh "$RUN_TIME" &> /dev/null & 
      RUN_TIME="$(date -ud "$LCYCLE second $RUN_TIME" +'%Y-%m-%d %H:%M:%S')"
     sleep 30
     fi

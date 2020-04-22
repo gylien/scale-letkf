@@ -3,6 +3,9 @@
 username=$(id -nu)
 groupname=$(id -ng)
 
+export GNAME=${groupname}
+export RSCGRP="regular-flat"
+
 scale_ver="ope" 
 letkf_ver="ope" 
 expname="ope"
