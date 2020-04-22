@@ -10,7 +10,7 @@ DAEMON=/work/hp150019/share/nowcast/bin/lwatcher
 LOGFILE=$TOP/LWATCHLOG
 PID_FILE=$TOP/LWATCH_PID
 #CONF_FILE=$TOP/etc/conf
-CONF_FILE=/work/hp150019/share/honda/jitdt/offline/etc/conf
+CONF_FILE=/work/hp150019/share/nowcast/saitama/etc/conf
 OPTIONS="-D -d -v -h 5 -c $CONF_FILE -f $LOGFILE"
 OPTIONS2="-d -v -c $CONF_FILE -f $LOGFILE"
 

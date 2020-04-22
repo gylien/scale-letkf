@@ -46,4 +46,7 @@ mkdir -p $OFFLINE_TOP
 
 #/work/hp150019/share/nowcast/bin/ltestgen.pl $DATADIR/$LOGFILE $DATADIR/$TARFILE $OFFLINE_TOP/data ${INT} ${CNT}
 #/work/hp150019/f22013/SCALE-LETKF/scale-5.3.2/scale-5.3.x_LETKF_sngl/scale-letkf-dacycle/scale/run/src/ltestgen.pl $DATADIR/$LOGFILE $DATADIR/$TARFILE $OFFLINE_TOP/data ${INT} ${CNT}
-./src/ltestgen.pl $LOGFILE $TARFILE $OFFLINE_TOP/data ${INT} ${CNT}
+
+###./src/ltestgen.pl $LOGFILE $TARFILE $OFFLINE_TOP/data ${INT} ${CNT}
+./src/stestgen.pl $LOGFILE $TARFILE $OFFLINE_TOP/data ${INT} ${CNT}
+
