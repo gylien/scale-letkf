@@ -6,21 +6,21 @@
 #===============================================================================
 
 PRESET='OFP' 
-RSCGRP="regular-flat"
 
 #===============================================================================
 
 DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
 
 
-OUTPUT="/work/hp150019/c24140/scale-letkf-rt/r0051_nest"
-EXP4=exp_d4_mer_1km
-EXP3=exp_d3
-EXP2=exp_d2
+OUTPUT="${DIR}/../../../result/ope"
+EXP4=d4_1km
+EXP3=d3
+EXP2=d2
 
 OUTDIR="${OUTPUT}/${EXP4}"
 
-INDIR="${OUTDIR}"
+BGDIR=<BGDIR>
+INDIR=<INDIR>
 
 #===============================================================================
 # Location of model/data files
@@ -29,9 +29,9 @@ SCALEDIR="$DIR/../.."                                                # Directory
 DATADIR="/work/hp150019/share/database" 
 SCALE_DB="/work/hp150019/share/database" 
 
-DATA_TOPO=                                                           # Directory of the prepared topo files
+DATA_TOPO="${OUTDIR}"                                                # Directory of the prepared topo files
 DATA_TOPO_BDY_SCALE="${OUTPUT}/${EXP3}/const/topo"
-DATA_LANDUSE=                                                        # Directory of the prepared landuse files
+DATA_LANDUSE="${OUTDIR}"                                             # Directory of the prepared landuse files
 DATA_BDY_SCALE="${OUTPUT}/${EXP4}"
 DATA_BDY_SCALE_PRC_NUM_X=
 DATA_BDY_SCALE_PRC_NUM_Y=
@@ -143,12 +143,12 @@ ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait unti
                             #  0: No
                             #  1: Yes
 
-SYSNAME="$(basename $OUTDIR)"                # A unique name in the machine
-TMPSUBDIR="scale-letkf_${SYSNAME}"           # (used to identify multiple runs in the same time)
+#SYSNAME="$(basename $OUTDIR)"                # A unique name in the machine
+#TMPSUBDIR="scale_letkf_${SYSNAME}"           # (used to identify multiple runs in the same time)
+TMPSUBDIR="dacycle_1km"       
 
-TMP="$DIR/tmp/$TMPSUBDIR" # Temporary directory shared among all nodes
-TMPS="$DIR/tmp/$TMPSUBDIR"  # Temporary directory only on the server node
-#TMPS="$TMP"  # Temporary directory only on the server node
+TMP="$DIR/run/$TMPSUBDIR" # Temporary directory shared among all nodes
+TMPS="$TMP"  # Temporary directory only on the server node
 TMPL="$TMP"
 TMP_JITDATA="/work/hp150019/share/$(id -nu)/jitdt/offline/data"
 TMP_JITDATA_IP="$(hostname -i)"
