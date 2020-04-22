@@ -17,18 +17,18 @@ character*30::cfile_g='../data_inv/v_gues.txt'
 character*30::ctitle1='V'
 character*30::ctitle2='(m/s)'
 
-character*30::psfile='../figs/v_letkf'
+character*30::psfile='../temp_figs/v_letkf'
 
 real(4),parameter::xmax_window=6.0 !!! day
 real(4),parameter::vmin_rmse=0.0
-real(4),parameter::vmax_rmse=4.0
-real(4),parameter::btic_rmse=1.0
-real(4),parameter::vmin_bias=-1.0
-real(4),parameter::vmax_bias= 1.0
-real(4),parameter::btic_bias=0.5
-real(4),parameter::vmin_num=10000.0
-real(4),parameter::vmax_num=40000.0
-real(4),parameter::btic_num=10000.0
+real(4),parameter::vmax_rmse=8.0
+real(4),parameter::btic_rmse=2.0
+real(4),parameter::vmin_bias=-2.0
+real(4),parameter::vmax_bias= 2.0
+real(4),parameter::btic_bias=1.0
+real(4),parameter::vmin_num=0.0
+real(4),parameter::vmax_num=400.0
+real(4),parameter::btic_num=200.0
 
 
 
@@ -110,6 +110,7 @@ xlocs=(/( xmin + 0.25*real(i-1) ,i=1,nrec )/)
 
 iout=2
 ! *** general settings ***
+      call gliset('MSGLEV',1)
       call sgiset ('IFONT',1)
       call swcmll
       call swlset ('LSEP',.FALSE.) ! psfilename numbering
@@ -139,18 +140,15 @@ iout=2
      
       call uulinz (nrec,xlocs,rmse_a,1,5)
       call uulinz (nrec,xlocs,rmse_g,3,5)
-      nls=int((xmax_window-xmin) / 0.25) +1
+      nls=min(int((xmax_window-xmin) / 0.25) +1, nrec)
+
 
       do il=1,nls
        xloc=real(int(xmin))+0.25* real(il-1)
-!       write(*,*) il,xloc
        ithck=1
        if (il.le.nrec.and.cdate(il).ne.'') ithck=3
        call uulinz (2,(/xloc,xloc/),(/vmin_rmse,vmax_rmse/),3,40+ithck)
       end do
-
-!      write(*,*) maxval(bias_a),minval(bias_a)
-!      write(*,*) maxval(rmse_a),minval(rmse_a)
       
       ! **** x ,y axis ****
       call UYSFMT('(F5.1)')
@@ -203,11 +201,10 @@ bmtics=btic_bias
       call uulinz (nrec,xlocs,bias_a,1,5)
       call uulinz (nrec,xlocs,bias_g,3,5)
 
-      nls=int((xmax_window-xmin) / 0.25) +1
+      nls=min(int((xmax_window-xmin) / 0.25) +1, nrec)
 
       do il=1,nls
        xloc=real(int(xmin))+0.25* real(il-1)
-!       write(*,*) il,xloc
        ithck=1
        if (il.le.nrec.and.cdate(il).ne.'') ithck=3
        call uulinz (2,(/xloc,xloc/),(/vmin,vmax/),3,40+ithck)
@@ -272,11 +269,10 @@ bmtics=btic_num
      
       call uulinz (nrec,xlocs,real(ndata),1,5)
 
-      nls=int((xmax_window-xmin) / 0.25) +1
+      nls=min(int((xmax_window-xmin) / 0.25) +1, nrec)
 
       do il=1,nls
        xloc=real(int(xmin))+0.25* real(il-1)
-       write(*,*) il,xloc
        ithck=1
        if (il.le.nrec.and.cdate(il).ne.'') ithck=3
        call uulinz (2,(/xloc,xloc/),(/vmin,vmax/),3,40+ithck)

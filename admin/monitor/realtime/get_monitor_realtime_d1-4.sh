@@ -28,6 +28,7 @@ timed3_p=$dummy
 timed4_p=$dummy
 fi
 
+
 nowsec=`date +%s` 
 nowsec_t=`expr $nowsec / 600 \* 600 - 32400`
 
@@ -48,8 +49,11 @@ timed1=`tail -n 1 ${monitor_dir}/monitor_cycle_temp.txt | awk '{print $1}'`0000
 [ "$timegfs" -eq "0000" ] && timegfs=$timegfs_p ### TORI AEZU
 [ "$timed1" -eq "0000" ] && timed1=$timed1_p ### TORI AEZU
 
+timed2=$timed2_p
+
 latest=`ls -1 ${OUTBASE}/d2/2020*/fcstgpi/mdet/sfc_prcp_f000000.png | tail -n 1`
-based2=`echo $latest | egrep --only-matching [0-9]{14}`
+if [ ! -z "$latest" ];then
+fbased2=`echo $latest | egrep --only-matching [0-9]{14}`
 lend2=`basename $latest | sed -e 's/[^0-9]//g' `
 
 yyyy=`echo $based2 | cut -c 1-4`
@@ -61,10 +65,12 @@ sec=`echo $based2 | cut -c 13-14`
 
 
 timed2=`date -d "$lend2 sec ${yyyy}-${mm}-${dd} ${hh}:${mon}:${sec}" +%Y%m%d%H%M%S`
+fi
 
 timed3=$timed3_p
 
 list=`ls -1td ${OUTBASE}/d3/ref_2020*/2020*/fcstgpi/mean | head -n 10`
+
 if [ ! -z "$list" ];then
 for path in $list;do
 latest=`ls -1 $path/sfc_prcp_*.png | tail -n 1` 
@@ -103,6 +109,8 @@ done
 fi
 
 
+#echo $timeref $timeobs $timegfs $timed1 $timed2 $timed3 $timed4
+#exit 0
 echo $timeref $timeobs $timegfs $timed1 $timed2 $timed3 $timed4 >> data/d1-4.txt
 tac data/d1-4.txt > data_inv/d1-4.txt 
 

@@ -60,8 +60,17 @@ done
  cd -
 done
 
+mogrify -trim ./figs/*.png 
+
 if [ `date -d "$time_end_fmt" +%H` == "00" ];then
   mkdir -p ./save/$time_end
   cp ./figs/*.png ./save/$time_end/
 fi
+
+  cd $wkdir/subdomain
+  ./get_monitor_letkf.sh
+  cd $wkdir/obsdep/sounding 
+  ./drawall.sh $time_end
+
+
 

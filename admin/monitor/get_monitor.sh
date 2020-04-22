@@ -161,6 +161,8 @@ cd $wkdir
 
 ### ANALYSIS (TORI AEZU)
 
+time_cycle_old=`tail -n 1 monitor_cycle_temp.txt | cut -c 1-14`
+
 [ -e monitor_cycle_temp.txt ] && rm monitor_cycle_temp.txt
 touch monitor_cycle_temp.txt
 
@@ -177,12 +179,13 @@ while [ $iftime -le $nowf ] ;do
  iftime=`date -ud "6 hour $YMD $HH" +'%Y%m%d%H'`
 done
 
-
-echo 'monitor D1 LETKF performance ...'
-
-cd ./letkf
- ./get_monitor_letkf.sh
-cd ..
-cd ./realtime
- ./get_monitor_realtime_d1-4.sh
-cd ..
+time_cycle=`tail -n 1 monitor_cycle_temp.txt | cut -c 1-14`
+if [ "$time_cycle" != "$time_cycle_old" ]; then
+  echo 'monitor D1 LETKF performance ...'
+  cd ./letkf
+  ./get_monitor_letkf.sh
+  cd ..
+  cd ./realtime
+  ./get_monitor_realtime_d1-4.sh
+  cd ..
+fi

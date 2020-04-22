@@ -27,7 +27,7 @@ real(4),parameter::vmin_bias=-1.0
 real(4),parameter::vmax_bias= 1.0
 real(4),parameter::btic_bias=0.5
 real(4),parameter::vmin_num=10000.0
-real(4),parameter::vmax_num=30000.0
+real(4),parameter::vmax_num=40000.0
 real(4),parameter::btic_num=10000.0
 
 
