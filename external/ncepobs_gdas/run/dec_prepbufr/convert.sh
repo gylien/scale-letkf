@@ -45,9 +45,9 @@ wc -c "$file" | $BUFRBIN/grabbufr "$file" prepbufr.in
 ##### must be executed on calc node ; otherwise AVX512 is not supported
 ###pjsub ./exec_dec_prepbufr.sh
 
-module load hdf5/1.8.17
-module load netcdf/4.4.1
-module load netcdf-fortran/4.4.3
+module load hdf5/1.10.5
+module load netcdf/4.7.0
+module load netcdf-fortran/4.4.5
 
 
 #./dec_prepbufr
