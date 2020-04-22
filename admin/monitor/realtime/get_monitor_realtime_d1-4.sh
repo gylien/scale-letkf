@@ -5,6 +5,10 @@ myname=$0
 mydir=`dirname $myname`
 cd $mydir
 
+time_offset=0
+[ -f "../../time_offset.txt" ] && time_offset=`cat ../../time_offset.txt` 
+nowtime="$(date -ud "$time_offset second now" +'%Y-%m-%d %H:%M:%S')"
+
 monitor_dir="$mydir/.."
 OUTBASE="${mydir}/../../../result/ope"
 
@@ -18,7 +22,7 @@ timed2_p=`echo $prev | awk '{print $5}'`
 timed3_p=`echo $prev | awk '{print $6}'`
 timed4_p=`echo $prev | awk '{print $7}'`
 else
-dummy=`date -d "-5 days" +%Y%m%d%H%M%S`
+dummy=`date -ud "-5 days $nowtime" +%Y%m%d%H%M%S`
 timeref_p=$dummy
 timeobs_p=$dummy
 timegfs_p=$dummy
@@ -29,7 +33,7 @@ timed4_p=$dummy
 fi
 
 
-nowsec=`date +%s` 
+nowsec=`date -ud "$nowtime" +%s` 
 nowsec_t=`expr $nowsec / 600 \* 600 - 32400`
 
 timeref=`date -d @$nowsec_t +%Y%m%d%H%M%S`
@@ -51,7 +55,7 @@ timed1=`tail -n 1 ${monitor_dir}/monitor_cycle_temp.txt | awk '{print $1}'`0000
 
 timed2=$timed2_p
 
-latest=`ls -1 ${OUTBASE}/d2/2020*/fcstgpi/mdet/sfc_prcp_f000000.png | tail -n 1`
+latest=`ls -1 ${OUTBASE}/d2/20*/fcstgpi/mdet/sfc_prcp_f000000.png | tail -n 1`
 if [ ! -z "$latest" ];then
 fbased2=`echo $latest | egrep --only-matching [0-9]{14}`
 lend2=`basename $latest | sed -e 's/[^0-9]//g' `
@@ -69,7 +73,7 @@ fi
 
 timed3=$timed3_p
 
-list=`ls -1td ${OUTBASE}/d3/ref_2020*/2020*/fcstgpi/mean | head -n 10`
+list=`ls -1td ${OUTBASE}/d3/ref_20*/20*/fcstgpi/mean | head -n 10`
 
 if [ ! -z "$list" ];then
 for path in $list;do
@@ -92,7 +96,7 @@ D4mode=d4_1km
 
 timed4=$timed4_p
 
-list=`ls -1t ${OUTBASE}/d3/ref_2020*/2020*/$D4mode/anal/mean/init_*.pe000000.nc | head -n 10`
+list=`ls -1t ${OUTBASE}/d3/ref_20*/20*/$D4mode/anal/mean/init_*.pe000000.nc | head -n 10`
 if [ ! -z "$list" ];then
 for file in $list;do
 based3=`echo $file | egrep --only-matching "init_[0-9]{8}-[0-9]{6}" | cut -c 6-20`

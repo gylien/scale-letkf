@@ -18,9 +18,11 @@ rundir_fcst=$RUNBASE/run_d1_ext
 rundir_fcst_d2=$RUNBASE/run_d1-2
 rundir_fcst_d3=$RUNBASE/run_d3
 
+time_offset=0
+[ -f "../time_offset.txt" ] && time_offset=`cat ../time_offset.txt` 
 
-now="$(date -u +'%Y-%m-%d %H:%M:%S')"
-nowf="$(date -u  +'%Y%m%d%H')"
+now="$(date -ud "$time_offset second now" +'%Y-%m-%d %H:%M:%S')"
+nowf="$(date -ud "$now" +'%Y%m%d%H')"
 ystf="$(date -ud "-30 hour $now" +'%Y%m%d%H')"
 
 oldest=$ystf

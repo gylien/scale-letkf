@@ -4,7 +4,12 @@ myname=$0
 mydir=`dirname $myname`
 cd $mydir
 
-nowsec=`date +%s` 
+time_offset=0
+[ -f "../../time_offset.txt" ] && time_offset=`cat ../../time_offset.txt` 
+nowtime="$(date -ud "$time_offset second now" +'%Y-%m-%d %H:%M:%S')"
+
+
+nowsec=`date -ud "$nowtime" +%s` 
 nowsec_t=`expr $nowsec / 5 \* 5 - 32400`
 
 timeref=`date -d @$nowsec_t +%Y%m%d%H%M%S`
@@ -14,9 +19,9 @@ timeanal=`ssh -i ~/.ssh/id_rsa_mac daweb "cd public_html/HPCC_scale/data/d4/real
 timefcst=`ssh -i ~/.ssh/id_rsa_mac daweb "cd public_html/HPCC_scale/data/d4/realtime ; ls -1t fcst_* | tail -n 1 | sed -e 's/[^0-9]//g'" `
 
 
-[ "$timeobs" == "" ] && timeobs=`date -d " -1 days " +%Y%m%d%H%M%S` ### TORI AEZU
-[ "$timeanal" == "" ] && timeanal=`date -d " -1 days " +%Y%m%d%H%M%S` ### TORI AEZU
-[ "$timefcst" == "" ] && timefcst=`date -d " -1 days " +%Y%m%d%H%M%S` ### TORI AEZU
+[ "$timeobs" == "" ] && timeobs=`date -d " -1 days $nowtime" +%Y%m%d%H%M%S` ### TORI AEZU
+[ "$timeanal" == "" ] && timeanal=`date -d " -1 days $nowtime" +%Y%m%d%H%M%S` ### TORI AEZU
+[ "$timefcst" == "" ] && timefcst=`date -d " -1 days $nowtime" +%Y%m%d%H%M%S` ### TORI AEZU
 
 
 echo $timeref $timeobs $timeanal $timefcst >> data/d4.txt

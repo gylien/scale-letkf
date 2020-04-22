@@ -21,6 +21,9 @@ function unlock () {
 trap unlock EXIT
 #-----------------------------
 
+time_offset=0
+[ -f "time_offset.txt" ] && time_offset=`cat time_offset.txt` 
+
 isec=0
 cyclesec=60
 limitsec=86400
@@ -29,11 +32,11 @@ END_TIME="2020-03-31 00:00:00"
 
 rundir=${realtimebase}/scale_${scale_ver}/scale-letkf_${letkf_ver}_d4/scale/run
 
-INIT_TIME="$(date -ud +'%Y-%m-%d %H:00:00')"
+INIT_TIME="$(date -ud "$time_offset second now" +'%Y-%m-%d %H:00:00')"
 INIT_TIMEf="$(date -ud "$INIT_TIME" +'%Y%m%d%H0000')"
 
-cd $rundir
-$rundir/prep.sh init 
+#cd $rundir
+#$rundir/prep.sh init 
 
   echo " $INIT_TIME start "
   nohup ./start.sh "$INIT_TIMEf" &> admin_cycle_d4.log.${INIT_TIMEf}

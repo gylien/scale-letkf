@@ -5,10 +5,15 @@ myname=$0
 mydir=`dirname $myname`
 cd $mydir
 
+time_offset=0
+[ -f "../../time_offset.txt" ] && time_offset=`cat ../../time_offset.txt` 
+nowtime="$(date -ud "$time_offset second now" +'%Y-%m-%d %H:%M:%S')"
+
+
 monitor_dir="$mydir/.."
 OUTBASE="${mydir}/../../../result/ope"
 
-nowsec=`date +%s` 
+nowsec=`date -ud "$nowtime" +%s` 
 nowsec_t=`expr $nowsec / 600 \* 600 - 32400`
 
 timeref=`date -d @$nowsec_t +%Y%m%d%H%M%S`
@@ -17,7 +22,7 @@ timeobs=`tail -n 1 ${monitor_dir}/monitor_obs.txt | awk '{print $1}'`0000
 timegfs=`tail -n 1 ${monitor_dir}/monitor_gfs.txt | awk '{print $1}'`0000
 timed1=`tail -n 1 ${monitor_dir}/monitor_cycle_temp.txt | awk '{print $1}'`0000
 
-[ "$timed1" -eq "0000" ] && timed1=`date -d " -3 days " +%Y%m%d%H%M%S` ### TORI AEZU
+[ "$timed1" -eq "0000" ] && timed1=`date -d " -3 days $nowtime" +%Y%m%d%H%M%S` ### TORI AEZU
 
 
 latest=`ls -1 ${OUTBASE}/d2/*/fcstgpi/mdet/sfc_prcp_* | tail -n 1`

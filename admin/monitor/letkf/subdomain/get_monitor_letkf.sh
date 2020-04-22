@@ -1,13 +1,12 @@
 #!/bin/sh
 
+wkdir="$( cd "$( dirname "$0" )" && pwd )"
+
+cd ${wkdir}
 
 time_end_fmt=`cat ../../../admin_cycle.time` 
 time_end=`date -d "$time_end_fmt" +%Y%m%d%H%M%S`
 time_start=`date -d "-6 day $time_end_fmt" +%Y%m%d%H%M%S`
-
-wkdir="$( cd "$( dirname "$0" )" && pwd )"
-
-cd ${wkdir}
 
 BASEDIR=$wkdir/../../../../result/ope/d1
 
