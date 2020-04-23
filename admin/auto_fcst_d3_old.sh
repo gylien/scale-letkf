@@ -21,12 +21,11 @@ limitsec=21600
 PARENT_TIME_B=`date -d "-1 year" +"%F %T"`
 
 
-FCSTHOUR_DEF=7 ### 6+1
+FCSTHOUR_DEF=5 ### maximum 5 hour
 
 . admin.rc || exit $1
 
-####PARENT_FCSTLEN=${FCSTLEN_d2}
-PARENT_FCSTLEN=64800
+PARENT_FCSTLEN=${FCSTLEN_d2}
 
 ofp_parentdir=/work/hp150019/c24140/HPCC_SCALE-LETKF-rt/result/ope_single/d2
 
@@ -56,17 +55,14 @@ done
 
  if [ `date -d "$PARENT_TIME" +%s` -gt `date -d "$PARENT_TIME_B" +%s` ] ;then
 
-### echo "PARENT_TIME" $PARENT_TIME $PARENT_TIME_B
+ echo "PARENT_TIME" $PARENT_TIME $PARENT_TIME_B
  PARENT_TIME_B=$PARENT_TIME
 
  INIT_LIMITf="$(date -ud "$PARENT_FCSTLEN second -7200 second  ${PARENT_TIME}"  +'%Y%m%d%H%M%S')"
  PARENT_LIMITf="$(date -ud "$PARENT_FCSTLEN second ${PARENT_TIME}"  +'%Y%m%d%H%M%S')"
 
 
- starth="$(date -ud "${START_TIME}" +%H)"
- hdif=`expr \( $starth + 1 \) \% 6`
-
- INIT_START="$(date -ud " - $hdif hour ${START_TIME}" +'%Y-%m-%d %H:00:00')"
+ INIT_START="$(date -ud " -7200 second ${START_TIME}" +'%Y-%m-%d %H:00:00')"
  INIT_STARTf="$(date -ud "${INIT_START}" +'%Y%m%d%H%M%S')"
 
  while [ $INIT_STARTf -le $INIT_LIMITf ]; do
@@ -80,21 +76,15 @@ done
     done
     FCSTLEN=`expr $FCSTHOUR \* 3600`
     nohup ./admin_fcst_d3.sh "$PARENT_TIME" "$INIT_START" "$FCSTLEN" &> admin_fcst_d3.log.${PARENT_TIMEf}.${INIT_STARTf} &
-###    echo "$PARENT_TIME" "$INIT_START" "$FCSTLEN" 
-    INIT_START="$(date -ud " $FCSTHOUR hour -1 hour  ${INIT_START}" +'%Y-%m-%d %H:00:00')"
+    INIT_START="$(date -ud " +4 hours  ${INIT_START}" +'%Y-%m-%d %H:00:00')"
     INIT_STARTf="$(date -ud "${INIT_START}" +'%Y%m%d%H%M%S')"
  sleep 31
- isec=0
  done
 
  fi
 
  sleep ${cyclesec}s 
  isec=`expr $isec + $cyclesec`
-
- echo "stop"
- exit 0
-
  echo "$isec / $limitsec wait..."
 done
 

@@ -10,7 +10,7 @@ time_offset=0
 nowtime="$(date -ud "$time_offset second now" +'%Y-%m-%d %H:%M:%S')"
 
 monitor_dir="$mydir/.."
-OUTBASE="${mydir}/../../../result/ope"
+OUTBASE="${mydir}/../../../result/ope_single"
 
 prev=`cat data/d1-4.txt | tail -n 1`
 if [ ! -z "$prev" ] ;then 
@@ -56,8 +56,11 @@ timed1=`tail -n 1 ${monitor_dir}/monitor_cycle_temp.txt | awk '{print $1}'`0000
 timed2=$timed2_p
 
 latest=`ls -1 ${OUTBASE}/d2/20*/fcstgpi/mdet/sfc_prcp_f000000.png | tail -n 1`
+
 if [ ! -z "$latest" ];then
-fbased2=`echo $latest | egrep --only-matching [0-9]{14}`
+based2=`echo $latest | egrep --only-matching [0-9]{14}`
+testdir=`dirname $latest`
+latest=`ls -1 $testdir/sfc_prcp_f*.png | tail -n 1`
 lend2=`basename $latest | sed -e 's/[^0-9]//g' `
 
 yyyy=`echo $based2 | cut -c 1-4`
@@ -67,17 +70,17 @@ hh=`echo $based2 | cut -c 9-10`
 mon=`echo $based2 | cut -c 11-12`
 sec=`echo $based2 | cut -c 13-14`
 
-
 timed2=`date -d "$lend2 sec ${yyyy}-${mm}-${dd} ${hh}:${mon}:${sec}" +%Y%m%d%H%M%S`
 fi
 
 timed3=$timed3_p
 
-list=`ls -1td ${OUTBASE}/d3/ref_20*/20*/fcstgpi/mean | head -n 10`
+list=`ls -1td ${OUTBASE}/d3/ref_20*/20*/fcstgpi/mdet | head -n 10`
 
 if [ ! -z "$list" ];then
 for path in $list;do
 latest=`ls -1 $path/sfc_prcp_*.png | tail -n 1` 
+
 based3=`echo $latest | egrep --only-matching /[0-9]{14} | cut -c 2-15`
 lend3=`basename $latest | egrep --only-matching f[0-9]{6} | cut -c 2-7`
 
@@ -118,7 +121,7 @@ fi
 echo $timeref $timeobs $timegfs $timed1 $timed2 $timed3 $timed4 >> data/d1-4.txt
 tac data/d1-4.txt > data_inv/d1-4.txt 
 
-./draw_d1-4
+./draw_d1-4 `date -ud "9 hour $nowtime" +%Y%m%d%H%M%S`
 mv ./figs/d1-4_0001.png ./figs/realtime_d1-4.png 
 mogrify -trim ./figs/realtime_d1-4.png 
 

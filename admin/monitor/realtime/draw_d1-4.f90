@@ -41,11 +41,18 @@ real(4),parameter::vmin=-25.0
 real(4),parameter::vmax= 20.0
 real(4),parameter::btic=6.0
 
+character*14::ctimenow
 
 end module setup
 !==================================================!
 program main
 use setup
+
+ctimenow=''
+nargs=iarg()
+if(nargs.gt.0) then
+  call getarg(1,ctimenow)
+end if
 
 call set_time
 
@@ -63,12 +70,14 @@ character*14::ctime_now
 call dateq1(id)
 call timeq1(it_now)
 
+if (ctimenow.ne.'')then
+  read(ctimenow(1:8),*)id
+  read(ctimenow(9:14),*)it_now
+end if
+
 call date13(id,iyyyy,imm,idd)
 
-
 write(ctitle2,'(I4.4,A,I2.2,A,I2.2)') iyyyy,'/',imm,'/',idd
-
-
 
 it = (it_now /10000) * 10000 
 itres=mod(it_now,10000)
