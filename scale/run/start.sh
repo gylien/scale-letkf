@@ -5,9 +5,8 @@ cd "$(dirname "$0")"
 
 #-------------------------------------------------------------------------------
 
-PLACE=Kobe
-DX=500m_verysmall
-#STIME="`date -u +%Y%m%d%H0000`"
+PLACE=Saitama
+DX=1km
 STIME=$1
 
 NCYCLE=120
@@ -15,19 +14,20 @@ WTIME_L="01:10:00"
 NMEM=50
 DACYCLE_RUN_FCST_TIME=1800
 MAX_DACYCLE_RUN_FCST=$NCYCLE
+NUM_DACYCLE_FCST_MEM=10
 
 intv_sec=`expr \( $NCYCLE - 1 \) \* 30`
 STIME_in="${STIME:0:4}-${STIME:4:2}-${STIME:6:2} ${STIME:8:2}:${STIME:10:2}:${STIME:12:2}"
 ETIME=`date -d "${intv_sec} second ${STIME_in}" +'%Y%m%d%H%M%S'`
 
-##NNODES=`expr \( $NMEM + 1 + $MAX_DACYCLE_RUN_FCST \) \* 16` ### 500m / 1024domain
-##NNODES=`expr \( $NMEM + 1 + $NMEM \) \* 4` ### 500m / 256domain
-NNODES=`expr \( $NMEM + 1 + $NMEM \) ` ### 500m / 64domain
+##NNODES=`expr \( $NMEM + 2 + $MAX_DACYCLE_RUN_FCST \) \* 16` ### 500m / 1024domain
+##NNODES=`expr \( $NMEM + 2 + $NMEM \) \* 4` ### 500m / 256domain
+NNODES=`expr \( $NMEM + 2 + $NUM_DACYCLE_FCST_MEM \) ` ### 500m / 64domain
 
 
 #-------------------------------------------------------------------------------
 
-CONFIG="${PLACE}/D4_${DX}"
+CONFIG="${PLACE}/d4_${DX}"
 if [ ! -d config/${CONFIG} ];then
  echo "EXPTYPE "$EXPTYPE" not supported !"
  exit
@@ -38,8 +38,8 @@ cp config/${CONFIG}/config.* .
 cat config.main.ofp | \
     sed -e "s/<MEMBER>/${NMEM}/g" | \
     sed -e "s/<NNODES>/${NNODES}/g" | \
-    sed -e "s#<INDIR>#\${OUTDIR}#g" | \
-    sed -e "s#<BGDIR>#\${DIR}/run/bgdata#g"  \
+    sed -e "s#<BGDIR>#\${DIR}/run/bgdata#g" | \
+    sed -e "s#<INDIR>#\${BGDIR}#g"  \
     > config.main
 
 cat config/$CONFIG/config.cycle | \
@@ -48,6 +48,7 @@ cat config/$CONFIG/config.cycle | \
     sed -e "s/<WTIME_L>/${WTIME_L}/g" | \
     sed -e "s/<MEMBER>/${NMEM}/g" | \
     sed -e "s/<MAX_DACYCLE_RUN_FCST>/${MAX_DACYCLE_RUN_FCST}/g" | \
+    sed -e "s/<NUM_DACYCLE_FCST_MEM>/${NUM_DACYCLE_FCST_MEM}/g" | \
     sed -e "s/<DACYCLE_RUN_FCST_TIME>/${DACYCLE_RUN_FCST_TIME}/g"  \
     > config.cycle
 
@@ -55,7 +56,9 @@ cat config/$CONFIG/config.cycle | \
 
 #-------------------------------------------------------------------------------
 ### prepare latest init and boundary files
-./prep.sh init 
+### ./prep.sh init 
+ ./prep.sh $STIME 
+ ./prep.sh $ETIME 
 
 #-------------------------------------------------------------------------------
 

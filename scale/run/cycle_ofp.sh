@@ -14,6 +14,10 @@ cd "$(dirname "$0")"
 myname="$(basename "$0")"
 job='cycle'
 
+RSCGRP=${RSCGRP:-"regular-flat"}
+GNAME=${GNAME:-`id -ng`}
+
+
 #===============================================================================
 # Configuration
 
@@ -136,9 +140,7 @@ cat > $jobscrp << EOF
 ##PJM --mpi proc=${totalnp}
 #PJM --omp thread=${THREADS}
 
-#PJM -g $(echo $(id -ng))
-# HPC
-##PJM -g gx14  
+#PJM -g ${GNAME}
 
 #PJM -s
 
@@ -171,6 +173,10 @@ export TMI_PSM2_CONNECT_TIMEOUT=2000
 
 #export OMP_STACKSIZE=128m
 ulimit -s unlimited
+
+
+export JITCLIENT_LOGFILE="jitclient-log.txt"
+
 
 
 ./${job}.sh "$STIME" "$ETIME" "$ISTEP" "$FSTEP" "$CONF_MODE" || exit \$?
