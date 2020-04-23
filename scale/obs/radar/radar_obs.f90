@@ -806,9 +806,9 @@ subroutine read_obs_radar_toshiba(cfile, obs)
 !  real(kind=c_float) :: az(AZDIM, ELDIM, n_type)
 !  real(kind=c_float) :: el(AZDIM, ELDIM, n_type)
 !  real(kind=c_float) :: rtdat(RDIM, AZDIM, ELDIM, n_type)
-  real(kind=c_float), allocatable :: rtdat(:, :, :, :)
-  real(kind=c_float), allocatable :: az(:, :, :)
-  real(kind=c_float), allocatable :: el(:, :, :)
+  real(kind=c_float), allocatable, save :: rtdat(:, :, :, :)
+  real(kind=c_float), allocatable, save :: az(:, :, :)
+  real(kind=c_float), allocatable, save :: el(:, :, :)
   integer :: j, ierr, ierr2
   character(len=3) :: fname
   integer, save::i=0
@@ -990,10 +990,12 @@ subroutine read_obs_radar_toshiba(cfile, obs)
     endif
 #endif
   elseif ( obs_da_time_compare(utime_obs) == 0 ) then !!! use previous obs data
-    write(6,'(a)') "Model reaches previous obs time."
-    write(6,'(a,i4.4,i2.2,i2.2,1x,i2.2,1a,i2.2,1a,i2.2)') "SCALE-LETKF:",&
+      if (myrank_o == 0 ) then
+        write(6,'(a)') "Model reaches previous obs time."
+        write(6,'(a,i4.4,i2.2,i2.2,1x,i2.2,1a,i2.2,1a,i2.2)') "SCALE-LETKF:",&
           TIME_NOWDATE(1),TIME_NOWDATE(2),TIME_NOWDATE(3),&
           TIME_NOWDATE(4),":",TIME_NOWDATE(5),":",TIME_NOWDATE(6)
+      endif
   else !!! model is behind obs
     if (myrank_o == 0 ) then
       write(6,'(a)') "Model is still behind observation !"
