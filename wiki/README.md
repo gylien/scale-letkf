@@ -25,24 +25,24 @@ Realtime forecasts are displayed at
 | --- | --- | --- |  --- |  --- | 
 | [D1](realtime-D1-2-forecast.md)* | 18 km | 18 hours | 50 | D1 analysis / NCEP GFS |
 | [D2](realtime-D1-2-forecast.md)* | 6 km | 18 hours | 50 | D1 forecast |
-| [D3](realtime-D3-forecast.md) | 1 km | 6 hours | 50 | D2 forecast |
+| [D3](realtime-D3-forecast.md) | 1.5 km | 6 hours | 50 | D2 forecast |
 | [D4](realtime-D4-analysis-and-forecast.md) | 500 m / 250 m | 30 min | 1 | D4 analysis / D3 forecast |
 | [D1](realtime-D1-analysis-and-forecast.md) (extended) | 18 km | 5 days | 1 (mdet) | D1 analysis / NCEP GFS |
 
 \* D1 and D2 forecasts are performed as a combined online-nesting system.  
 
-<img src="https://github.com/aamemiya/shared_image/blob/master/domain1-3_Kanto.png" height="250px"><img src="https://github.com/aamemiya/shared_image/blob/master/domain3-4_Kanto.png" height="250px">
+<img src="imgs/map_d1-4.png" height="250px"><img src="imgs/map_d3-4.png" height="250px">
 
 ## Sources
 ### SCALE-RM
 Current version 
-[https://gitlab.com/scale-met/scale/tree/LETKF-5.3.4/](https://gitlab.com/scale-met/scale/tree/LETKF-5.3.4/)  
+[https://gitlab.com/scale-met/scale/tree/LETKF-5.3.6/](https://gitlab.com/scale-met/scale/tree/LETKF-5.3.6/)  
 (Do not use the master branch [http://scale.aics.riken.jp/ja/download/index.html](http://scale.aics.riken.jp/ja/download/index.html) : There are some differences including additional namelists)
 
 ### SCALE-LETKF
-Branch [realtime_fcst_D1-3_ope](https://github.com/gylien/scale-letkf/tree/realtime_fcst_D1-3_ope) is currently used.  
+Domain 1,2,3 and initial/boundary conditions of domain 4 : branch [realtime_fcst_D1-3_ope](https://github.com/gylien/scale-letkf/tree/realtime_fcst_D1-3_ope)   
 
-For the innermost domain for PAWR assimilation, branch [dacycle_OFP](https://github.com/gylien/scale-letkf/tree/dacycle_OFP) is being developed. 
+Domain 4 DAcycle/forecast : [dacycle_OFP_ope](https://github.com/gylien/scale-letkf/tree/dacycle_OFP_ope) 
 
 ## Getting started
 
