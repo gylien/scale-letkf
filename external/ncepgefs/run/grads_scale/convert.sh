@@ -171,3 +171,6 @@ while (($(date -ud "$time" '+%s') <= $(date -ud "$tend" '+%s'))); do
 time=$(date -ud "$tint second $time" '+%Y-%m-%d %H')
 
 done
+
+rm tmp.grb2
+rm tmp_small.grb2

@@ -187,7 +187,8 @@ if [ "$time_cycle" != "$time_cycle_old" ]; then
   cd ./letkf
   ./get_monitor_letkf.sh
   cd ..
+fi
   cd ./realtime
   ./get_monitor_realtime_d1-4.sh
   cd ..
-fi
+
