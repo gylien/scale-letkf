@@ -16,6 +16,9 @@ cd "$(dirname "$0")"
 myname="$(basename "$0")"
 job='pp'
 
+RSCGRP=${RSCGRP:-"debug-flat"}
+GNAME=${GNAME:-`id -ng`}
+
 #===============================================================================
 # Configuration
 
@@ -137,7 +140,7 @@ NPIN=`expr 255 / \( $PPN \) + 1`
 
 cat > $jobscrp << EOF
 #!/bin/sh -l
-#PJM -L rscgrp=debug-flat
+#PJM -L rscgrp=${RSCGRP}
 #PJM -L node=${NNODES}
 #PJM -L elapse="00:10:00"
 #PJM --mpi "proc=$((NNODES*PPN))"
@@ -203,13 +206,13 @@ stage_out server || exit $?
 echo "[$(datetime_now)] Finalization"
 echo
 
-backup_exp_setting $job $TMP $jobid ${job}_job.sh 'o e'
+#backup_exp_setting $job $TMP $jobid ${job}_job.sh 'o e'
 
 ###if [ "$CONF_MODE" = 'static' ]; then
 ###  config_file_save $TMPS/config || exit $?
 ###fi
 
-archive_log
+# archive_log
 
 #if ((CLEAR_TMP == 1)); then
 #  safe_rm_tmpdir $TMPS
