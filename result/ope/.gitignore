@@ -5,5 +5,12 @@
 *
 !.gitignore
 !d1
-!ncepobs
+!d2
+!d3
+!d4_1km
+!d4_500m
+!d4_250m
+!ncepgfs_grads
 !ncepgfs_grads_da
+!ncepgfs_grads_ext
+!ncepobs
