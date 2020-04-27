@@ -23,8 +23,6 @@ TIME_DT_DYN=8.0D0
 CONFIG='realtime_ope_d1'
 PRESET=`hostname | cut -d '.' -f 2 | tr '[a-z]' '[A-Z]'`
 
-FP_SUFFIX='_single'
-
 if [ $MEMBER == 'mdet' ] ;then
   MEMBERS='mdet'
   MEMBER=1
@@ -124,8 +122,7 @@ cat config/${CONFIG}/config.main.${config_suffix} | \
     sed -e "s/<DATA_BDY_GRADS>/${DATA_BDY_GRADS}/g" | \
     sed -e "s/<NNODES>/${NNODES}/g" | \
     sed -e "s/<MEMBER>/${MEMBER}/g" | \
-    sed -e "s/<STIME>/${STIME}/g" | \
-    sed -e "s/<FP_SUFFIX>/${FP_SUFFIX}/g" \
+    sed -e "s/<STIME>/${STIME}/g"  \
     > config.main
 
 cat config/${CONFIG}/config.${SCPNAME} | \

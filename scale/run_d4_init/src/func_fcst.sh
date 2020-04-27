@@ -275,9 +275,9 @@ fi
 # TMPRUN
 
 cat >> ${STAGING_DIR}/${STGINLIST} << EOF
-${ENSMODEL_DIR}/scale-rm_pp_ens${fp_suffix}|${RUN_SUBDIR}/scale_pp/scale-rm_pp_ens
-${ENSMODEL_DIR}/scale-rm_init_ens${fp_suffix}|${RUN_SUBDIR}/scale_init/scale-rm_init_ens
-${ENSMODEL_DIR}/scale-rm_ens${fp_suffix}|${RUN_SUBDIR}/scale/scale-rm_ens
+${ENSMODEL_DIR}/scale-rm_pp_ens|${RUN_SUBDIR}/scale_pp/scale-rm_pp_ens
+${ENSMODEL_DIR}/scale-rm_init_ens|${RUN_SUBDIR}/scale_init/scale-rm_init_ens
+${ENSMODEL_DIR}/scale-rm_ens|${RUN_SUBDIR}/scale/scale-rm_ens
 EOF
 
 #-------------------------------------------------------------------------------

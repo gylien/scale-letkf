@@ -7,9 +7,7 @@
 
 PRESET='<PRESET>'                           # 'K' or 'K_rankdir' or 'K_micro'
 
-fp_suffix='<FP_SUFFIX>'
-
-EXPNAME=ope${fp_suffix}
+EXPNAME=ope
 EXPDOMAIN=1
 
 #===============================================================================

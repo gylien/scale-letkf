@@ -34,8 +34,6 @@ fi
 CONFIG='realtime_fcst_D3'
 PRESET=`hostname | cut -d '.' -f 2 | tr '[a-z]' '[A-Z]'`
 
-FP_SUFFIX='_single'
-
 #-------------------------------------------------------------------------------
 
 if [ "$PRESET" = 'OFP' ]; then
@@ -131,8 +129,7 @@ cat config.main.${config_suffix} | \
    sed -e "s/<MEMBER>/${NMEM}/g" | \
    sed -e "s/<NNODES>/${NNODES}/g" | \
    sed -e "s/<STIME>/${STIME}/g" | \
-   sed -e "s/<PARENT_REF_TIME>/${PARENT_REF_TIME}/g" | \
-   sed -e "s/<FP_SUFFIX>/${FP_SUFFIX}/g"  \
+   sed -e "s/<PARENT_REF_TIME>/${PARENT_REF_TIME}/g"  \
  > config.main
 rm config.main.${config_suffix}
 

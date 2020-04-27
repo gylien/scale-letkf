@@ -36,9 +36,9 @@ done
 cat >> ${STAGING_DIR}/${STGINLIST} << EOF
 ${COMMON_DIR}/pdbash|pdbash
 ${COMMON_DIR}/datetime|datetime
-${ENSMODEL_DIR}/scale-rm_pp_ens${fp_suffix}|scale-rm_pp_ens
-${ENSMODEL_DIR}/scale-rm_init_ens${fp_suffix}|scale-rm_init_ens
-${ENSMODEL_DIR}/scale-rm_ens${fp_suffix}|scale-rm_ens
+${ENSMODEL_DIR}/scale-rm_pp_ens|scale-rm_pp_ens
+${ENSMODEL_DIR}/scale-rm_init_ens|scale-rm_init_ens
+${ENSMODEL_DIR}/scale-rm_ens|scale-rm_ens
 EOF
 
 if [ "$JOBTYPE" = 'cycle' ]; then

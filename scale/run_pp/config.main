@@ -15,9 +15,6 @@ TOPDIR="$SCALEDIR/.."                                                # Directory
 
 DOMNUM=1
 
-fp_suffix='_single' ### '' (double) or '_single'
-#fp_suffix='' ### '' (double) or '_single'
-
 #DOMAIN=d1
 #NX=320
 #NY=240

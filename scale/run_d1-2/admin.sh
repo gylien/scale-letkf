@@ -31,8 +31,6 @@ else
  MEMBERS='all'
 fi
 
-FP_SUFFIX=_single
-
 CONFIG='online_NRT_5.3.X'
 PRESET=`hostname | cut -d '.' -f 2 | tr '[a-z]' '[A-Z]'`
 
@@ -125,7 +123,6 @@ cat config/${CONFIG}/config.${SCPNAME} | \
 cat config.main.${config_suffix} | \
    sed -e "s/<MEMBER>/${NMEM}/g" | \
    sed -e "s/<NNODES>/${NNODES}/g" | \
-   sed -e "s/<FP_SUFFIX>/${FP_SUFFIX}/g" | \
    sed -e "s/<STIME>/${STIME}/g" \
  > config.main
 rm config.main.${config_suffix}

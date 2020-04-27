@@ -29,8 +29,6 @@ ETIME="$STIME"
 CONFIG='realtime_fcst_D4_1km'
 PRESET=`hostname | cut -d '.' -f 2 | tr '[a-z]' '[A-Z]'`
 
-FP_SUFFIX='_single' ### '' or '_single'
-
 #-------------------------------------------------------------------------------
 
 if [ "$PRESET" = 'OFP' ]; then
@@ -120,8 +118,7 @@ cat config.main.${config_suffix} | \
    sed -e "s/<NNODES>/${NNODES}/g" | \
    sed -e "s/<STIME>/${STIME}/g" | \
    sed -e "s/<PARENT_REF_TIME>/${PARENT_REF_TIME}/g" | \
-   sed -e "s/<PARENT_REF_TIME_D2>/${PARENT_REF_TIME_D2}/g" | \
-   sed -e "s/<FP_SUFFIX>/${FP_SUFFIX}/g"  \
+   sed -e "s/<PARENT_REF_TIME_D2>/${PARENT_REF_TIME_D2}/g" \
  > config.main
 rm config.main.${config_suffix}
 

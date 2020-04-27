@@ -7,9 +7,7 @@
 
 PRESET='OFP' 
 
-fp_suffix='<FP_SUFFIX>'  ### '' or '_single'
-
-EXPNAME=ope${fp_suffix}
+EXPNAME=ope
 
 
 NRT_FCST=1 # Near real time forecast? # 1:True

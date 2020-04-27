@@ -7,9 +7,7 @@
 
 PRESET='OBCX' 
 
-fp_suffix='<FP_SUFFIX>'
-
-EXPNAME=ope${fp_suffix}
+EXPNAME=ope
 
 #===============================================================================
 
