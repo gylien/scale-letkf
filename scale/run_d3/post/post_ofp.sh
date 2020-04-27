@@ -338,7 +338,7 @@ done
 echo 'plot...'
 echo $STIME > plot.lock 
  [ ! -z "`ls out/`" ] && rm out/*
- grads -bcl "plot_driver_d3_10min.gs $OUTDIR/$STIME/fcstgp/$mem/history.ctl 1 25 1" &> plot.log 
+ grads -bcl "plot_driver_d3_10min.gs $OUTDIR/$STIME/fcstgp/$mem/history.ctl 1 $ntime 1" &> plot.log 
  mkdir -p $OUTDIR/$STIME/fcstgpi/$mem 
  mv out/*.png $OUTDIR/$STIME/fcstgpi/$mem/
  rm plot.lock
