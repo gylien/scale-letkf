@@ -19,8 +19,6 @@ See [directory structure](directory-structure.md) for the entire structure of th
 
 ### Build SCALE-RM
 
-exec files for both single-precision and double-precision need to be created. 
-
 ```
 cd scale_ope
 cp scale-letkf_ope/Mkinclude_scale ./Mkinclude   ### Special config to create multiple bin/lib/include sets
@@ -29,41 +27,32 @@ export SCALE_ENABLE_OPENMP=T
 export SCALE_USE_SINGLEFP=T ### single precision 
 cd scale-rm/src
 make 
-make allclean
-export SCALE_USE_SINGLEFP=F ### double precision
-make
 cd -
 ```
-This makes pairs of bin/lib/include directories respectively for single and double precision execusion.
 
 ### Build LETKF
 
 Two separate LETKF source codes respectively for D1-3 and D4(realtime) are needed to be compiled.
 
-If you need to perform simulation with both single and double precision, you need to compile twice with `$SCALE_USE_SINGLEFP=T` and `F`.
-
-By default, D1 DA cycle is performed with double precision and D1-3 ensemble forecasts are performed with single precision. 
+By default, LETKF uses double precision while SCALE model applies single precision. 
+This is enabled by setting two different environment variables `SCALE_SINGLEFP` `LETKF_SINGLEFP` in `configure.user.ofp` . 
 
 ```
 cd scale-letkf_ope/scale
-ln -s arch/configure.user.OFP ./configure.user
-export SCALE_USE_SINGLEFP=T ### single precision 
-make 
-export SCALE_USE_SINGLEFP=F ### double precision 
+ln -s arch/configure.user.ofp ./configure.user 
 make 
 cd -
 cd scale-letkf_ope_d4/scale
 ln -s arch/configure.user.OFP ./configure.user
-export SCALE_USE_SINGLEFP=T ### single precision 
 make 
 ```
-The one for D1-3 creates exec files as follows. If `$SCALE_USE_SINGLEFP=T`, the prefix `_single` is added to each file name.  
+The exec files for D1-3 are as follows.  
 ```
 ensmodel/scale-rm_ens
 ensmodel/scale-rm_init_ens
 ensmodel/scale-rm_pp_ens
 ```
-The one for D4 creats a combined exec file as follows.
+The exec files for D4 are as follows.  
 ```
 dacycle/dacycle
 ```
