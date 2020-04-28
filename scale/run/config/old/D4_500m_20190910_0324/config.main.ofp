@@ -9,18 +9,18 @@ PRESET='OFP'
 
 RSCGRP="debug-cache"
 RSCGRP="debug-flat"
-RSCGRP="regular-flat"
+#RSCGRP="regular-flat"
 
 #===============================================================================
 
 DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
 
 
-EXP4=D4_500m_20190910_TEST0420
+EXP4=D4_500m_20190910_TEST0420_QVONLY
 
 
 OUTDIR="/work/hp150019/share/honda/SCALE-LETKF/AIP_D4_VERIFY/${EXP4}"
-INDIR="/work/hp150019/share/honda/SCALE-LETKF/TEST_INPUT/D4_500m_20190910"
+INDIR="/work/hp150019/share/honda/SCALE-LETKF/TEST_INPUT/D4_500m_20190910_0324"
 
 #===============================================================================
 # Location of model/data files
@@ -29,9 +29,9 @@ SCALEDIR="$DIR/../.."                                                # Directory
 DATADIR="/work/hp150019/share/database" 
 SCALE_DB="/work/hp150019/share/database" 
 
-DATA_TOPO="/work/hp150019/share/honda/SCALE-LETKF/TEST_INPUT/D4_500m_20190910"
+DATA_TOPO="/work/hp150019/share/honda/SCALE-LETKF/TEST_INPUT/D4_500m_20190910_0324"
 DATA_TOPO_BDY_SCALE=
-DATA_LANDUSE="/work/hp150019/share/honda/SCALE-LETKF/TEST_INPUT/D4_500m_20190910"
+DATA_LANDUSE="/work/hp150019/share/honda/SCALE-LETKF/TEST_INPUT/D4_500m_20190910_0324"
 
 DATA_BDY_SCALE=
 DATA_BDY_SCALE_PRC_NUM_X=

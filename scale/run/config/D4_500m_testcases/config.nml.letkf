@@ -4,9 +4,16 @@
 /
 
 &PARAM_LOG
- LOG_LEVEL = 2,
+ LOG_LEVEL = 1,
  USE_MPI_BARRIER = .true.,
 /
+
+&PARAM_LETKF_VAR_LOCAL
+ VAR_LOCAL_RADAR_REF = 1.0d0, 1.0d0, 1.0d0, 1.0d0, 1.0d0, ! u, v, w, t, p
+                       1.0d0, 1.0d0, 1.0d0, 1.0d0, 1.0d0, ! q, qc, qr, qi, qs
+                       1.0d0,                             ! qg
+/
+
 
 &PARAM_OBSOPE
 !--OBS_IN_NUM--
@@ -33,11 +40,13 @@
 !--GUES_OUT_BASENAME--
 !--GUES_MEAN_OUT_FREQ--
 !--GUES_SPRD_OUT_FREQ--
+!--GUES_SPRD_OUT_BASENAME--
 !--ANAL_OUT_BASENAME--
 !--ANAL_OUT_FREQ--
 !--ANAL_MEAN_OUT_FREQ--
 !--ANAL_MDET_OUT_FREQ--
 !--ANAL_SPRD_OUT_FREQ--
+!--ANAL_SPRD_OUT_BASENAME--
 !--GUES_ANAL_POSTFIX_TIMELABEL--
 !--LETKF_TOPO_IN_BASENAME--
  INFL_MUL = 1.00D0,
@@ -81,7 +90,7 @@
  HORI_LOCAL_RADAR_OBSNOREF = 2.0D3,
 ! HORI_LOCAL_RADAR_VR = 10.0D3,
 ! VERT_LOCAL_RADAR_VR = 3.0D3,
- MAX_NOBS_PER_GRID = 100,
+ MAX_NOBS_PER_GRID = 50,
  MAX_NOBS_PER_GRID_CRITERION = 1,
  OBS_SORT_GRID_SPACING = 0.0D0, -1.0D0, -1.0D0, -1.0D0, -1.0D0, -1.0D0, -1.0D0, -1.0D0, -1.0D0, -1.0D0,
                         -1.0D0, -1.0D0, -1.0D0, -1.0D0, -1.0D0, -1.0D0, -1.0D0, -1.0D0, -1.0D0, -1.0D0,
@@ -110,11 +119,17 @@
  MIN_RADAR_REF_DBZ = 10.0D0,
  LOW_REF_SHIFT = -5.0D0,
  RADAR_ZMAX = 11.0D3,
- RADAR_ZMIN = 500.0D,
+ RADAR_ZMIN = 500.0D, 
  RADAR_SO_SIZE_HORI = 500.0D0,
  RADAR_SO_SIZE_VERT = 500.0D0,
+ RADAR_THIN_HORI = 1,
+ RADAR_THIN_VERT = 1,
  RADAR_MAX_ABS_VR = 50.0D0,
  USE_METHOD3_REF_MELT = .false.,
+ RADAR_BIAS_COR_RAIN = .false.,
+ RADAR_BIAS_COR_CLR = .false.,
+ RADAR_BIAS_RAIN_CONST_DBZ = 20.0d0,
+ RADAR_BIAS_CLR_CONST_DBZ = 0.0d0,
 /
 
 &PARAM_OBS_ERROR
@@ -127,12 +142,13 @@
 /
 
 &PARAM_PLOT_DCL
- plot_obs  = .true. ,
- plot_anal = .true. ,
- plot_fcst = .true. ,
- plot_zlev_min = 10 , 
- plot_zlev_max = 40 , 
- plot_zlev_intv = 5 , 
+ PLOT_OBS  = .true.,
+ PLOT_ANAL = .true.,
+ PLOT_FCST = .true.,
+ PLOT_FCST_T0 = .true.,
+ PLOT_ZLEV_MIN = 10,
+ PLOT_ZLEV_MAX = 40,
+ PLOT_ZLEV_INTV = 5,
 /
 
 

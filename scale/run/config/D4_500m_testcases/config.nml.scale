@@ -97,8 +97,8 @@
 #################################################
 
 &PARAM_PRC_CARTESC
- PRC_NUM_X      = 32,
- PRC_NUM_Y      = 32,
+ PRC_NUM_X      = 16,
+ PRC_NUM_Y      = 16,
  PRC_PERIODIC_X = .false.,
  PRC_PERIODIC_Y = .false.,
 /
@@ -111,8 +111,8 @@
 
 &PARAM_ATMOS_GRID_CARTESC_INDEX
  KMAX = 60,
- IMAX = 8,
- JMAX = 8,
+ IMAX = 16,
+ JMAX = 16,
 /
 
 &PARAM_LAND_GRID_CARTESC_INDEX
@@ -156,11 +156,15 @@
 /
 
 &PARAM_MAPPROJECTION
+! Saitama NICT MP-PAWR
+ MAPPROJECTION_basepoint_lon = 139.609D0,
+ MAPPROJECTION_basepoint_lat =  35.861D0,
+!! Chiba JRC PAWR
 ! MAPPROJECTION_basepoint_lon = 140.228718370199D0,
 ! MAPPROJECTION_basepoint_lat =  35.5224078287146D0,
 !! Kobe PAWR
- MAPPROJECTION_basepoint_lon = 134.9512D0,
- MAPPROJECTION_basepoint_lat =  34.7105D0,
+! MAPPROJECTION_basepoint_lon = 134.9512D0,
+! MAPPROJECTION_basepoint_lat =  34.7105D0,
 !
  MAPPROJECTION_type          = 'MER',
 ! MAPPROJECTION_type          = 'LC',

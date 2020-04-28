@@ -5,12 +5,14 @@
 #
 #===============================================================================
 
+#STIME='20190819130000'
+#STIME='20190824190000'
+#STIME='20190903130000'
+STIME='20190910130000'
 
-STIME='20190910150000'
-ETIME='20190910151930'
+ETIME=$STIME
 
-
-TIME_LIMIT='1:30:00'
+TIME_LIMIT='1:00:00'
 CYCLE=
 CYCLE_SKIP=1
 
@@ -25,16 +27,16 @@ DIRECT_TRANSFER=1
 DACYCLE_RUN_FCST=1
 
 # Maximum number of dacycle forecasts 
-MAX_DACYCLE_RUN_FCST=10
+MAX_DACYCLE_RUN_FCST=120
 
 # Number of dafcst members
 NUM_DACYCLE_FCST_MEM=10
 
 # Forecast time for dacycle-forecast members that will be initiated from the analysis ensemble mean
-DACYCLE_RUN_FCST_TIME=1200 # sec
+DACYCLE_RUN_FCST_TIME=1800 # sec
 
 # Cycle # of 1st dacycle-forecast start
-ICYC_DACYCLE_RUN_FCST=10
+ICYC_DACYCLE_RUN_FCST=1
 
 # Cycle # of 1st DA cycle starts after spin-up forecast
 ICYC_DACYCLE_RUN_ANALYSIS=1

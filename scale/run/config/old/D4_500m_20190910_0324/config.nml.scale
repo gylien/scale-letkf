@@ -97,8 +97,8 @@
 #################################################
 
 &PARAM_PRC_CARTESC
- PRC_NUM_X      = 32,
- PRC_NUM_Y      = 32,
+ PRC_NUM_X      = 8,
+ PRC_NUM_Y      = 8,
  PRC_PERIODIC_X = .false.,
  PRC_PERIODIC_Y = .false.,
 /
@@ -111,8 +111,8 @@
 
 &PARAM_ATMOS_GRID_CARTESC_INDEX
  KMAX = 60,
- IMAX = 8,
- JMAX = 8,
+ IMAX = 32,
+ JMAX = 32,
 /
 
 &PARAM_LAND_GRID_CARTESC_INDEX
@@ -156,11 +156,15 @@
 /
 
 &PARAM_MAPPROJECTION
+! Saitama NICT MP-PAWR
+ MAPPROJECTION_basepoint_lon = 139.609D0,
+ MAPPROJECTION_basepoint_lat =  35.861D0,
+!! Chiba JRC PAWR
 ! MAPPROJECTION_basepoint_lon = 140.228718370199D0,
 ! MAPPROJECTION_basepoint_lat =  35.5224078287146D0,
 !! Kobe PAWR
- MAPPROJECTION_basepoint_lon = 134.9512D0,
- MAPPROJECTION_basepoint_lat =  34.7105D0,
+! MAPPROJECTION_basepoint_lon = 134.9512D0,
+! MAPPROJECTION_basepoint_lat =  34.7105D0,
 !
  MAPPROJECTION_type          = 'MER',
 ! MAPPROJECTION_type          = 'LC',
@@ -221,7 +225,7 @@
 #################################################
 
 &PARAM_ATMOS_VARS
- ATMOS_VARS_CHECKRANGE = .false.,
+ ATMOS_VARS_CHECKRANGE = .true.,
 /
 
 &PARAM_ATMOS_REFSTATE
@@ -258,14 +262,14 @@
  ATMOS_DYN_FVM_FLUX_TYPE              = "UD3",          ! r0051
  ATMOS_DYN_FVM_FLUX_TRACER_TYPE       = "UD3KOREN1993",
  ATMOS_DYN_FLAG_FCT_TRACER            = .false.,
- ATMOS_DYN_NUMERICAL_DIFF_COEF        = 0.0D0,
+ ATMOS_DYN_NUMERICAL_DIFF_COEF        = 1.D-4,
  ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER = 0.0D0,
  ATMOS_DYN_CORIOLIS_TYPE = "SPHERE",
  ATMOS_DYN_WDAMP_HEIGHT               = 15.D3,
 /
 
 &PARAM_ATMOS_PHY_TB_SMG
- ATMOS_PHY_TB_SMG_horizontal = .false.,
+ ATMOS_PHY_TB_SMG_horizontal = .true.,
 /
 
 &PARAM_ATMOS_PHY_RD_MSTRN
@@ -297,7 +301,7 @@
 #################################################
 
 &PARAM_OCEAN_VARS
- OCEAN_VARS_CHECKRANGE = .false.,
+ OCEAN_VARS_CHECKRANGE = .true.,
 /
 
 &PARAM_OCEAN_DYN_SLAB

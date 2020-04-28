@@ -1,7 +1,5 @@
-dset /work/hp150019/share/honda/SCALE-LETKF/AIP_D4_VERIFY/D4_500m_20190910_THIN/%y4%m2%d2%h20000/mean_grads/%e_pawr_%y4%m2%d2-%h2%n200.grd 
-undef 9.999E+33
-options template big_endian
-edef 2 names anal gues
+dset /work/hp150019/share/honda/SCALE-LETKF/AIP_D4_VERIFY/D4_500m_20190910_THIN/20190910150000/dafcst/fcst_ref3d_20190910-150500.grd
+undef -9.990000e+33
 xdef    256 linear 139.02670288085938 0.0045
 ydef    256 linear 35.3876838684082 0.00366
 zdef    60 levels    110.0000   220.0000   330.0000   440.0000   550.0000
@@ -16,9 +14,9 @@ zdef    60 levels    110.0000   220.0000   330.0000   440.0000   550.0000
           17242.8008 18042.8008 18842.8008 19642.8008 20442.8008
           21242.8008 22042.8008 22842.8008 23642.8008 24442.8008
           25242.8008 26042.8008 26842.8008 27642.8008 28442.8008
-tdef 100 linear 15:00Z10Sep2019 1mn
-vars 2
-dbz 60 99 Radar reflectivity
-vr 60 99 Radial velocity
+tdef    60 linear 12:00Z30Jan2018 1mn
+* Acutual DT is 30 sec but GrADS cannot deal with DT < 1 min
+* FT=0 data, which should be the same with the analysis data, is not included
+vars 1
+dbz     60 99 X-band Radar Reflectivity (dBZ)
 endvars
-

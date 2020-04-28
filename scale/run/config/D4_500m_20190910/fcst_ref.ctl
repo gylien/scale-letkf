@@ -1,5 +1,6 @@
 dset /work/hp150019/share/honda/SCALE-LETKF/AIP_D4_VERIFY/D4_500m_20190910_THIN/20190910150000/dafcst/fcst_ref3d_20190910-150500.grd
 undef -9.990000e+33
+options big_endian
 xdef    256 linear 139.02670288085938 0.0045
 ydef    256 linear 35.3876838684082 0.00366
 zdef    60 levels    110.0000   220.0000   330.0000   440.0000   550.0000

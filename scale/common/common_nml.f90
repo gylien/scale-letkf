@@ -199,6 +199,7 @@ MODULE common_nml
   real(r_size) :: BOUNDARY_TAPER_WIDTH = 0.0d0 ! Deprecated (use BOUNDARY_BUFFER_WIDTH)
   logical :: OUT_GRADS_DAFCST = .false. ! Outut dacycle forecast in GrADS format
   logical :: OUT_GRADS_DA_ALL = .false. ! Outut dacycle analysis/guess in GrADS format
+  integer :: OUT_GRADS_DA_ALL_ZSKIP = 1  ! Output Z interval
   character(filelenmax) :: OUT_GRADS_DA_ALL_PATH = "" ! Output path
 
   !--- PARAM_LETKF_OBS
@@ -735,6 +736,7 @@ subroutine read_nml_letkf
     NOBS_OUT_BASENAME, &
     OUT_GRADS_DAFCST, &
     OUT_GRADS_DA_ALL, &
+    OUT_GRADS_DA_ALL_ZSKIP, &
     OUT_GRADS_DA_ALL_PATH, &
     COV_INFL_MUL, &       !*** for backward compatibility ***
     MIN_INFL_MUL, &       !*** for backward compatibility ***

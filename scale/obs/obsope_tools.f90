@@ -909,7 +909,7 @@ subroutine write_grd_mpi(filename, nv3dgrd, nv2dgrd, step, v3d, v2d)
     iunit = 55
     inquire (iolength=iolen) iolen
     open (iunit, file=trim(filename), form='unformatted', access='direct', &
-          status='unknown', convert='native', recl=nlong*nlatg*iolen)
+          status='unknown', convert='big_endian', recl=nlong*nlatg*iolen)
     irec = (nlev * nv3dgrd + nv2dgrd) * (step-1)
   end if
 
@@ -965,8 +965,7 @@ subroutine write_pawr_direct( timelabel, step )
 
   character(10) :: head
   character(len=H_LONG) :: filename
-  real(r_sngl), allocatable :: buf1(:,:,:)
-  real(r_sngl), allocatable :: buf2(:,:,:)
+  real(r_sngl) :: buf(nlong,nlatg)
   integer :: iunit, iolen
   integer :: n, irec, ierr
   integer :: proc_i, proc_j
@@ -1002,16 +1001,6 @@ subroutine write_pawr_direct( timelabel, step )
   ishift = proc_i * nlon
   jshift = proc_j * nlat
 
-  allocate( buf1(nlev,nlong,nlatg) )
-  allocate( buf2(nlev,nlong,nlatg) )
-
-  buf1 = 0.0
-  buf1(:,1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real( ref3d, kind=r_sngl )
-  call MPI_ALLREDUCE(MPI_IN_PLACE, buf1, nlev*nlong*nlatg, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr)
-
-  buf2 = 0.0
-  buf2(:,1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real( vr3d, kind=r_sngl )
-  call MPI_ALLREDUCE(MPI_IN_PLACE, buf2, nlev*nlong*nlatg, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr)
 
   if ( myrank_d == 0 ) then
 
@@ -1022,21 +1011,32 @@ subroutine write_pawr_direct( timelabel, step )
     iunit = 55
     inquire (iolength=iolen) iolen
     open (iunit, file=trim(filename), form='unformatted', access='direct', &
-          status='unknown', convert='native', recl=nlong*nlatg*iolen)
+          status='unknown', convert='big_endian', recl=nlong*nlatg*iolen)
     irec = 0
 
-    do n = 1, 2
-      do k = 1, nlev
+  endif ! myrank_d == 0
+
+  do n = 1, 2
+    do k = 1, nlev, OUT_GRADS_DA_ALL_ZSKIP
+      buf = 0.0
+      if ( n == 1 ) then
+        buf(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real( ref3d(k,:,:), kind=r_sngl )
+      elseif ( n == 2 ) then
+        buf(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real( vr3d(k,:,:), kind=r_sngl )
+      endif
+      call MPI_ALLREDUCE(MPI_IN_PLACE, buf, nlong*nlatg, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr)
+  
+      if ( myrank_d == 0 ) then
         irec = irec + 1
-        if( n == 1 ) write (iunit, rec=irec) buf1(k,:,:)
-        if( n == 2 ) write (iunit, rec=irec) buf2(k,:,:)
-      enddo
+        write (iunit, rec=irec) buf(:,:)
+      endif
     enddo
+  enddo
 
+
+  if ( myrank_d == 0 ) then
     close (iunit)
-  end if ! myrank_d == 0
-
-  deallocate( buf1, buf2 )
+  endif ! myrank_d == 0
 
   return
 end subroutine write_pawr_direct

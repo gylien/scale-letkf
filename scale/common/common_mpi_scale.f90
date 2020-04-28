@@ -1891,7 +1891,7 @@ subroutine write_grd_dafcst_mpi(timelabel, ref3d, step)
     iunit = 55
     inquire (iolength=iolen) iolen
     open (iunit, file=trim(filename), form='unformatted', access='direct', &
-          status='unknown', convert='native', recl=nlong*nlatg*iolen)
+          status='unknown', convert='big_endian', recl=nlong*nlatg*iolen)
     irec = (step - 1)*nlev*1 ! 1 variable (nlev*1 record) output 
   end if
 
@@ -1941,7 +1941,7 @@ subroutine write_grd_all_mpi(timelabel, v3dg, step)
 
   character(4) :: head
   character(len=H_LONG) :: filename
-  real(r_sngl) :: buf(nlev,nlong,nlatg)
+  real(r_sngl) :: bufr4(nlong,nlatg)
   integer :: iunit, iolen
   integer :: k, n, irec, ierr
   integer :: proc_i, proc_j
@@ -1962,23 +1962,25 @@ subroutine write_grd_all_mpi(timelabel, v3dg, step)
     iunit = 55
     inquire (iolength=iolen) iolen
     open (iunit, file=trim(filename), form='unformatted', access='direct', &
-          status='unknown', convert='native', recl=nlong*nlatg*iolen)
+          status='unknown', convert='big_endian', recl=nlong*nlatg*iolen)
     irec = 0
   end if
 
+
   do iv3d = 1, nv3d
-    buf(:,:,:) = 0.0
-    buf(:,1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real( v3dg(:,:,:,iv3d), kind=r_sngl )
-    call MPI_ALLREDUCE(MPI_IN_PLACE, buf, nlev*nlong*nlatg, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr)
+    do k = 1, nlev, OUT_GRADS_DA_ALL_ZSKIP
+      bufr4(:,:) = 0.0
+      bufr4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real( v3dg(k,:,:,iv3d), r_sngl)
+      call MPI_ALLREDUCE(MPI_IN_PLACE, bufr4, nlong*nlatg, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr)
 
-    if (myrank_d == 0) then
-      do k = 1, nlev
+      if (myrank_d == 0) then
         irec = irec + 1
-        write (iunit, rec=irec) buf(k,:,:)
-      enddo
-    end if
+        write (iunit, rec=irec) bufr4
+      end if
 
+    enddo
   enddo
+
 
   if (myrank_d == 0) then
     close (iunit)
@@ -2071,9 +2073,9 @@ subroutine plot_dafcst_mpi(timelabel, ref3d, step)
     nlev_plot = nlev_plot + 1
 
     bufr3d(nlev_plot,1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(ref3d(k,1:nlon,1:nlat), r_sngl)
+    call MPI_ALLREDUCE(MPI_IN_PLACE, bufr3d(nlev_plot,:,:), nlong*nlatg, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr)
   enddo
 
-  call MPI_ALLREDUCE(MPI_IN_PLACE, bufr3d, nlong*nlatg*nlev_plot, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr)
 
 
   ! Gather required data for reflectivity computation

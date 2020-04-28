@@ -498,6 +498,7 @@ program dacycle
       !  call write_ensmean(trim(GUES_MEAN_OUT_BASENAME) // trim(timelabel_anal), gues3d, gues2d, &
       !                     calced=.false., mean_out=gues_mean_out_now)
       !end if
+      call mpi_timer('GUES_MEAN', 1, barrier=MPI_COMM_da)
 
       if ( OUT_GRADS_DA_ALL .and. myrank_e == mmean_rank_e ) then
         call TIME_gettimelabel(fstimelabel)
@@ -510,7 +511,7 @@ program dacycle
         call write_enssprd(trim(GUES_SPRD_OUT_BASENAME) // trim(fstimelabel), gues3d, gues2d)
       end if
 
-      call mpi_timer('GUES_MEAN', 1, barrier=MPI_COMM_da)
+      call mpi_timer('WRITE RESTART/GRADS(GUES)', 1, barrier=MPI_COMM_da)
 
       !-----------------------------------------------------------------------
       ! Data Assimilation
@@ -611,6 +612,8 @@ program dacycle
         call write_grd_all_mpi( trim(fstimelabel(1:15)), mean3d, 2 )
         call write_pawr_direct( trim(fstimelabel(1:15)), 2 )
       endif
+
+      call mpi_timer('WRITE RESTART/GRADS(ANAL)', 1, barrier=MPI_COMM_da)
 
     end if ! [ TIME_DOATMOS_DA .and. myrank_use_da]
     !-------------------------------------------------------------------------

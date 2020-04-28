@@ -1,6 +1,6 @@
 dset /work/hp150019/share/honda/SCALE-LETKF/AIP_D4_VERIFY/D4_500m_20190910_THIN/%y4%m2%d2%h20000/mean_grads/%e%y4%m2%d2-%h2%n200.grd 
 undef 9.999E+33
-options template
+options template big_endian
 edef 2 names anal gues
 xdef    256 linear 139.02670288085938 0.0045
 ydef    256 linear 35.3876838684082 0.00366
