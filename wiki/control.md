@@ -2,23 +2,20 @@
 
 The scripts in `admin` control realtime operation of the SCALE-LETKF system. 
 
-The following scripts run a corresponding single analysis or forecast. 
 ```
-admin_cycle.sh
-admin_fcst_d1_ext.sh
-admin_fcst_d1-2.sh
-admin_fcst_d3.sh \*
-```
-\* Including D4 initial and boundary conditions downscaled from resultant D3 forecast.
+admin_cycle.sh           ### run a single D1 DA cycle
+admin_fcst_d1_ext.sh     ### run a single D1 extended forecast
+admin_fcst_d1-2.sh       ### run a single D1-2 forecast
+admin_fcst_d3.sh         ### run a single D3 forecast and generate D4 initial/boundary conditions from it 
 
-(TODO: scripts for D4)
+auto_cycle.sh            ### automatically run D1 DA cycle for multiple times  
+auto_fcst_d1_ext.sh      ### automatically run D1 extended forecasts 
+auto_fcst_d1-2.sh        ### automatically run D1-2 forecasts
+auto_fcst_d3.sh          ### automatically run realtime D3 forecasts 
 
-The following scripts launch automatic realtime execusion of corresponding analysis or forecast. 
-```
-auto_cycle.sh
-auto_fcst_d1_ext.sh
-auto_fcst_d1-2.sh
-auto_fcst_d3.sh
+auto_cycle_d4.sh         ### automatically run realtime D4 DA cycle and extended forecasts 
+
+time_offset.txt          ### time offset in second for past mode (optional)
 ```
 
 ### Configuration
@@ -61,24 +58,24 @@ If more detailed configuration needs to be modified (such as changing output var
 
 ### D1 analysis cycle
 
-The latest time of analysis data is recorded in `admin_cycle.time` in a "YYYY-MM-DD HH:MM:SS" format.
+The latest time of analysis data is recorded in `admin_cycle.time` in a "YYYY-MM-DD HH" format.
 If a target time needs to be specified, for example,
 ```
-echo '2020-01-01 00:00:00' > admin_cycle.time
+echo '2020-01-01 00' > admin_cycle.time
 ```
-and the next D1 analysis creates an analysis at "2020-01-01 06:00:00". 
+and the next D1 analysis creates an analysis at "2020-01-01 06". 
 
 To run a single analysis cycle, 
 ```
 nohup ./admin_cycle.sh &
 ```
-The progress will be shown in `admin_cycle.log`. While the program is running a temporary file `admin_cycle.lock` appears to prevent accidental multiple execution. When it ends successfully, the time stamp in `admin_cycle.time` is updated. 
+The progress will be shown in `admin_cycle.log`. While the program is running a temporary file `admin_cycle.lock` appears to prevent accidental multiple execution. When `admin_cycle.sh` ends successfully, the time stamp in `admin_cycle.time` is updated. 
 
 To run a realtime analysis cycle automatically, 
 ```
 nohup ./auto_cycle.sh &> auto_cycle.log &
 ```
-this repeatedly call `admin_cycle.sh` or wait until NCEP data for next time step is avaiable.
+this repeatedly call `admin_cycle.sh` or wait until when NCEP GFS and PREPBUFR data for next time step is avaiable.
 
 ### D1 extended forecast
 
@@ -95,8 +92,7 @@ nohup ./auto_fcst_d1_ext.sh "2020-01-01 06:00:00" & > auto_fcst_d1_ext.log &
 ```
 this automatically run forecast from "2020-01-01 06:00:00" first and from "2020-01-01 12:00:00" next, and so on.
 
-Multiple forecasts from different initial times can be run simulateneously (see also [here](misc.md)).
-
+Simutaneous run of multiple forecasts from different initial times is supported (see also [here](misc.md)). This also applies for D1-2 and D3. 
 
 ### D1 and D2 forecast
 
@@ -113,8 +109,6 @@ nohup ./auto_fcst_d1-2.sh "2020-01-01 06:00:00" & > auto_fcst_d1-2.log &
 ```
 this automatically run forecast from "2020-01-01 06:00:00" first and from "2020-01-01 12:00:00" next, and so on.
 
-Multiple forecasts from different initial times can be run simulateneously (see also [here](misc.md)).
-
 ### D3 forecast and creating D4 init/boundary files
 
 To run a D3 forecast, an initial time of *D2 forecast* to be used as initial/boundary condition, an initial time of D3 forecast, and a forecast length need to be specified.   
@@ -128,15 +122,22 @@ The automatic run of D3 is a bit more complicated than D1-2 because it is design
 ```
 nohup ./auto_fcst_d3.sh & > auto_fcst_d3.log &
 ```
-(description to be added)
-
-Multiple forecasts from different initial times can be run simulateneously (see also [here](misc.md)).
-
-
 
 ### Contenious run of automatic scripts
 While automatic run scripts like `auto_cycle.sh` is running, a temporary file such as `running_cycle` appears. It stores **the hostname (ofpXX or obcxXX) and PID** of the corresponding automatic program currently running. 
 
 To manually stop automatic scripts, **log in to the corresponding host** and kill the process with the corresponding PID.
+
+### Past mode 
+The scripts supports the "past mode", in which the test case in a specific time in the past can be treated as a virtual realtime operation. 
+To activate past mode, set time offset in `time_offset.txt` in a unit of second.
+For example,  if you want to treat the past "2019 August 24th 15 UTC" as if it is happening now, set the offset as follows.  
+```
+nows= `date -u +%s`
+pasts=`date -ud "2019-08-24 15:00:00" +%s`
+cat `expr $pasts - $nows` > time_offset.txt
+```
+Then the time offset applies when the scripts `auto_fcst_d3.sh` and `auto_cycle_d4.sh` run.  
+There are also tools in `external/past` to imitate 6-hourly download of realtime NCEP data for past events.
 
 
