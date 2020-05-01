@@ -14,12 +14,9 @@ $TOPDIR/                                 ### top directory for SCALE-LETKF realt
 │   └── ncepobs_gdas_letkf/               #            -- decoded data
 │
 ├── scale_ope/                           ### SCALE model
-│   ├── bin/                              # binary  (double precision)
-│   ├── bin_single/                       #         (single)
-│   ├── include/                          # include (double precision)
-│   ├── include_single/                   #         (single)
-│   ├── lib/                              # library (double precision)
-│   ├── lib_single/                       #         (single)
+│   ├── bin/                              # binary  
+│   ├── include/                          # include 
+│   ├── lib/                              # library 
 │   ├── scale-rm/                         # SCALE-RM main source files  
 |   ├── scalelib/                         # SCALE common library source files
 |   ├── sysdep/                           # system-dependent configuration
@@ -54,20 +51,18 @@ $TOPDIR/                                 ### top directory for SCALE-LETKF realt
 │ 
 └── result/                              ### Results
     ├── ope/                              # Double precision
-    │   ├── d1/                           # Domain 1 analysis
-    │   ├── ncepgfs_grads_da/             #   temporal paths used in D1 cycle
-    │   └── ncepobs/                      #   temporal paths used in D1 cycle
     └── ope_single/                       # Single precision
-        ├── d1/                           # Domain 1 forecast (online)
+        ├── d1/                           # Domain 1 analysis and forecast (online)
         ├── d1_ext/                       #          extended forecast 
         ├── d2/                           # Domain 2 forecast (online)
-        ├── d3/                           # Domain 3 forecast Kansai area
-        ├── d3_Kanto/                     #                   Kanto area
+        ├── d3/                           # Domain 3 forecast 
         ├── d4_1km/                       # Domain 4 analysis/forecast (test)
         ├── d4_500m/                      #                            (ope)
         ├── d4_250m/                      #                            (champaign)
+        ├── ncepgfs_grads_da/             #   temporal paths used in D1 cycle
         ├── ncepgfs_grads/                #   temporal paths used in D1-2 forecast 
-        └── ncepgfs_grads_ext/            #   temporal paths used in D1 extended forecast
+        ├── ncepgfs_grads_ext/            #   temporal paths used in D1 extended forecast
+        └── ncepobs/                      #   temporal paths used in D1 cycle
 
 ```
 
@@ -194,6 +189,7 @@ $OUTDIR/                                               ### SCALE-LETKF output di
 │           ├── bdy/                                    # Boundary files with timestamp
 │           │   └── <member>/                              # 4-digit ensemble member number and/or mean/mdet
 │           │       └── boundary_YYYYMMDD-HHmmss.000.pe<process>.nc   
+│           ├── dafcst/                                 # *output GrADS binary files and png files*
 │           ├── exp/                                    # runtime log files archive 
 │           └── log/                                    # log files of creating D4 init/bdy archive
 └── const/                                              # time-invariant files
