@@ -28,6 +28,8 @@ LANDUSE_FORMAT='GLCCv2'   # 'prep': Use prepared landuse files in $DATA_LANDUSE
                         # 'LU100M' (requires compatible 'config.nml.scale_pp')
 ```
 
+### Run
+ 
 Execute `pp_ofp.sh` to generate topo and landuse files (and `const/log/latlon_domain_catalogue.txt`). 
 (The name of a log file should not be changed, as it is used for job end detection. )
 
