@@ -1,6 +1,6 @@
 ## SCALE-LETKF realtime system domain 4
 
-See [wiki - PAWR DA with the merged version](https://github.com/gylien/scale-letkf/wiki/PAWR-DA-with-the-merged-version) for a more detailed instruction. 
+See [wiki - PAWR DA with the merged version](https://github.com/gylien/scale-letkf/wiki/PAWR-DA-with-the-merged-version) for more detailed instruction. 
 
 ### Overview
 
