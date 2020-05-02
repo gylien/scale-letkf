@@ -129,6 +129,16 @@ if [ "$JOBTYPE" = 'cycle' ] && ((OBS_USE_JITDT != 1)); then
 fi
 
 #-------------------------------------------------------------------------------
+# radar masking 
+
+if [ "$JOBTYPE" = 'cycle' ] ; then
+  maskfile_dir=${OBSUTIL_DIR}/radar
+  maskfile="saitama-nearfield-shadow-mask.dat"
+              echo "${maskfile_dir}/${maskfile}|${maskfile}" >> ${STAGING_DIR}/${STGINLIST_OBS}
+   
+fi
+
+#-------------------------------------------------------------------------------
 # create empty directories
 
 cat >> ${STAGING_DIR}/${STGINLIST} << EOF

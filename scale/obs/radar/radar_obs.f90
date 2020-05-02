@@ -791,6 +791,13 @@ subroutine read_obs_radar_toshiba(cfile, obs)
    (/'.ze', '.vr'/)
   logical, parameter :: input_is_dbz = .true.
   integer, parameter :: opt_verbose = 0 !!! for MP-PAWR toshiba format    
+
+  integer :: access !FILE INQUIRY
+  integer :: ios
+  character(len=33),parameter:: shadow_fname = "saitama-nearfield-shadow-mask.dat"
+  integer(4),save :: shadow_na, shadow_ne
+  integer(1), allocatable ,save :: shadow(:,:)
+  real(8),save :: shadow_del_az
 #else
   integer, parameter :: n_type = 3
   character(len=4), parameter :: file_type_sfx(n_type) = &
@@ -859,6 +866,30 @@ subroutine read_obs_radar_toshiba(cfile, obs)
   RADAR_SO_SIZE_HORI = max( real( DX, kind=r_size ), RADAR_SO_SIZE_HORI )
   RADAR_SO_SIZE_HORI = max( real( DY, kind=r_size ), RADAR_SO_SIZE_HORI )
 
+!!! MP-PAWR shadow masking 
+#ifdef MPW
+  if (not(allocated(shadow))) then
+    if (myrank_o == 0)then
+        write(*, '("reading ", A)') trim(shadow_fname)
+        open(99, file = trim(shadow_fname), status = "old", access = "stream", form = "unformatted", convert = "little_endian")
+        read(99,iostat=ios) shadow_na, shadow_ne
+        if (ios.eq.0)then
+          allocate(shadow(shadow_na, shadow_ne))
+          read(99,iostat=ios) shadow
+          close(99)
+          if(ios.ne.0) shadow=0
+        else
+          write(*,*) 'file ',trim(shadow_fname) ,' not found or unsupported format.'
+        end if 
+    end if
+    if (nprocs_o /= 1)then
+      call MPI_BCAST(shadow_na, 1, MPI_INTEGER4, 0, MPI_COMM_o, ierr)
+      call MPI_BCAST(shadow_ne, 1, MPI_INTEGER4, 0, MPI_COMM_o, ierr)
+      if (myrank_o /= 0) allocate(shadow(shadow_na,shadow_ne))
+      call MPI_BCAST(shadow, shadow_na*shadow_ne, MPI_INTEGER1, 0, MPI_COMM_o, ierr)
+    end if
+  end if
+#endif
 
   if ( .not. OBS_JITDT_CHECK_RADAR_TIME .or. obs_da_time_compare(utime_obs) == -1 ) then !!! read new data 
 
@@ -1043,6 +1074,14 @@ subroutine read_obs_radar_toshiba(cfile, obs)
 
 #ifdef MPW
            qcflag(ia, ir, ie) = 0.0d0 !valid
+           shadow_del_az = 360.0d0 / shadow_na
+            if (allocated(shadow)) then
+             if (ie <= shadow_ne) then
+               if(shadow(nint(az(ia, ie, 1) / shadow_del_az) + 1, ie) .ne. 0) then
+                 qcflag(ia, :, ie) = 1000.0d0  !invalid
+               end if
+             end if
+           end if
 #else
            tmp_qcf = int(rtdat(ir, ia, ie, 3), int1)
            if(iand(valid_qcf, tmp_qcf) == 0) then      
