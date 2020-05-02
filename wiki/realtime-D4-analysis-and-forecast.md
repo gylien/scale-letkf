@@ -1,4 +1,7 @@
 ## SCALE-LETKF realtime system domain 4
+
+See [wiki - PAWR DA with the merged version](https://github.com/gylien/scale-letkf/wiki/PAWR-DA-with-the-merged-version) for a more detailed instruction. 
+
 ### Overview
 
 * Domain setting  
@@ -23,4 +26,4 @@
 
 ### Forecast 
 
-Extended forecasts for 5 days ahead are performed every 6 hours, initialized by `mdet` of D1 analysis. 
+Extended forecasts for 30 minutes ahead are performed, initiated with every 30 seconds analysis fields. 
