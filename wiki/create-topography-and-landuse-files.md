@@ -16,7 +16,7 @@ DATA_BDY_SCALE_PRC_NUM_X=16 ### Parent number of process
 DATA_BDY_SCALE_PRC_NUM_Y=16 ### 
 ```
 
-Source data files for topography and landuse are specified in `config.main` as follows. 
+Source data files for topography and landuse are specified in `config.main` as follows.   
 DEM50M and LU100M may be better for D4 as they have finer resolution. 
 
 ```
@@ -30,12 +30,12 @@ LANDUSE_FORMAT='GLCCv2'   # 'prep': Use prepared landuse files in $DATA_LANDUSE
 
 ### Run
  
-Execute `pp_ofp.sh` to generate topo and landuse files (and `const/log/latlon_domain_catalogue.txt`). 
+Execute `pp_ofp.sh` to generate topo and landuse files (and `const/log/latlon_domain_catalogue.txt`).   
 (The name of a log file should not be changed, as it is used for job end detection. )
 
 The job takes only a few nodes and a few minutes. If not specified, `debug-flat` resource group is used. 
 ```
 ./pp_ofp.sh &> pp_ofp.log &
 ```
-By default, the destination of output files are `**your SCALE-LETKF top directory**/result/test_const/const`.
+By default, the destination of output files are `**your SCALE-LETKF top directory**/result/test_const/const`.  
 Check the validity of files and move the directory `const` to your target directory. 
