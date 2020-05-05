@@ -162,6 +162,7 @@ MODULE common_obs_scale
   INTEGER,PARAMETER :: iqc_out_vlo=21
   INTEGER,PARAMETER :: iqc_out_h=22
   INTEGER,PARAMETER :: iqc_obs_bad=50
+  INTEGER,PARAMETER :: iqc_obs_thin=55
   INTEGER,PARAMETER :: iqc_otype=90
   INTEGER,PARAMETER :: iqc_time=91
 
@@ -877,6 +878,10 @@ SUBROUTINE calc_ref_vr(qv,qc,qr,qci,qs,qg,u,v,w,t,p,az,elev,ref,vr)
       fws= qr / ( qr + qs )
     ENDIF
 
+    if ( .not. USE_RADAR_METHOD3_MELT ) then
+      Fs = 0.0d0
+      Fg = 0.0d0
+    endif
 
     !Correct the rain, snow and hail mixing ratios assuming
     !that we have a mixture due to melting.
@@ -3087,7 +3092,9 @@ END SUBROUTINE write_obs_H08
 !END SUBROUTINE write_obs_radar3d
 
 
-subroutine Trans_XtoY_LT(elm,ri,rj,rk,v3d,v2d,yobs,qc,myrank)
+subroutine Trans_XtoY_LT(elm,ri,rj,rk,v3d,v2d,yobs,qc,lev,myrank)
+  use scale_grid, only: &
+      GRID_CZ
   use scale_grid_index, only: &
       KHALO
 
@@ -3099,6 +3106,7 @@ subroutine Trans_XtoY_LT(elm,ri,rj,rk,v3d,v2d,yobs,qc,myrank)
 
   real(r_size), intent(out) :: yobs
   integer, intent(out) :: qc
+  real(r_size), intent(out) :: lev
 
   real(r_size) :: posfl, negfl
   real(r_size) :: posfl1d(nlevh), negfl1d(nlevh)
@@ -3109,6 +3117,9 @@ subroutine Trans_XtoY_LT(elm,ri,rj,rk,v3d,v2d,yobs,qc,myrank)
 
   integer, intent(in) :: myrank
   integer :: imod, jmod
+
+  real(r_size) :: tmp_fp, tmp_fp3d
+  integer :: kk
 
   yobs = undef
   qc = iqc_good
@@ -3144,10 +3155,10 @@ subroutine Trans_XtoY_LT(elm,ri,rj,rk,v3d,v2d,yobs,qc,myrank)
 
     call ij_l2g( myrank, cil, cjl, cig, cjg )
 
-    imod = mod( cig, 4 ) 
-    jmod = mod( cjg, 4 ) 
-
-    if ( imod /= 0 .or. jmod /= 0 ) qc = iqc_obs_bad
+!    imod = mod( cig, 4 ) 
+!    jmod = mod( cjg, 4 ) 
+!
+!    if ( imod /= 0 .or. jmod /= 0 ) qc = iqc_obs_bad
 
 !    cil = cil - imod + 3
 !    cjl = cjl - jmod + 3
@@ -3169,6 +3180,15 @@ subroutine Trans_XtoY_LT(elm,ri,rj,rk,v3d,v2d,yobs,qc,myrank)
 
     yobs = max( sum( v3d(ks:ke,is:ie,js:je,iv3dd_fp) ), 0.0_r_size )
 
+    tmp_fp = sum( v3d(ks,is:ie,js:je,iv3dd_fp) )
+    lev = 0.0d0
+    do kk = ks, ke
+      tmp_fp3d = sum( v3d(kk,is:ie,js:je,iv3dd_fp) )
+      if ( tmp_fp < tmp_fp3d ) then
+        lev = GRID_CZ(kk+KHALO)
+        tmp_fp = tmp_fp3d
+      endif
+    enddo
 
 !    call itpl_2d_column(v3d(:,:,:,iv3dd_fp),ri,rj,posfl1d(:))
 
@@ -3218,7 +3238,7 @@ subroutine read_obs_radar_grd(cfile,obs)
 
   iunit=91
   inquire (iolength=iolen) iolen
-  open(iunit,file=cfile,form='unformatted',access='direct',recl=nlong*nlatg*iolen)
+  open(iunit,file=cfile,form='unformatted',convert='little_endian',access='direct',recl=nlong*nlatg*iolen)
   irec = 0
   do k = 1, nlev
     irec = irec + 1
@@ -3408,13 +3428,17 @@ subroutine read_obs_lt_grd(cfile,obs)
   real(r_sngl) :: vmax
 
   integer :: z_thinning_lt_, xy_thinning_lt_
+  real(r_size) :: tmp_fp, tmp_fp3d
+  integer :: imin, imax
+  integer :: jmin, jmax
+  integer :: kk
 
 !  call obs_info_allocate(obs)
 
 
   iunit=91
   inquire (iolength=iolen) iolen
-  open(iunit,file=cfile,form='unformatted',access='direct',recl=nlong*nlatg*iolen)
+  open(iunit,file=cfile,form='unformatted',convert='little_endian',access='direct',recl=nlong*nlatg*iolen)
   irec = 0
   do k = 1, nlev
     irec = irec + 1
@@ -3427,7 +3451,7 @@ subroutine read_obs_lt_grd(cfile,obs)
   enddo ! k
 
   irec = irec + 1
-  read(iunit,rec=irec) (( lt2d(j,k), i = 1, nlong), j = 1, nlatg)
+  read(iunit,rec=irec) (( lt2d(i,j), i = 1, nlong), j = 1, nlatg)
 
   irec = irec + 1
   read(iunit,rec=irec) (( err2d(i,j), i = 1, nlong), j = 1, nlatg)
@@ -3450,28 +3474,39 @@ subroutine read_obs_lt_grd(cfile,obs)
     obs_id = id_ltp2d_obs
   end select
 
-  if ( LT_TEST_SINGLE ) then
-
-    if ( kmax_lt > 1 ) then ! 3d case
-      vmax = maxval(lt3d(:,:,:))
-
-    else ! 2d case
-      vmax = -1.0
-      do j = 1, nlatg
-      do i = 1, nlong
-        if ( vmax < lt2d(i,j) ) then 
-          vmax = lt2d(i,j)
-        endif
-      enddo
-      enddo
-    endif
-  endif
+!  if ( LT_TEST_SINGLE ) then
+!
+!    if ( kmax_lt > 1 ) then ! 3d case
+!      vmax = maxval(lt3d(:,:,:))
+!
+!    else ! 2d case
+!      vmax = -1.0
+!      do j = 1, nlatg
+!      do i = 1, nlong
+!        if ( vmax < lt2d(i,j) ) then 
+!          vmax = lt2d(i,j)
+!        endif
+!      enddo
+!      enddo
+!    endif
+!  endif
 
   cnt = 0
   n = 0
   do k = 1, kmax_lt
   do j = 1, nlatg
   do i = 1, nlong
+
+    imin = i - 2
+    imax = i + 1
+    if (imin < 1) imin = 1
+    if (imax > nlong) imax = nlong
+
+    jmin = j - 2
+    jmax = j + 1
+    if ( jmin < 1 ) jmin = 1
+    if ( jmax > nlatg ) jmax = nlatg
+
 
 !   if ( lt3d(i,j,k) > 1.0e-6 ) cnt = cnt + 1
 
@@ -3492,41 +3527,55 @@ subroutine read_obs_lt_grd(cfile,obs)
         err = 0.0
         obs%err(n) = OBSERR_FP_OBSOFF
       else
-        err = real(err3d(i,j,k), kind=r_size) * abs(lt3d(i,j,k)) * OBSERR_FP_RAT
+        err = real(err3d(i,j,k), kind=r_size) * OBSERR_FP_TRUE
         obs%err(n) = OBSERR_FP_OBSON
       endif
       obs%dat(n) = real(lt3d(i,j,k), kind=r_size) + err
     case( id_fp2d_obs, id_lt2d_obs, id_ltp2d_obs)
-      !xy_thinning_lt_ = 4 ! assume GLM
-      xy_thinning_lt_ = 1 ! DEBUG ! assume GLM 
+      xy_thinning_lt_ = XY_THINNING_LT
       z_thinning_lt_ = 1 ! assume GLM
-      if ( lt2d(i,j) < 1.0e-6 ) then
+
+      if ( lt2d(i,j) < 1.0 ) then
         err = 0.0
         obs%err(n) = OBSERR_FP_OBSOFF
+
       else
-        err = real(err2d(i,j), kind=r_size) * lt2d(i,j) * OBSERR_FP_RAT
+        err = real(err2d(i,j), kind=r_size) * OBSERR_FP_TRUE
         obs%err(n) = OBSERR_FP_OBSON
+
+        tmp_fp = sum( lt3d(imin:imax,jmin:jmax,1) )
+        do kk = 2, nlev
+
+           tmp_fp3d = sum( lt3d(imin:imax,jmin:jmax,kk) )
+           if ( tmp_fp < tmp_fp3d ) then
+             tmp_fp = tmp_fp3d
+             obs%lev(n) = GRID_CZ(kk+KHALO)
+           endif
+        enddo
       endif
-      obs%dat(n) = real( lt2d(i,j), kind=r_size ) + err
+      obs%dat(n) = max( real( lt2d(i,j), kind=r_size ) + err, 0.0 )
     end select
 
     ! Thinning
     if ( ( mod(i, xy_thinning_lt_ ) /= 0 ) .or. &
          ( mod(j, xy_thinning_lt_ ) /= 0 ) .or. &
          ( mod(k, z_thinning_lt_ ) /= 0) ) then
-       obs%dat(n) = -1.0_r_size
+       obs%dat(n) = -999.0_r_size
        ! obs%dat(n) < 0 will be discarded in letkf_obs.f90 
     endif
 
-    if ( LT_TEST_SINGLE ) then
-      if ( obs%dat(n) < vmax ) then
-        obs%dat(n) = -1.0_r_size
-      endif
-    endif
+
+!    if ( LT_TEST_SINGLE ) then
+!      if ( obs%dat(n) < vmax ) then
+!        obs%dat(n) = -1.0_r_size
+!      endif
+!    endif
 
   enddo
   enddo
   enddo
+
+  write(6,'(a,3f7.1)')"DEBUG FP2D", maxval( obs%dat ), maxval( lt2d ), maxval( lt3d )
 
 !  write(6,'(a,i10)')"DEBUG000 Non-zero flash-point obs:",cnt
 
@@ -3554,7 +3603,7 @@ subroutine read_obs_Him8_grd( cfile, obs )
 
   iunit = 91
   inquire (iolength = iolen) iolen
-  open(iunit,file=cfile,form='unformatted',access='direct',recl=nlong*nlatg*iolen)
+  open(iunit,file=cfile,form='unformatted',convert='little_endian',access='direct',recl=nlong*nlatg*iolen)
   irec = 0
 
   do ch = 1, 10
@@ -3562,7 +3611,9 @@ subroutine read_obs_Him8_grd( cfile, obs )
     read(iunit,rec=irec) ((tbb3d(i,j,ch), i = 1, nlong), j = 1, nlatg)
     irec = irec + 1
     read(iunit,rec=irec) ((err3d(i,j,ch), i = 1, nlong), j = 1, nlatg)
+write(6,'(a,2f7.1)')"DEBUG HIM8 READ",maxval( tbb3d(:,:,ch) ), maxval( err3d(:,:,ch) )
   enddo
+
 
   ch = 3
   n = 0
@@ -3584,6 +3635,7 @@ subroutine read_obs_Him8_grd( cfile, obs )
   enddo
   enddo
 
+write(6,'(a,2f7.1)')"DEBUG HIM8 READ",maxval( obs%dat ), maxval(obs%err)
   return
 end subroutine read_obs_Him8_grd
 

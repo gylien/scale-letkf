@@ -196,6 +196,10 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 
       ! update 3D variables
       DO n=1,nv3d
+        if ( ilev > MAX_UPDATE_ZNUM ) then
+          anal3d(ij,ilev,:,n) = mean3d(ij,ilev,n) + gues3d(ij,ilev,:,n)
+          cycle
+        endif
 
         ! calculate mean and perturbation weights
         IF(var_local_n2n(n) < n) THEN

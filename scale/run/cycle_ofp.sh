@@ -141,15 +141,22 @@ cat > $jobscrp << EOF
 ##PJM -j
 #PJM -s
 
-rm -f machinefile
-for inode in \$(cat \$I_MPI_HYDRA_HOST_FILE); do
-  for ippn in \$(seq $PPN); do
-    echo "\$inode" >> machinefile
-  done
-done
+module unload impi
+module unload intel
+module load intel/2018.1.163
+
 module load hdf5/1.8.17
 module load netcdf/4.4.1
 module load netcdf-fortran/4.4.3
+
+
+#rm -f machinefile
+#for inode in \$(cat \$I_MPI_HYDRA_HOST_FILE); do
+#  for ippn in \$(seq $PPN); do
+#    echo "\$inode" >> machinefile
+#  done
+#done
+
 
 export FORT_FMT_RECL=400
 

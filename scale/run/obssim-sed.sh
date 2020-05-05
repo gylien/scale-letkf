@@ -2,17 +2,16 @@
 
 ORG=obssim-radar-lt-ofp.sh
 
-TMEM_S=1
 TMEM_S=0
+TMEM_S=21
 # Total member
 TMEM=320
-#TMEM=20
 
 DMEM=3
 DMEM=5
 
-TMEM_S=111
-TMEM=215
+#TMEM_S=111
+#TMEM=215
 
 rm -f ???[0-9]_obssim.sh
 

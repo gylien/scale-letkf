@@ -1801,7 +1801,7 @@ subroutine write_grd_mpi(filename, nv3dgrd, nv2dgrd, step, v3d, v2d, obsout)
     iunit = 55
     inquire (iolength=iolen) iolen
     open (iunit, file=trim(filename), form='unformatted', access='direct', &
-          status='unknown', convert='native', recl=nlong*nlatg*iolen)
+          status='unknown', convert='little_endian', recl=nlong*nlatg*iolen)
     irec = (nlev * nv3dgrd + nv2dgrd) * (step-1)
 
     if (obsout_) then
@@ -1812,7 +1812,7 @@ subroutine write_grd_mpi(filename, nv3dgrd, nv2dgrd, step, v3d, v2d, obsout)
       iunit2 = 60
       write(ctlev,'(i6.6)') (step - 1 ) * OBSSIM_TIME_INT
       open (iunit2, file=trim(OBSSIM_OBSOUT_FNAME)//"_t"//ctlev//".dat", &
-            form='unformatted', access='direct', recl=nlong*nlatg*iolen)
+            form='unformatted', convert='little_endian', access='direct', recl=nlong*nlatg*iolen)
       irec2 = 0
 
     endif

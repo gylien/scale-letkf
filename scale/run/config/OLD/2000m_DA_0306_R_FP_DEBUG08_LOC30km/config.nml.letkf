@@ -1,0 +1,139 @@
+&PARAM_ENSEMBLE
+!--MEMBER--
+/
+
+&PARAM_OBSOPE
+!--OBS_IN_NUM--
+!--OBS_IN_NAME--
+! OBS_IN_FORMAT = 5, ! radar
+! OBS_IN_FORMAT = 6, ! flash
+! OBS_IN_FORMAT = 3, ! Him8
+ OBS_IN_FORMAT = 6,
+!--OBSDA_RUN--
+!--OBSDA_OUT--
+!--OBSDA_OUT_BASENAME--
+!--HISTORY_IN_BASENAME--
+!--SLOT_START--
+!--SLOT_END--
+!--SLOT_BASE--
+!--SLOT_TINTERVAL--
+/
+
+&PARAM_LETKF
+!--OBSDA_IN--
+!--OBSDA_IN_BASENAME--
+!--GUES_IN_BASENAME--
+!--GUES_OUT_MEAN_BASENAME--
+!--GUES_OUT_SPRD_BASENAME--
+!--ANAL_OUT_BASENAME--
+!--ANAL_OUT_MEAN_BASENAME--
+!--ANAL_OUT_SPRD_BASENAME--
+!--LETKF_TOPO_IN_BASENAME--
+ INFL_MUL = 1.00D0,
+! INFL_MUL_MIN = 0.0D0,
+!--INFL_MUL_ADAPTIVE--
+!--INFL_MUL_IN_BASENAME--
+!--INFL_MUL_OUT_BASENAME--
+ RELAX_ALPHA = 0.5D0, ! Similar to Zhang et al. 2004
+! RELAX_ALPHA_SPREAD = 0.95D0,
+!--RELAX_SPREAD_OUT--
+!--RELAX_SPREAD_OUT_BASENAME--
+ RELAX_TO_INFLATED_PRIOR = .true.,
+ GROSS_ERROR = 5.0D0,
+ GROSS_ERROR_RADAR_REF = 10.0D0,
+ GROSS_ERROR_RADAR_VR = 10.0D0,
+ GROSS_ERROR_RADAR_PRH = 10.0D0,
+ GROSS_ERROR_LT = 10.0D33, ! No gross error check
+! Q_UPDATE_TOP = 300.0D2,
+! Q_SPRD_MAX = 0.5D0,
+ BOUNDARY_BUFFER_WIDTH = 40.0D3,
+ POSITIVE_DEFINITE_Q = .false.,
+ POSITIVE_DEFINITE_QHYD = .true.,
+!--NOBS_OUT--
+!--NOBS_OUT_BASENAME--
+/
+
+&PARAM_LETKF_PRC
+!--NNODES--
+!--PPN--
+!--MEM_NODES--
+!--MEM_NP--
+/
+
+&PARAM_LETKF_OBS
+ HORI_LOCAL = 400.0D3,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,
+                  -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,
+                  -1., 2.0D3,   60.0D3,   -1., 30.0D3,
+! 1.0D3: similar to Zhang et al. 2004 (ROI=3km)
+! 2.0D3: in-between ROI of 6km in Dowell et al. (2004a) and that of 8 km in Tong and Xue (2005)
+ VERT_LOCAL =   2.0D3,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,
+                  -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,
+                  -1., 1.0D3,   0.0d0,   -1.,  0.0d0,
+! similar to Zhang et al. 2004 (ROI=3km) and Aksoy et al. (2009) with ROI of 4 km
+! TIME_LOCAL = 3.0D0,
+ HORI_LOCAL_RADAR_OBSNOREF = 2.0D3,
+! MAX_NOBS_PER_GRID = 100,
+/
+
+&PARAM_LETKF_MONITOR
+ DEPARTURE_STAT = .true.
+ DEPARTURE_STAT_RADAR = .true.
+! DEPARTURE_STAT_T_RANGE = 0.0d0
+/
+
+&PARAM_LETKF_RADAR
+ USE_RADAR_REF = .true.,
+ USE_RADAR_VR = .true.,
+ USE_OBSERR_RADAR_REF = .true.,
+ USE_OBSERR_RADAR_VR = .true.,
+! RADAR_REF_THRES_DBZ = 10.0D0,
+! MIN_RADAR_REF_MEMBER = 2,
+! MIN_RADAR_REF_DBZ = 10.0D0,
+ RADAR_REF_THRES_DBZ = 15.0D0,
+ MIN_RADAR_REF_MEMBER = 1,  ! TEST
+ MIN_RADAR_REF_MEMBER_OBSREF = 1,
+! MIN_RADAR_REF_DBZ = 5.0D0,
+ MIN_RADAR_REF_DBZ = 15.0D0, ! TEST
+ RADAR_IDEAL = .true.,
+ LOW_REF_SHIFT = -10.0D0,
+! LOW_REF_SHIFT = 0.0D0,
+ RADAR_ZMAX = 12.0D3, ! tropopause
+/
+
+
+&PARAM_OBS_ERROR
+ OBSERR_RADAR_REF = 5.0D0,
+ OBSERR_RADAR_VR = 3.0D0,
+ OBSERR_FP_OBSOFF = 1.0d0,
+ OBSERR_FP_OBSON = 1.0d0,
+/
+
+&PARAM_OBSSIM
+ OBSSIM_RADAR_LON = 180.0d3,
+ OBSSIM_RADAR_LAT = 180.0d3,
+ OBSSIM_RADAR_Z = 0.0d0,
+ OBSSIM_RADAR_ERR_10 = .true., ! Similar to Maejima et al. and Xue et al. GRL
+ OBSSIM_RADAR_CLR_THIN = 3, ! Similar to Aksoy et al.
+ OBSSIM_RADAR_RAIN_THIN = 3, ! TEST
+/
+
+
+&PARAM_LETKF_LT
+ LT_OBS_NANE = "FP2D",
+ LT_TEST_SINGLE = .false.,
+ LT_OBSERR_GROSS = 1.0d0, ! obs error for gross-error check
+ MIN_LT_MEMBER_OBSON = 8, !
+ MIN_LT_MEMBER_OBSOFF = 8, !
+ LT_ZMAX = 12.0d3, ! tropopause
+ XY_THINNING_LT = 4,
+ Z_THINNING_LT = 1,
+/
+
+&PARAM_LETKF_H08
+ H08_OBSERR_RUN_CLR = 3.0d0,
+ H08_OBSERR_RUN_CLD = 6.0d0,
+ H08_THIN_NG = 1,
+/
+
+!*** Attach SCALE configuration below ***
+

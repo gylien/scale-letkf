@@ -5,12 +5,11 @@ USER=honda
 SYS=ofp
 
 OBSTYPE="RADAR"
-OBSTYPE="H08"
+#OBSTYPE="H08"
 #OBSTYPE="LT"
 #OBSTYPE="FP" # Flash point
 #OBSTYPE="CONV"
 #OBSTYPE="ALL"
-#OBSTYPE="FP" # Flash point
 
 # Generate new obs format file
 OBSSIM_OBSOUT=".false." # anal/gues
@@ -20,13 +19,38 @@ H08_RTTOV_CFRAC=1
 
 TYPE=fcst
 #TYPE=hist
-TYPE=anal
-TYPE=gues
+#TYPE=anal
+#TYPE=gues
 
 
 
 EXP=2000m_DA_0306_TEST_Him8
-#EXP=2000m_DA_0306
+EXP=2000m_NODA_0306
+
+EXP=2000m_DA_0306_R_FP_180km
+EXP=2000m_DA_0306_R_FP_60km
+EXP=2000m_DA_0306
+
+EXP=2000m_DA_0306_R_FP_DEBUG32_LOC90km_SINGLE0.1_I98_J106
+
+EXP=2000m_DA_0306_R_FP_DEBUG32_LOC90km
+
+EXP=2000m_DA_0306_FP_M32_LOC90km
+
+#EXP=2000m_DA_0306_FP_M32_LOC90km_HT8
+
+EXP=2000m_NODA_0306
+#EXP=2000m_NODA_0306_NOMELT
+
+EXP=2000m_DA_0306_FP_M32_LOC90km_QC5
+
+EXP=2000m_DA_0306_FP_M32_LOC90km_ZMAX23
+
+EXP=2000m_DA_0306_FP_M01_LOC90km
+
+EXP=2000m_DA_0306_FP_M32_LOC150km
+
+#EXP=2000m_DA_0306_FP_M32_LOC30km
 
 . config/${EXP}/config.main.$SYS
 . config/${EXP}/config.fcst
@@ -43,10 +67,11 @@ tstart='2001-01-01 1:15:00'
 tstart='2001-01-01 1:20:00'
 tstart='2001-01-01 1:25:00'
 tstart='2001-01-01 1:30:00'
+
 #tstart='2001-01-01 1:00:00'
-tend='2001-01-01 2:00:00'
-tstart='2001-01-01 1:00:00'
-tstart='2001-01-01 1:40:00'
+#tend='2001-01-01 2:00:00'
+#tstart='2001-01-01 1:00:00'
+#tstart='2001-01-01 1:40:00'
 tend=$tstart
 #tend='2001-01-01 1:25:00'
 
@@ -59,21 +84,26 @@ if [ "$TYPE" == "fcst" ] || [ "$TYPE" == "hist" ]; then
   TE=121
 
 
-  tstart='2001-01-01 1:10:00'
+  tstart='2001-01-01 1:00:00'
+  #tstart='2001-01-01 1:10:00'
   #tstart='2001-01-01 1:20:00'
   tstart='2001-01-01 1:30:00'
-  #tstart='2001-01-01 1:05:00'
-  tstart='2001-01-01 1:00:00'
 
+  #tstart='2001-01-01 1:25:00'
 
 
   tend=$tstart
   TS=1
-  FCSTLEN=3600 
-  TE=13
+  #FCSTLEN=5400 
+  #TE=19
 
-  #FCSTLEN=1800 
-  #TE=7
+#  FCSTLEN=3600 
+#  TE=13
+
+  FCSTLEN=1800 
+  TE=7
+  #TE=2
+
 
   if [ "$TYPE" == "hist" ] ; then
     TE=2
@@ -93,6 +123,7 @@ MEM_NP=${SCALE_NP}
 MEM=mean
 
 SMEM=0 # 
+#SMEM=1 # 
 #SMEM=320 # 
 #SMEM=252 # 
 EMEM=${SMEM} # mean
@@ -198,6 +229,7 @@ cat << EOF >> $RUNCONF_COMMON
  MIN_RADAR_REF_DBZ = 5.0D0,
  LOW_REF_SHIFT = 0.0D0, ! Do not use
  RADAR_ZMAX = 31.0D3, ! Entire the domain
+! USE_RADAR_METHOD3_MELT = .false., ! debug
 /
 
 &PARAM_OBS_ERROR
@@ -240,7 +272,8 @@ cat > $RUNSH << EOF
 
 #PJM -N OBSSIM
 ##PJM -L rscgrp=regular-flat
-#PJM -L rscgrp=debug-flat
+##PJM -L rscgrp=debug-flat
+#PJM -L rscgrp=debug-cache
 #PJM -L node=<TNODE_CNT>
 ##PJM -L node=$((SCALE_NP/PPN))
 #PJM -L elapse=00:30:00
@@ -258,6 +291,10 @@ export FORT_FMT_RECL=400
 #    echo "\$inode" >> machinefile
 #  done
 #done
+
+module unload impi
+module unload intel
+module load intel/2018.1.163
 
 module load hdf5/1.8.17
 module load netcdf/4.4.1
@@ -340,7 +377,7 @@ while (($(date -ud "$ctime" '+%s') <= $(date -ud "$tend" '+%s'))); do # -- time
   elif [ "$OBSTYPE" = 'H08' ]; then
     ONAME=${ORG_DIR}/Him8_${HTIME}_${MEM}.dat
     OBSSIM_NUM_3D_VARS="0"
-    OBSSIM_3D_VARS_LIST="1"
+    OBSSIM_3D_VARS_LIST="0"
     OBSSIM_NUM_2D_VARS="10"
     OBSSIM_2D_VARS_LIST="8800, 8800, 8800, 8800, 8800, 8800, 8800, 8800, 8800, 8800" 
     OHEAD="Him8" 

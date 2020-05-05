@@ -312,8 +312,8 @@ SUBROUTINE obsope_cal(obs, obsda_return)
                 !!!!!!
 
                 case (4, 6) ! Lighting obs
-                  call Trans_XtoY_LT( obs(iof)%elm(n),ri(nn),rj(nn),rk, &
-                                      v3dg,v2dg,obsda%val(nn),obsda%qc(nn), myrank_d)
+                  call Trans_XtoY_LT( obs(iof)%elm(n), ri(nn), rj(nn), rk, &
+                                      v3dg, v2dg, obsda%val(nn), obsda%qc(nn), obsda%lev(nn), myrank_d )
 
                 end select
               end if
@@ -342,9 +342,9 @@ SUBROUTINE obsope_cal(obs, obsda_return)
               obsda%val2(nn) = yobs_H08_clr(i8,j8,3)
               obsda%qc(nn) = iqc_good ! test
 
-              if ( mod( nint(obsda%ri(nobs)), H08_THIN_NG ) /= 0 .or. &
-                   mod( nint(obsda%rj(nobs)), H08_THIN_NG ) /= 0 ) then
-                obsda%qc(nn) = iqc_obs_bad
+              if ( mod( nint(obsda%ri(nn)), H08_THIN_NG ) /= 0 .or. &
+                   mod( nint(obsda%rj(nn)), H08_THIN_NG ) /= 0 ) then
+                obsda%qc(nn) = iqc_obs_thin
               endif
             enddo
 
@@ -622,7 +622,7 @@ SUBROUTINE obsmake_cal(obs)
 
                 case (4, 6)
                   call Trans_XtoY_LT(obs(iof)%elm(n),ri,rj,rk, &
-                                     v3dg,v2dg,obs(iof)%dat(n),iqc,myrank_d)
+                                     v3dg,v2dg,obs(iof)%dat(n),iqc,obs(iof)%lev(n),myrank_d)
                 end select
 
  !!! For radar observation, when reflectivity value is too low, do not generate ref/vr observations
@@ -745,6 +745,7 @@ subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, stggrd)
   real(r_size) :: lon, lat, lev
   real(r_size) :: tmpobs
   integer :: tmpqc
+  real(r_size) :: tmplev
 
   integer :: ig, jg
 
@@ -797,7 +798,7 @@ subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, stggrd)
 
           case (id_lt3d_obs, id_fp3d_obs)
             call Trans_XtoY_LT(OBSSIM_3D_VARS_LIST(iv3dsim), ri, rj, rk, &
-                               v3dgh, v2dgh, tmpobs, tmpqc, myrank_d)
+                               v3dgh, v2dgh, tmpobs, tmpqc, tmplev, myrank_d)
 
           case (-999)
 !            if (iv3dsim == 7) then
@@ -849,11 +850,11 @@ subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, stggrd)
 
             case (id_lt2d_obs)
               call Trans_XtoY_LT(OBSSIM_2D_VARS_LIST(iv2dsim), ri, rj, rk, &
-                                 v3dgh, v2dgh, tmpobs, tmpqc, myrank_d)
+                                 v3dgh, v2dgh, tmpobs, tmpqc, tmplev, myrank_d)
 
             case (id_fp2d_obs)
               call Trans_XtoY_LT(OBSSIM_2D_VARS_LIST(iv2dsim), ri, rj, rk, &
-                                 v3dgh, v2dgh, tmpobs, tmpqc, myrank_d)
+                                 v3dgh, v2dgh, tmpobs, tmpqc, tmplev, myrank_d)
             case (id_H08IR_obs)
               USE_HIM8 = .true.
               cycle

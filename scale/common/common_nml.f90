@@ -46,6 +46,7 @@ MODULE common_nml
   real(r_size)          :: SLOT_TINTERVAL = 3600.0d0
 
   !--- PARAM_LETKF
+  integer               :: MAX_UPDATE_ZNUM = 100
   logical               :: QC_SIGB = .false.
   logical               :: WRITE_GRADS_SPRD = .true.
   logical               :: WRITE_GRADS_MEAN = .true.
@@ -205,6 +206,8 @@ MODULE common_nml
   !--- PARAM_LETKF_LT
   character(4) :: LT_OBS_NANE = 'FP3D'
   logical :: LT_TEST_SINGLE = .false. ! Sigle-observation experiment? 
+  integer :: LT_TEST_SINGLE_I = 1 ! grid index for single obs test
+  integer :: LT_TEST_SINGLE_J = 1 ! gird index for single obs test
   real(r_size) :: LT_OBSERR_GROSS = 1.0d0 ! obs error for gross-error check
   integer :: MIN_LT_MEMBER_OBSON = 1
   integer :: MIN_LT_MEMBER_OBSOFF = 1
@@ -231,6 +234,7 @@ MODULE common_nml
   real(r_size) :: RADAR_ZMAX = 99.0d3          !Height limit of radar data to be used
 
   REAL(r_size) :: RADAR_PRH_ERROR = 0.1d0      !Obserational error for pseudo RH observations.
+  logical :: USE_RADAR_METHOD3_MELT = .true.
 
   !These 2 flags affects the computation of model reflectivity and radial velocity. 
   INTEGER :: INTERPOLATION_TECHNIQUE = 1
@@ -305,6 +309,7 @@ MODULE common_nml
   real(r_size) :: OBSERR_LT2D = 1.0d0 ! tentative!!
   real(r_size) :: OBSERR_FP_RAT = 0.5d0 ! 50% of observed value: Lien et al. (2013)
   real(r_size) :: OBSERR_FP = 1.0d0 
+  real(r_size) :: OBSERR_FP_TRUE = 1.0d0
   real(r_size) :: OBSERR_FP_OBSON = 1.0d0  ! obs err for LETKF when obs has lightning
   real(r_size) :: OBSERR_FP_OBSOFF = 0.1d0  ! obs err for LETKF when obs has no lightning
 
@@ -418,6 +423,7 @@ subroutine read_nml_letkf
   integer :: ierr
   
   namelist /PARAM_LETKF/ &
+    MAX_UPDATE_ZNUM, &
     QC_SIGB, &
     WRITE_GRADS_MEAN, &
     WRITE_GRADS_SPRD, &
@@ -729,6 +735,7 @@ subroutine read_nml_letkf_radar
     MIN_RADAR_REF_DBZ, &
     LOW_REF_SHIFT, &
     RADAR_ZMAX, &
+    USE_RADAR_METHOD3_MELT, &
     RADAR_PRH_ERROR, &
     INTERPOLATION_TECHNIQUE, &
     METHOD_REF_CALC, &
@@ -820,6 +827,7 @@ subroutine read_nml_obs_error
     OBSERR_FP_RAT, &
     OBSERR_FP_OBSOFF, &
     OBSERR_FP_OBSON, &
+    OBSERR_FP_TRUE, &
     OBSERR_FP
 
   rewind(IO_FID_CONF)
@@ -951,6 +959,8 @@ subroutine read_nml_letkf_lt
 
   namelist /PARAM_LETKF_LT/ &
     LT_TEST_SINGLE, &
+    LT_TEST_SINGLE_I, &
+    LT_TEST_SINGLE_J, &
     LT_OBS_NANE, &
     LT_OBSERR_GROSS, &
     MIN_LT_MEMBER_OBSON, &

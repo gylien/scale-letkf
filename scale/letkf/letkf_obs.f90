@@ -415,6 +415,15 @@ SUBROUTINE set_letkf_obs
 !!!###### LT assimilation ######
     if (obs(iof)%elm(iidx) == id_fp3d_obs .or. obs(iof)%elm(iidx) == id_fp2d_obs) then
  
+      if ( LT_TEST_SINGLE ) then
+        if ( abs( nint( obsda%ri(n) ) - LT_TEST_SINGLE_I ) >= 4  .or. &
+             abs( nint( obsda%rj(n) ) - LT_TEST_SINGLE_J ) >= 4 )  then
+          obsda%qc(n) = iqc_out_h
+          cycle
+        endif
+      endif
+
+
       ! Thinning 
       if ( obs(iof)%dat(iidx) < 0.0d0 ) then
         obsda%qc(n) = iqc_out_h
@@ -432,9 +441,9 @@ SUBROUTINE set_letkf_obs
       ! obs: flash
         if (mem_ref < MIN_LT_MEMBER_OBSON) then
           obsda%qc(n) = iqc_ref_mem
-          cycle
+!          cycle
         endif
-      else
+      else if (obs(iof)%dat(iidx) == 0.0d0 ) then
       ! obs: no flash
         if (mem_ref < MIN_LT_MEMBER_OBSOFF) then
           obsda%qc(n) = iqc_ref_mem
@@ -626,7 +635,7 @@ SUBROUTINE set_letkf_obs
         obsda%qc(n) = iqc_gross_err
       ENDIF
 
-      IF(ABS(obsda%val(n)) > GROSS_ERROR_H08 * obs(iof)%err(iidx)) THEN
+      IF( ABS(obsda%val(n)) > GROSS_ERROR_H08 * H08_OBSERR_RUN_CLD ) THEN
         obsda%qc(n) = iqc_gross_err
       END IF
     case (id_tclon_obs)
@@ -693,16 +702,25 @@ SUBROUTINE set_letkf_obs
 !    ELSE
 !#ifdef DEBUG
 
-      write (6, '(2I6,2F7.1,5F10.3,I3)') obs(iof)%elm(iidx), &
+      !write (6, '(2I6,2F7.1,5F10.3,2I4)') obs(iof)%elm(iidx), &
+
+if (myrank_a < nprocs_d ) then
+      write (6, '(2I6,2I6,6F9.2,2I4)') obs(iof)%elm(iidx), &
                                          obs(iof)%typ(iidx), &
-                                         obs(iof)%lon(iidx)*0.001, &
-                                         obs(iof)%lat(iidx)*0.001, &
+                                         !obs(iof)%lon(iidx)*0.001, &
+                                         !obs(iof)%lat(iidx)*0.001, &
+                                         nint( obsda%ri(n) ), &
+                                         nint( obsda%rj(n) ), &
                                          obs(iof)%lev(iidx)*0.001, &
                                          obs(iof)%dat(iidx), &
+                                         obsda%lev(n) * MEMBER / max(mem_ref,1) * 0.001, &
                                          obs(iof)%err(iidx), &
                                          obsda%val(n), &
                                          sig_b, &
+                                         mem_ref, &
                                          obsda%qc(n)
+
+endif
 
 !#endif
 !    ENDIF

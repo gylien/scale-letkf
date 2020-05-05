@@ -41,8 +41,12 @@ def main(INFO, of):
 
 ##########
 
-IMAX = 24
-JMAX = 24
+#IMAX = 24
+#JMAX = 24
+
+IMAX = 20
+JMAX = 20
+
 PX = 8
 PY = 8
 
@@ -60,8 +64,8 @@ MIN_PT = 1.5
 
 MEAN_PT = 3.0
 SIGMA_PT = 0.5
-MAX_PT = 4.5
-MIN_PT = 1.5
+MAX_PT = 4.0
+MIN_PT = 2.0
 
 INFO = {"ENS":ENS, "CX":CX, "CY":CY, "SIGMA_LOC":SIGMA_LOC, "SIGMA_PT":SIGMA_PT,
         "MEAN_PT":MEAN_PT, "MAX_PT":MAX_PT, "MIN_PT":MIN_PT}
@@ -70,6 +74,7 @@ of = "init_loc_ens.txt"
 of = "init_loc_ens320.txt"
 of = "init_loc_ens320_0221.txt"
 of = "init_loc_ens320_3K.txt"
+of = "init_loc_ens320_3K_0414.txt"
 main(INFO, of)
 
 

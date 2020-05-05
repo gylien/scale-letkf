@@ -8,7 +8,7 @@
 
 PRESET='OFP'
 OFP_MODE="regular-flat"
-OFP_MODE="debug-flat"
+#OFP_MODE="debug-flat"
 
 
 EXP=2000m_DA_0306
@@ -100,8 +100,9 @@ MEMBER=320           # Ensemble size
 
 NNODES=111
 NNODES=105
-#NNODES=110
+NNODES=320
 
+NNODES=1
 
 PPN=64              # Number of processes per node
 
