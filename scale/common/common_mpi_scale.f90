@@ -1891,8 +1891,8 @@ subroutine write_grd_dafcst_mpi(timelabel, ref3d, step)
     iunit = 55
     inquire (iolength=iolen) iolen
     open (iunit, file=trim(filename), form='unformatted', access='direct', &
-          status='unknown', convert='native', recl=nlong*nlatg*iolen)
-    irec = (step - 1)*nlev*1 ! 1 variable (nlev*1 record) output 
+          status='unknown', convert='big_endian', recl=nlong*nlatg*iolen)
+    irec = step * nlev * 1 ! 1 variable (nlev*1 record) output 
   end if
 
   do k = 1, nlev 
