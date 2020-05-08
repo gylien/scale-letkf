@@ -26,6 +26,7 @@ if [ -z "$DIRNAME" ]; then
   exit 1
 fi
 
+rm -fr $DIRNAME || exit $?
 mkdir -p $DIRNAME || exit $?
 
 if [ ! -d "$DIRNAME" ]; then
@@ -36,8 +37,6 @@ if [ ! -O "$DIRNAME" ]; then
   echo "[Error] $FUNCNAME: '$DIRNAME' is not owned by you." >&2
   exit 1
 fi
-
-rm -fr $DIRNAME/* || exit $?
 
 #-------------------------------------------------------------------------------
 }

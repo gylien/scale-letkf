@@ -5,14 +5,23 @@
 #
 #===============================================================================
 
+
 #STIME='20190819130000'
-#STIME='20190824190000'
-#STIME='20190903130000'
-STIME='20190910130000'
+#ETIME='20190819135930'
 
-ETIME=$STIME
+#STIME='20190903070000'
+#ETIME='20190903075930'
 
-TIME_LIMIT='1:00:00'
+STIME='20190824150000'
+ETIME='20190824155930'
+
+#STIME='20190910090000'
+#ETIME='20190910095930'
+
+
+#ETIME=$STIME
+
+TIME_LIMIT='2:30:00'
 CYCLE=
 CYCLE_SKIP=1
 
@@ -27,7 +36,7 @@ DIRECT_TRANSFER=1
 DACYCLE_RUN_FCST=1
 
 # Maximum number of dacycle forecasts 
-MAX_DACYCLE_RUN_FCST=120
+MAX_DACYCLE_RUN_FCST=10
 
 # Number of dafcst members
 NUM_DACYCLE_FCST_MEM=10
@@ -51,7 +60,7 @@ OUT_MEAN_GRADS=1
 USE_MDET_FCST=1
 
 # Observation departure output
-OBSDEP_OUT=0
+OBSDEP_OUT=1
 
 #===============================================================================
 # Forecast settings
