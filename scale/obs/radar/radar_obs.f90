@@ -861,6 +861,11 @@ subroutine read_obs_radar_toshiba(cfile, obs)
 
   integer :: ii, jj, kk
 
+  real(r_sngl), allocatable :: ref3d(:,:,:)
+  character(len=255) :: filename
+  integer :: irec, iunit, iolen
+  integer :: k
+
   call mpi_timer('', 3)
 
   RADAR_SO_SIZE_HORI = max( real( DX, kind=r_size ), RADAR_SO_SIZE_HORI )
@@ -1162,8 +1167,10 @@ subroutine read_obs_radar_toshiba(cfile, obs)
 !!!!! check
 !write(*,*) nlon,nlat,nlev,nobs_sp
 
-
-
+  if ( OUT_PAWR_GRADS ) then
+    if (.not. allocated(ref3d) ) allocate(ref3d(nlon,nlat,nlev))
+    ref3d = undef
+  endif
 
   obs%meta(1) = lon0
   obs%meta(2) = lat0
@@ -1174,9 +1181,9 @@ subroutine read_obs_radar_toshiba(cfile, obs)
   do idx = 1, nobs_sp
 
     ! Thinning
-    ii = nint( abs( grid_lon_ze(idx) - lon0) / dlon )
-    jj = nint( abs( grid_lat_ze(idx) - lat0) / dlat )
-    kk = nint( abs( grid_z_ze(idx) - z0) / RADAR_SO_SIZE_VERT )
+    ii = nint( ( grid_lon_ze(idx) - lon(1) ) / dlon ) + 1
+    jj = nint( ( grid_lat_ze(idx) - lat(1) ) / dlat ) + 1
+    kk = nint( ( grid_z_ze(idx) - z(1) ) / RADAR_SO_SIZE_VERT ) + 1
 
     if ( mod(ii, RADAR_THIN_HORI) /= 0 .or. mod(jj, RADAR_THIN_HORI) /= 0 .or. &
          mod(kk, RADAR_THIN_VERT) /= 0 ) cycle
@@ -1206,11 +1213,20 @@ subroutine read_obs_radar_toshiba(cfile, obs)
   max_obs_vr = -huge(1.0d0)
   do idx = 1, nobs_sp
 
-    ! Thinning
-    ii = nint( abs( grid_lon_ze(idx) - lon0) / dlon )
-    jj = nint( abs( grid_lat_ze(idx) - lat0) / dlat )
-    kk = nint( abs( grid_z_ze(idx) - z0) / RADAR_SO_SIZE_VERT )
+    ii = nint( ( grid_lon_ze(idx) - lon(1) ) / dlon ) + 1
+    jj = nint( ( grid_lat_ze(idx) - lat(1) ) / dlat ) + 1
+    kk = nint( ( grid_z_ze(idx) - z(1) ) / RADAR_SO_SIZE_VERT ) + 1
+    if ( OUT_PAWR_GRADS ) then
+      if ( ii > 0 .and. ii <= nlon .and. &
+           jj > 0 .and. jj <= nlat .and. &
+           kk > 0 .and. kk <= nlev .and. &
+           grid_count_ze(idx) > 0 .and. &
+           grid_ze(idx) > 0.0_r_size ) then
+        ref3d(ii,jj,kk) = 10.0*log10(grid_ze(idx))
+      endif
+    endif
 
+    ! Thinning
     if ( mod(ii, RADAR_THIN_HORI) /= 0 .or. mod(jj, RADAR_THIN_HORI) /= 0 .or. &
          mod(kk, RADAR_THIN_VERT) /= 0 ) cycle
 
@@ -1285,6 +1301,29 @@ subroutine read_obs_radar_toshiba(cfile, obs)
   call mpi_timer('read_obs_radar_toshiba:plot_obs:', 2, barrier=MPI_COMM_o)
 #endif
 
+  if ( OUT_PAWR_GRADS ) then
+    if ( myrank_o == 0 ) then
+      filename = trim(OUT_PAWR_GRADS_PATH)//"/pawr_ref3d_"//trim(timelabel(1:15))//".grd"
+      iunit = 55
+      inquire (iolength=iolen) iolen
+      open(iunit, file=trim(filename), form='unformatted', access='direct', &
+            status='unknown', convert='big_endian', recl=nlon*nlat*iolen)
+      irec = 0
+
+      do k = 1, nlev
+        irec = irec + 1
+        write(iunit, rec=irec) ref3d(:,:,k)
+      enddo
+      write(6,'(a)') 'PAWR GrADS info'
+      write(6,'(i5,2f13.8)') nlon, lon(1), dlon
+      write(6,'(i5,2f13.8)') nlat, lat(1), dlat
+      write(6,'(i5,2f13.8)') nlev, z(1), RADAR_SO_SIZE_VERT
+      write(6,'(a)') ''
+
+      close( iunit )
+    endif
+  endif
+
   call obs_info_deallocate( obs_ref )
   if (myrank_o /= 0) then
     call obs_info_deallocate( obs )
@@ -1315,6 +1354,8 @@ subroutine read_obs_radar_toshiba(cfile, obs)
 !  if(allocated(radlon)) deallocate(radlon)
 !  if(allocated(radlat)) deallocate(radlat)
 !  if(allocated(radz)) deallocate(radz)
+
+
 
   if(allocated(grid_index)) deallocate(grid_index)
   if(allocated(grid_ze)) deallocate(grid_ze)
