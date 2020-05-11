@@ -203,6 +203,8 @@ MODULE common_nml
   logical :: OUT_GRADS_DA_ALL = .false. ! Outut dacycle analysis/guess in GrADS format
   integer :: OUT_GRADS_DA_ALL_ZSKIP = 1  ! Output Z interval
   character(filelenmax) :: OUT_GRADS_DA_ALL_PATH = "" ! Output path
+  logical :: OUT_PAWR_GRADS = .false. ! Outut PAWR obs in GrADS format
+  character(filelenmax) :: OUT_PAWR_GRADS_PATH = "" ! Output path
 
   !--- PARAM_LETKF_OBS
   logical :: USE_OBS(nobtype) = .true.
@@ -742,6 +744,8 @@ subroutine read_nml_letkf
     OUT_GRADS_DA_ALL, &
     OUT_GRADS_DA_ALL_ZSKIP, &
     OUT_GRADS_DA_ALL_PATH, &
+    OUT_PAWR_GRADS, &
+    OUT_PAWR_GRADS_PATH, &
     COV_INFL_MUL, &       !*** for backward compatibility ***
     MIN_INFL_MUL, &       !*** for backward compatibility ***
     ADAPTIVE_INFL_INIT, & !*** for backward compatibility ***
