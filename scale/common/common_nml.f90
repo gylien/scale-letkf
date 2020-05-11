@@ -197,7 +197,9 @@ MODULE common_nml
   real(r_size) :: MIN_INFL_MUL = 0.0d0         ! Deprecated (use INFL_MUL_MIN)
   logical :: ADAPTIVE_INFL_INIT = .false.      ! Deprecated (use INFL_MUL_ADAPTIVE)
   real(r_size) :: BOUNDARY_TAPER_WIDTH = 0.0d0 ! Deprecated (use BOUNDARY_BUFFER_WIDTH)
-  logical :: OUT_GRADS_DAFCST = .false. ! Outut dacycle forecast in GrADS format
+  logical :: OUT_GRADS_DAFCST = .false. ! Outut dacycle forecast in GrADS format (radar reflectivity)
+  logical :: OUT_GRADS_DAFCST_ALL = .false. ! Outut dacycle forecast in GrADS format (all variables)
+  integer :: OUT_GRADS_DAFCST_ALL_ZSKIP = 1 ! Outut Z interval
   logical :: OUT_GRADS_DA_ALL = .false. ! Outut dacycle analysis/guess in GrADS format
   character(filelenmax) :: OUT_GRADS_DA_ALL_PATH = "" ! Output path
 
@@ -734,6 +736,8 @@ subroutine read_nml_letkf
     NOBS_OUT, &
     NOBS_OUT_BASENAME, &
     OUT_GRADS_DAFCST, &
+    OUT_GRADS_DAFCST_ALL, &
+    OUT_GRADS_DAFCST_ALL_ZSKIP, &
     OUT_GRADS_DA_ALL, &
     OUT_GRADS_DA_ALL_PATH, &
     COV_INFL_MUL, &       !*** for backward compatibility ***

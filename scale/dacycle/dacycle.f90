@@ -31,8 +31,9 @@ program dacycle
     read_ens_mpi,             &
     write_enssprd,            &
     set_common_mpi_grid,      &
-    send_recv_analysis_direct,        &
+    send_recv_analysis_direct,&
     write_grd_dafcst_mpi,     &
+    write_grd_dafcst_all_mpi, &
     write_grd_all_mpi,        &
     send_recv_analysis_others,   &
 #ifdef PLOT_DCL
@@ -631,6 +632,9 @@ program dacycle
         if ( OUT_GRADS_DAFCST ) then ! Output of dacycle-forecast in GrADS format
           call write_grd_dafcst_mpi(fstimelabel(1:15), ref3d, dafcst_ostep)
         endif
+        if ( OUT_GRADS_DAFCST_ALL ) then ! Output of dacycle-forecast in GrADS format (all variables)
+          call write_grd_dafcst_all_mpi(fstimelabel(1:15), dafcst_ostep)
+        endif
 #ifdef PLOT_DCL 
         if ( PLOT_FCST ) then ! Output of dacycle-forecast        
           call plot_dafcst_mpi(fstimelabel(1:15), ref3d, dafcst_ostep)
@@ -690,6 +694,9 @@ program dacycle
           call plot_dafcst_mpi(fstimelabel(1:15), ref3d, dafcst_ostep)
           if ( OUT_GRADS_DAFCST ) then ! Output of dacycle-forecast in GrADS format
             call write_grd_dafcst_mpi(fstimelabel(1:15), ref3d, dafcst_ostep)
+          endif
+          if ( OUT_GRADS_DAFCST_ALL ) then ! Output of dacycle-forecast in GrADS format (all variables)
+            call write_grd_dafcst_all_mpi(fstimelabel(1:15), dafcst_ostep)
           endif
         endif 
 #endif
