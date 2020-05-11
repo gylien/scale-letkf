@@ -1855,7 +1855,7 @@ subroutine send_recv_analysis_direct( fcst_cnt )
 end subroutine send_recv_analysis_direct
 
 !-------------------------------------------------------------------------------
-! Write the subdomain model data into a single GrADS file from DACYCLE (additional) forecasts
+! Write the subdomain model data (only radar reflectivity) into a single GrADS file from DACYCLE (additional) forecasts
 !-------------------------------------------------------------------------------
 subroutine write_grd_dafcst_mpi(timelabel, ref3d, step)
   use mod_atmos_vars, only: &
@@ -1926,6 +1926,127 @@ subroutine write_grd_dafcst_mpi(timelabel, ref3d, step)
 
   return
 end subroutine write_grd_dafcst_mpi
+
+!-------------------------------------------------------------------------------
+! Write the subdomain model data into a single GrADS file from DACYCLE (additional) forecasts
+!-------------------------------------------------------------------------------
+subroutine write_grd_dafcst_all_mpi( timelabel, step )
+  use mod_atmos_vars, only: &
+    ATMOS_vars_calc_diagnostics, &
+    ATMOS_vars_get_diagnostic,   &
+    W,    &
+    PRES, TEMP, &
+    QV, QC, QR, &
+    QI, QS, QG
+!  use scale_atmos_hydrometeor, only: &
+!    I_QV, I_HC, I_HR, I_HI, I_HS, I_HG
+  use scale_atmos_grid_cartesC_index, only: &
+    IS, IE, JS, JE, KS, KE, IA, JA, KA, &
+    KHALO
+  use scale_io, only: &
+    H_LONG
+
+  implicit none
+  character(15), intent(in) :: timelabel
+  integer, intent(in) :: step
+
+  character(len=H_LONG) :: filename
+  real(r_sngl) :: bufr4(nlong,nlatg)
+  integer :: iunit, iolen
+  integer :: k, irec, ierr
+  integer :: proc_i, proc_j
+  integer :: ishift, jshift
+
+  integer :: iv3d
+  real(r_sngl) :: v3d_tmp(nlev,nlon,nlat)
+  real(RP) :: diag2d_RP(IA,JA)
+  real(RP) :: diag3d_RP(KA,IA,JA)
+
+  integer :: nlev_
+
+  nlev_ = 0
+  do k = 1, nlev, OUT_GRADS_DAFCST_ALL_ZSKIP
+     nlev_ = nlev_ + 1
+  enddo
+
+  call rank_1d_2d(myrank_d, proc_i, proc_j)
+  ishift = proc_i * nlon
+  jshift = proc_j * nlat
+
+  if (myrank_d == 0) then
+    filename = trim(DACYCLE_RUN_FCST_OUTNAME)//"/fcst_all_"//trim(timelabel)//".grd"
+    iunit = 55
+    inquire (iolength=iolen) iolen
+    open (iunit, file=trim(filename), form='unformatted', access='direct', &
+          status='unknown', convert='big_endian', recl=nlong*nlatg*iolen)
+    irec = step * ( nlev_ * nv3d + 1 ) ! nv3d + PW
+  end if
+
+  call ATMOS_vars_calc_diagnostics
+
+  do iv3d = 1, nv3d
+
+    select case( iv3d )
+    case( iv3d_u )
+      call ATMOS_vars_get_diagnostic( 'Umet', diag3d_RP )
+      v3d_tmp(:,:,:) = real( diag3d_RP(KS:KE,IS:IE,JS:JE), r_sngl)
+    case( iv3d_v )
+      call ATMOS_vars_get_diagnostic( 'Vmet', diag3d_RP )
+      v3d_tmp(:,:,:) = real( diag3d_RP(KS:KE,IS:IE,JS:JE), r_sngl)
+    case( iv3d_w )
+      v3d_tmp(:,:,:) = real( W(KS:KE,IS:IE,JS:JE), r_sngl)
+    case( iv3d_t )
+      v3d_tmp(:,:,:) = real( TEMP(KS:KE,IS:IE,JS:JE), r_sngl)
+    case( iv3d_p )
+      v3d_tmp(:,:,:) = real( PRES(KS:KE,IS:IE,JS:JE), r_sngl)
+    case( iv3d_q )
+      v3d_tmp(:,:,:) = real( QV(KS:KE,IS:IE,JS:JE), r_sngl)
+    case( iv3d_qc )
+      v3d_tmp(:,:,:) = real( QC(KS:KE,IS:IE,JS:JE), r_sngl)
+    case( iv3d_qr )
+      v3d_tmp(:,:,:) = real( QR(KS:KE,IS:IE,JS:JE), r_sngl)
+    case( iv3d_qi )
+      v3d_tmp(:,:,:) = real( QI(KS:KE,IS:IE,JS:JE), r_sngl)
+    case( iv3d_qs )
+      v3d_tmp(:,:,:) = real( QS(KS:KE,IS:IE,JS:JE), r_sngl)
+    case( iv3d_qg )
+      v3d_tmp(:,:,:) = real( QG(KS:KE,IS:IE,JS:JE), r_sngl)
+    case default
+      write (6, '(1A)') "[Error] write_grd_dafcst_all_mpi"
+      stop  
+    end select
+
+    do k = 1, nlev, OUT_GRADS_DAFCST_ALL_ZSKIP
+      bufr4(:,:) = 0.0
+
+      bufr4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = v3d_tmp(k,:,:)
+      call MPI_ALLREDUCE(MPI_IN_PLACE, bufr4, nlong*nlatg, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr)
+
+      if (myrank_d == 0) then
+        irec = irec + 1
+        write (iunit, rec=irec) bufr4
+      end if
+
+    enddo ! k = 1, nlev
+  
+  enddo ! n = 1, nv3d
+
+  call ATMOS_vars_get_diagnostic( 'PW', diag2d_RP )
+  bufr4(:,:) = 0.0
+  bufr4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real( diag2d_RP(IS:IE,JS:JE), kind=r_sngl )
+  call MPI_ALLREDUCE(MPI_IN_PLACE, bufr4, nlong*nlatg, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr)
+
+  if ( myrank_d == 0 ) then
+    irec = irec + 1
+    write (iunit, rec=irec) bufr4
+  end if
+
+  if (myrank_d == 0) then
+    close (iunit)
+  end if
+
+  return
+end subroutine write_grd_dafcst_all_mpi
 
 !-------------------------------------------------------------------------------
 ! Write the analysis/guess ensemble mean into a single GrADS file 

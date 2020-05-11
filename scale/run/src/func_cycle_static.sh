@@ -1270,6 +1270,11 @@ EOF
       else
         OUT_GRADS_DAFCST_TF=".false."
       fi
+      if (( OUT_GRADS_DAFCST_ALL > 0 )); then
+        OUT_GRADS_DAFCST_ALL_TF=".true."
+      else
+        OUT_GRADS_DAFCST_ALL_TF=".false."
+      fi
     fi
 
     if ((DACYCLE_RUN_FCST == 1)); then
@@ -1328,6 +1333,7 @@ EOF
             -e "/!--RELAX_SPREAD_OUT--/a RELAX_SPREAD_OUT = ${RTPS_INFL_OUT_TF}," \
             -e "/!--RELAX_SPREAD_OUT_BASENAME--/a RELAX_SPREAD_OUT_BASENAME = \"${RELAX_SPREAD_OUT_BASENAME}\"," \
             -e "/!--OUT_GRADS_DAFCST--/a OUT_GRADS_DAFCST = ${OUT_GRADS_DAFCST_TF}," \
+            -e "/!--OUT_GRADS_DAFCST_ALL--/a OUT_GRADS_DAFCST_ALL = ${OUT_GRADS_DAFCST_ALL_TF}," \
             -e "/!--OUT_GRADS_DA_ALL--/a OUT_GRADS_DA_ALL = ${OUT_GRADS_DA_ALL_TF}," \
             -e "/!--OUT_GRADS_DA_ALL_PATH--/a OUT_GRADS_DA_ALL_PATH = \"${OUT_GRADS_DA_ALL_PATH}\"," \
             -e "/!--NOBS_OUT--/a NOBS_OUT = ${NOBS_OUT_TF}," \
