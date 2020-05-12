@@ -404,7 +404,8 @@
 &HISTORY_ITEM name='W'    / ! LETKF
 &HISTORY_ITEM name='RH'   / ! LETKF (not analyzed)
 
-&HISTORY_ITEM name='PREC', taverage=.true. /
+! To output all variables in dafcst, taverage should be false
+&HISTORY_ITEM name='PREC', taverage=.false. / 
 &HISTORY_ITEM name='RAIN', taverage=.true. /
 &HISTORY_ITEM name='SNOW', taverage=.true. /
 
