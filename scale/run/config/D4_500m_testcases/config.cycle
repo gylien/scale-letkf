@@ -53,7 +53,7 @@ ICYC_DACYCLE_RUN_ANALYSIS=1
 # GrADS output from dafcst
 OUT_GRADS_DAFCST=1
 
-# GrADS output from dafcst (all variables: u, v, w, t, p, qv, qc, qr, qi, qs, qg, & PW)
+# GrADS output from dafcst (all variables: u, v, w, t, p, qv, qc, qr, qi, qs, qg, PW, PRCP)
 OUT_GRADS_DAFCST_ALL=0
 
 # GrADS output

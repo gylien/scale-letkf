@@ -11,17 +11,18 @@ zdef    30 levels    110.0000    330.0000    550.0000    788.8249   1055.1472
           21242.8008  22842.8008  24442.8008  26042.8008  27642.8008 
 tdef    61 linear 12:00Z30Jan2018 1mn
 * Acutual DT is 30 sec but GrADS cannot deal with DT < 1 min
-vars 12
-u 30 99 U wind
-v 30 99 V wind
-w 30 99 W wind
-tk 30 99 Temperature
-p 30 99 Pressure
-qv 30 99 Qv
-qc 30 99 Qc
-qr 30 99 Qr
-qi 30 99 Qi
-qs 30 99 Qs
-qg 30 99 Qg
-pw 0 99 Precipitable water
+vars 13
+u 30 99 U wind (m/s)
+v 30 99 V wind (m/s)
+w 30 99 W wind (m/s)
+tk 30 99 Temperature (K)
+p 30 99 Pressure (Pa)
+qv 30 99 Qv (kg/kg)
+qc 30 99 Qc (kg/kg)
+qr 30 99 Qr (kg/kg)
+qi 30 99 Qi (kg/kg)
+qs 30 99 Qs (kg/kg)
+qg 30 99 Qg (kg/kg)
+pw 0 99 Precipitable water (g/m2)
+prec 0 99 Precipitation amount (mm/h) snapshot
 endvars

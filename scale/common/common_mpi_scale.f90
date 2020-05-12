@@ -1957,7 +1957,7 @@ subroutine write_grd_dafcst_all_mpi( timelabel, step )
   integer :: proc_i, proc_j
   integer :: ishift, jshift
 
-  integer :: iv3d
+  integer :: iv3d, iv2d
   real(r_sngl) :: v3d_tmp(nlev,nlon,nlat)
   real(RP) :: diag2d_RP(IA,JA)
   real(RP) :: diag3d_RP(KA,IA,JA)
@@ -1979,11 +1979,12 @@ subroutine write_grd_dafcst_all_mpi( timelabel, step )
     inquire (iolength=iolen) iolen
     open (iunit, file=trim(filename), form='unformatted', access='direct', &
           status='unknown', convert='big_endian', recl=nlong*nlatg*iolen)
-    irec = step * ( nlev_ * nv3d + 1 ) ! nv3d + PW
+    irec = step * ( nlev_ * nv3d + 2 ) ! nv3d + PW + PREC
   end if
 
   call ATMOS_vars_calc_diagnostics
 
+  ! 3D variables
   do iv3d = 1, nv3d
 
     select case( iv3d )
@@ -2012,7 +2013,7 @@ subroutine write_grd_dafcst_all_mpi( timelabel, step )
     case( iv3d_qg )
       v3d_tmp(:,:,:) = real( QG(KS:KE,IS:IE,JS:JE), r_sngl)
     case default
-      write (6, '(1A)') "[Error] write_grd_dafcst_all_mpi"
+      write (6, '(1A)') "[Error] write_grd_dafcst_all_mpi 3D"
       stop  
     end select
 
@@ -2031,15 +2032,29 @@ subroutine write_grd_dafcst_all_mpi( timelabel, step )
   
   enddo ! n = 1, nv3d
 
-  call ATMOS_vars_get_diagnostic( 'PW', diag2d_RP )
-  bufr4(:,:) = 0.0
-  bufr4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real( diag2d_RP(IS:IE,JS:JE), kind=r_sngl )
-  call MPI_ALLREDUCE(MPI_IN_PLACE, bufr4, nlong*nlatg, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr)
+  ! 2D variables
+  do iv2d = 1, 2
+ 
+    bufr4(:,:) = 0.0
+    select case( iv2d )
+    case( 1 )
+      call ATMOS_vars_get_diagnostic( 'PW', diag2d_RP )
+    case( 2 )
+      call ATMOS_vars_get_diagnostic( 'PREC', diag2d_RP )
+    case default
+      write (6, '(1A)') "[Error] write_grd_dafcst_all_mpi 2D"
+      stop  
+    end select
 
-  if ( myrank_d == 0 ) then
-    irec = irec + 1
-    write (iunit, rec=irec) bufr4
-  end if
+    bufr4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real( diag2d_RP(IS:IE,JS:JE), kind=r_sngl )
+    call MPI_ALLREDUCE(MPI_IN_PLACE, bufr4, nlong*nlatg, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr)
+  
+    if ( myrank_d == 0 ) then
+      irec = irec + 1
+      write (iunit, rec=irec) bufr4
+    end if
+
+  enddo ! iv2d = 1, 2
 
   if (myrank_d == 0) then
     close (iunit)
