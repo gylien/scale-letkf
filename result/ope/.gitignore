@@ -1,9 +1,0 @@
-#
-# directory ope 
-#
-
-*
-!.gitignore
-!d1
-!ncepobs
-!ncepgfs_grads_da
