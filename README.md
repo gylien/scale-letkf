@@ -30,8 +30,8 @@ Realtime forecasts are displayed at
 | [D1](realtime-D1-analysis-and-forecast.md) (extended) | 18 km | 5 days | 1 (mdet) | D1 analysis / NCEP GFS |
 
 \* D1 and D2 forecasts are performed as a combined online-nesting system.  
-
-<img src="imgs/map_d1-4.png" height="250px"><img src="imgs/map_d3-4.png" height="250px">
+<img src="imgs/map_color.png" height="400px">
+<!-- <img src="imgs/map_d1-4.png" height="250px"><img src="imgs/map_d3-4.png" height="250px"> -->
 
 ## Sources
 ### SCALE-RM
