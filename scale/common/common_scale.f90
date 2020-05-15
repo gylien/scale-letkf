@@ -884,6 +884,136 @@ subroutine write_restart_direct(v3dg,v2dg)
   return
 end subroutine write_restart_direct
 
+subroutine write_dafcst_nc( filename, step, nlev_plot, ref3d ) 
+  use netcdf
+  use common_ncio
+  use scale_const, only: &
+    D2R => CONST_D2R
+  use scale_atmos_grid_cartesC, only: &
+    CZ => ATMOS_GRID_CARTESC_CZ, &
+    CXG => ATMOS_GRID_CARTESC_CXG, &
+    CYG => ATMOS_GRID_CARTESC_CYG
+  use scale_atmos_grid_cartesC_index, only: &
+    KHALO, IHALO, JHALO, KMAX
+  use scale_mapprojection, only: &
+      MAPPROJECTION_xy2lonlat
+  implicit none
+
+  character(*), intent(in) :: filename
+  integer, intent(in) :: step
+  integer, intent(in) :: nlev_plot
+  real(r_sngl) :: ref3d(nlev_plot, nlong, nlatg)
+  integer :: ncid, varid
+
+  integer :: tlev
+
+  character(len=*), parameter :: lat_name = "Latitude"
+  character(len=*), parameter :: lon_name = "Longitude"
+  character(len=*), parameter :: z_name   = "Height"
+  character(len=*), parameter :: t_name = "time"
+  character(len=*), parameter :: ref_name = "Reflectivity"
+  character(len=*), parameter :: lon_unit = "degree_east"
+  character(len=*), parameter :: lat_unit = "degree_north"
+  character(len=*), parameter :: z_unit = "m (above ground level)"
+  character(len=*), parameter :: t_unit = "seconds"
+  character(len=*), parameter :: ref_unit = "dBZ"
+  integer :: z_dimid, lon_dimid, lat_dimid, t_dimid
+  integer :: lon_varid, lat_varid, z_varid, t_varid
+  integer :: ref_varid
+
+  integer :: dimids(4)
+  integer :: start(4), count(4)
+
+  real :: lons(nlong), lats(nlatg), zlevs(nlev_plot)
+  real(RP) :: lon_RP, lat_RP
+  real, allocatable :: tlevs(:)
+  integer :: i, j, k
+
+  if ( step == 0 ) then
+
+    tlev = int( DACYCLE_RUN_FCST_TIME / OUT_DAFCST_DSEC ) + 1
+    allocate( tlevs(tlev) )
+
+    ! Create the file. 
+    call ncio_create( trim(filename), nf90_clobber, ncid )
+
+    ! Define the dimensions. 
+    call ncio_check( nf90_def_dim( ncid, trim(lon_name), nlong, lon_dimid) )
+    call ncio_check( nf90_def_dim( ncid, trim(lat_name), nlatg, lat_dimid) )
+    call ncio_check( nf90_def_dim( ncid, trim(z_name), nlev_plot, z_dimid) )
+    call ncio_check( nf90_def_dim( ncid, trim(t_name), tlev, t_dimid) )
+
+    ! Define the coordinate variables. 
+    call ncio_check( nf90_def_var(ncid, trim(lon_name), nf90_real, lon_dimid, lon_varid) )
+    call ncio_check( nf90_def_var(ncid, trim(lat_name), nf90_real, lat_dimid, lat_varid) )
+    call ncio_check( nf90_def_var(ncid, trim(z_name), nf90_real, z_dimid, z_varid) )
+    call ncio_check( nf90_def_var(ncid, trim(t_name), nf90_real, t_dimid, t_varid) )
+
+    ! Assume Mercator projection
+    do i = 1, nlong
+      call MAPPROJECTION_xy2lonlat( CXG(IHALO+i), CYG(JHALO+1), lon_RP, lat_RP )
+      lons(i) = real( lon_RP/D2R, kind=r_sngl )
+    enddo
+
+    do j = 1, nlatg
+      call MAPPROJECTION_xy2lonlat( CXG(IHALO+1), CYG(JHALO+j), lon_RP, lat_RP )
+      lats(j) = real( lat_RP/D2R, kind=r_sngl )
+    enddo
+
+    do i = 1, tlev
+      tlevs(i) = real( i - 1 ) * real( OUT_DAFCST_DSEC, kind=r_sngl )
+    enddo
+
+
+    ! Assign units attributes to coordinate variables.
+    call ncio_check( nf90_put_att(ncid, lon_varid, "units", trim(lon_unit) ) )
+    call ncio_check( nf90_put_att(ncid, lat_varid, "units", trim(lat_unit) ) )
+    call ncio_check( nf90_put_att(ncid, z_varid, "units", trim(z_unit) ) )
+    call ncio_check( nf90_put_att(ncid, t_varid, "units", trim(t_unit) ) )
+    dimids = (/ z_dimid, lon_dimid, lat_dimid, t_dimid /)
+
+    ! Define the netCDF variables
+    call ncio_check( nf90_def_var(ncid, trim(ref_name), nf90_real, dimids, ref_varid) )
+    call ncio_check( nf90_put_att(ncid, ref_varid, "units", trim(ref_unit) ) )
+
+    ! End define mode
+    call ncio_check( nf90_enddef(ncid) )
+
+    ! Write the coordinate variable data. 
+    call ncio_check( nf90_put_var(ncid, lat_varid, lats) )
+    call ncio_check( nf90_put_var(ncid, lon_varid, lons) )
+    call ncio_check( nf90_put_var(ncid, t_varid, tlevs) )
+
+    j = 0
+    do k = max( 1, OUT_NETCDF_ZLEV_MIN), min( nlev, OUT_NETCDF_ZLEV_MAX), OUT_NETCDF_ZLEV_INTV
+       j = j + 1
+       zlevs(j) = real( CZ(KHALO+k), kind=r_sngl )
+
+    enddo
+
+    call ncio_check( nf90_put_var(ncid, z_varid, zlevs ) )
+
+    deallocate( tlevs )
+
+  else
+
+    call ncio_open( trim(filename), nf90_write, ncid )
+    call ncio_check( nf90_inq_varid( ncid, trim(ref_name), ref_varid) )
+
+  endif
+
+  count = (/ nlev_plot, nlong, nlatg, 1 /)
+  start = (/ 1, 1, 1, step+1 /)
+
+  ! Write the data.
+  call ncio_check( nf90_put_var(ncid, ref_varid, ref3d, start = start, &
+                   count = count) )
+
+  call ncio_close( ncid )
+
+  return
+end subroutine write_dafcst_nc
+
 !-------------------------------------------------------------------------------
 ! [File I/O] Read SCALE restart files for model coordinates
 !-------------------------------------------------------------------------------

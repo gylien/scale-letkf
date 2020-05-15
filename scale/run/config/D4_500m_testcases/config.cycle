@@ -36,7 +36,7 @@ DIRECT_TRANSFER=1
 DACYCLE_RUN_FCST=1
 
 # Maximum number of dacycle forecasts 
-MAX_DACYCLE_RUN_FCST=120
+MAX_DACYCLE_RUN_FCST=60
 
 # Number of dafcst members
 NUM_DACYCLE_FCST_MEM=10
@@ -56,7 +56,10 @@ OUT_GRADS_DAFCST=1
 # GrADS output from dafcst (all variables: u, v, w, t, p, qv, qc, qr, qi, qs, qg, PW, PRCP)
 OUT_GRADS_DAFCST_ALL=0
 
-# GrADS output
+# NetCDF output from dafcst
+OUT_NETCDF_DAFCST=1
+
+# GrADS output of ensemble mean 
 OUT_MEAN_GRADS=1
 
 # Output PAWR obs (GrADS)
