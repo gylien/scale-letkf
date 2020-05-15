@@ -1271,6 +1271,14 @@ EOF
       else
         OUT_GRADS_DAFCST_TF=".false."
       fi
+
+      if (( OUT_NETCDF_DAFCST > 0 )); then
+        OUT_NETCDF_DAFCST_TF=".true."
+        OUT_GRADS_DAFCST_TF=".true."
+      else
+        OUT_NETCDF_DAFCST_TF=".false."
+      fi
+
       if (( OUT_GRADS_DAFCST_ALL > 0 )); then
         OUT_GRADS_DAFCST_ALL_TF=".true."
       else
@@ -1344,10 +1352,12 @@ EOF
             -e "/!--RELAX_SPREAD_OUT_BASENAME--/a RELAX_SPREAD_OUT_BASENAME = \"${RELAX_SPREAD_OUT_BASENAME}\"," \
             -e "/!--OUT_PAWR_GRADS--/a OUT_PAWR_GRADS = ${OUT_PAWR_GRADS_TF}," \
             -e "/!--OUT_PAWR_GRADS_PATH--/a OUT_PAWR_GRADS_PATH = \"${OUT_PAWR_GRADS_PATH}\"," \
+            -e "/!--OUT_NETCDF_DAFCST--/a OUT_NETCDF_DAFCST = ${OUT_NETCDF_DAFCST_TF}," \
             -e "/!--OUT_GRADS_DAFCST--/a OUT_GRADS_DAFCST = ${OUT_GRADS_DAFCST_TF}," \
             -e "/!--OUT_GRADS_DAFCST_ALL--/a OUT_GRADS_DAFCST_ALL = ${OUT_GRADS_DAFCST_ALL_TF}," \
             -e "/!--OUT_GRADS_DA_ALL--/a OUT_GRADS_DA_ALL = ${OUT_GRADS_DA_ALL_TF}," \
             -e "/!--OUT_GRADS_DA_ALL_PATH--/a OUT_GRADS_DA_ALL_PATH = \"${OUT_GRADS_DA_ALL_PATH}\"," \
+            -e "/!--OUT_DAFCST_DSEC--/a OUT_DAFCST_DSEC = ${LCYCLE}.D0," \
             -e "/!--NOBS_OUT--/a NOBS_OUT = ${NOBS_OUT_TF}," \
             -e "/!--NOBS_OUT_BASENAME--/a NOBS_OUT_BASENAME = \"${NOBS_OUT_BASENAME}\"," \
             -e "/!--OBSDEP_OUT_BASENAME--/a OBSDEP_OUT_BASENAME = \"${OBSDEP_OUT_BASENAME}\"," \

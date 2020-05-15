@@ -1857,7 +1857,7 @@ end subroutine send_recv_analysis_direct
 !-------------------------------------------------------------------------------
 ! Write the subdomain model data (only radar reflectivity) into a single GrADS file from DACYCLE (additional) forecasts
 !-------------------------------------------------------------------------------
-subroutine write_grd_dafcst_mpi(timelabel, ref3d, step)
+subroutine write_grd_dafcst_mpi( timelabel, ref3d, step )
   use mod_atmos_vars, only: &
     TEMP
 !  use scale_atmos_hydrometeor, only: &
@@ -1880,13 +1880,43 @@ subroutine write_grd_dafcst_mpi(timelabel, ref3d, step)
   integer :: proc_i, proc_j
   integer :: ishift, jshift
 
-!  real(r_sngl) :: v2d_ref(nlong,nlatg,nv3dd)
+  character(len=H_LONG) :: ncfilename
+  real(r_sngl), allocatable :: bufr3d(:,:,:)
+  integer :: nlev_plot
+
 
   call rank_1d_2d(myrank_d, proc_i, proc_j)
   ishift = proc_i * nlon
   jshift = proc_j * nlat
 
-  if (myrank_d == 0) then
+  if ( OUT_NETCDF_DAFCST ) then
+
+    ncfilename = trim(DACYCLE_RUN_FCST_OUTNAME)//"/fcst_ref3d_"//trim(timelabel)//".nc"
+
+
+    nlev_plot = 0
+    do k = max( 1, OUT_NETCDF_ZLEV_MIN), min( nlev, OUT_NETCDF_ZLEV_MAX), OUT_NETCDF_ZLEV_INTV
+       nlev_plot = nlev_plot + 1
+    enddo
+    if ( .not. allocated(bufr3d) ) allocate( bufr3d(nlev_plot,nlong,nlatg))
+
+    bufr3d(:,:,:) = 0.0
+
+    nlev_plot = 0
+    do k = max( 1, OUT_NETCDF_ZLEV_MIN), min( nlev, OUT_NETCDF_ZLEV_MAX), OUT_NETCDF_ZLEV_INTV
+       nlev_plot = nlev_plot + 1
+       bufr3d(nlev_plot, 1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(ref3d(k,1:nlon,1:nlat), r_sngl)
+       call MPI_ALLREDUCE( MPI_IN_PLACE, bufr3d(nlev_plot,:,:), nlong*nlatg, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr)
+    enddo
+    if ( myrank_d == 0 ) then
+      call write_dafcst_nc( trim(ncfilename), step, nlev_plot, bufr3d )
+    endif
+    return
+
+  endif
+
+
+  if ( myrank_d == 0 ) then
     filename = trim(DACYCLE_RUN_FCST_OUTNAME)//"/fcst_ref3d_"//trim(timelabel)//".grd"
     iunit = 55
     inquire (iolength=iolen) iolen
@@ -1907,18 +1937,6 @@ subroutine write_grd_dafcst_mpi(timelabel, ref3d, step)
 
   enddo
 
-!  ! debug
-!  do k = 1, nlev 
-!    bufr4(:,:) = 0.0
-!    bufr4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(TEMP(KHALO+k,IS:IE,JS:JE), r_sngl)
-!    call MPI_ALLREDUCE(MPI_IN_PLACE, bufr4, nlong*nlatg, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr)
-!
-!    if (myrank_d == 0) then
-!      irec = irec + 1
-!      write (iunit, rec=irec) bufr4
-!    end if
-!
-!  enddo
 
   if (myrank_d == 0) then
     close (iunit)
@@ -2186,13 +2204,13 @@ subroutine plot_dafcst_mpi(timelabel, ref3d, step)
 
   ! Count the number of plot levels
   nlev_plot = 0
-  do k = plot_zlev_min, plot_zlev_max, plot_zlev_intv
+  do k = PLOT_ZLEV_MIN, PLOT_ZLEV_MAX, PLOT_ZLEV_INTV
 
     if (CZ(k+KHALO) > real(RADAR_ZMAX,kind=RP)) cycle ! Do not draw the stratosphere
     nlev_plot = nlev_plot + 1
   enddo
 
-  allocate(bufr3d(nlev_plot,nlong,nlatg))
+  allocate( bufr3d(nlev_plot,nlong,nlatg) )
   bufr3d(:,:,:) = 0.0
 
   call rank_1d_2d(myrank_d, proc_i, proc_j)
@@ -2201,21 +2219,18 @@ subroutine plot_dafcst_mpi(timelabel, ref3d, step)
 
 
   nlev_plot = 0
-  do k = plot_zlev_min, plot_zlev_max, plot_zlev_intv
+  do k = PLOT_ZLEV_MIN, PLOT_ZLEV_MAX, PLOT_ZLEV_INTV
 
     if (CZ(k+KHALO) > real(RADAR_ZMAX,kind=RP)) cycle ! Do not draw the stratosphere
     nlev_plot = nlev_plot + 1
 
     bufr3d(nlev_plot,1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(ref3d(k,1:nlon,1:nlat), r_sngl)
   enddo
-
-  call MPI_ALLREDUCE(MPI_IN_PLACE, bufr3d, nlong*nlatg*nlev_plot, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr)
-
-
+  
   ! Gather required data for reflectivity computation
 
   nlev_plot = 0
-  do k = plot_zlev_min, plot_zlev_max, plot_zlev_intv
+  do k = PLOT_ZLEV_MIN, PLOT_ZLEV_MAX, PLOT_ZLEV_INTV
 
     if (CZ(k+KHALO) > real(RADAR_ZMAX,kind=RP)) cycle ! Do not draw the stratosphere
     nlev_plot = nlev_plot + 1

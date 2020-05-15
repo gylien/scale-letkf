@@ -198,9 +198,15 @@ MODULE common_nml
   logical :: ADAPTIVE_INFL_INIT = .false.      ! Deprecated (use INFL_MUL_ADAPTIVE)
   real(r_size) :: BOUNDARY_TAPER_WIDTH = 0.0d0 ! Deprecated (use BOUNDARY_BUFFER_WIDTH)
   logical :: OUT_GRADS_DAFCST = .false. ! Outut dacycle forecast in GrADS format (radar reflectivity)
+  real(r_size) :: OUT_DAFCST_DSEC = 30.0d0 ! Outut dacycle forecast interval (sec)
   logical :: OUT_GRADS_DAFCST_ALL = .false. ! Outut dacycle forecast in GrADS format (all variables)
   integer :: OUT_GRADS_DAFCST_ALL_ZSKIP = 1 ! Outut Z interval
   logical :: OUT_GRADS_DA_ALL = .false. ! Outut dacycle analysis/guess in GrADS format
+  integer :: OUT_GRADS_DA_ALL_ZSKIP = 1  ! Output Z interval
+  logical :: OUT_NETCDF_DAFCST = .false. ! Outut dacycle forecast in NETCDF format (radar reflectivity)
+  integer :: OUT_NETCDF_ZLEV_MIN = 1
+  integer :: OUT_NETCDF_ZLEV_MAX = 42
+  integer :: OUT_NETCDF_ZLEV_INTV = 1
   character(filelenmax) :: OUT_GRADS_DA_ALL_PATH = "" ! Output path
   logical :: OUT_PAWR_GRADS = .false. ! Outut PAWR obs in GrADS format
   character(filelenmax) :: OUT_PAWR_GRADS_PATH = "" ! Output path
@@ -737,9 +743,14 @@ subroutine read_nml_letkf
     PS_ADJUST_THRES, &
     NOBS_OUT, &
     NOBS_OUT_BASENAME, &
+    OUT_NETCDF_DAFCST, &
+    OUT_NETCDF_ZLEV_MIN, &
+    OUT_NETCDF_ZLEV_MAX, &
+    OUT_NETCDF_ZLEV_INTV, &
     OUT_GRADS_DAFCST, &
     OUT_GRADS_DAFCST_ALL, &
     OUT_GRADS_DAFCST_ALL_ZSKIP, &
+    OUT_DAFCST_DSEC, &
     OUT_GRADS_DA_ALL, &
     OUT_GRADS_DA_ALL_PATH, &
     OUT_PAWR_GRADS, &
@@ -853,6 +864,11 @@ subroutine read_nml_letkf
   if (trim(NOBS_OUT_BASENAME) == '') then
     NOBS_OUT = .false.
   end if
+
+
+  if ( OUT_NETCDF_DAFCST ) then
+      OUT_GRADS_DAFCST = .true.
+  endif
 
   !*** for backward compatibility ***
   if (COV_INFL_MUL /= 1.0d0 .and. INFL_MUL == 1.0d0) then

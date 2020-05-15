@@ -38,13 +38,26 @@ ICYC_DACYCLE_RUN_FCST=1
 ICYC_DACYCLE_RUN_ANALYSIS=1
 
 # GrADS output from dafcst
-OUT_GRADS_DAFCST=0
+OUT_GRADS_DAFCST=1
 
-# GrADS output
+# GrADS output from dafcst (all variables: u, v, w, t, p, qv, qc, qr, qi, qs, qg, PW, PRCP)
+OUT_GRADS_DAFCST_ALL=0
+
+# NetCDF output from dafcst
+OUT_NETCDF_DAFCST=1
+
+# GrADS output of ensemble mean 
 OUT_MEAN_GRADS=0
 
+# Output PAWR obs (GrADS)
+OUT_PAWR_GRADS=0
+
 # Use mdet for extended forecasts
-USE_MDET_FCST=1
+USE_MDET_FCST=0
+
+# Observation departure output
+OBSDEP_OUT=0
+
 
 #===============================================================================
 # Forecast settings

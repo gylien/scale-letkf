@@ -549,6 +549,7 @@ program dacycle
       ! WRITE ANAL and ENS MEAN
       !
       call write_ens_mpi(anal3d, anal2d, mean3d=mean3d, mean2d=mean2d)
+      call TIME_gettimelabel(fstimelabel)
       call monit_obs_mpi(mean3d, mean2d, monit_step=2, timelabel=trim(fstimelabel(1:15)) )
 
 
@@ -629,7 +630,7 @@ program dacycle
 
         if ( .not. allocated(ref3d) ) allocate( ref3d(nlev,nlon,nlat) )
         call calc_ref_direct( ref3d )
-        if ( OUT_GRADS_DAFCST ) then ! Output of dacycle-forecast in GrADS format
+        if ( OUT_GRADS_DAFCST ) then ! Output of dacycle-forecast in GrADS/NetCDF format
           call write_grd_dafcst_mpi(fstimelabel(1:15), ref3d, dafcst_ostep)
         endif
         if ( OUT_GRADS_DAFCST_ALL ) then ! Output of dacycle-forecast in GrADS format (all variables)
@@ -692,7 +693,7 @@ program dacycle
           if ( .not. allocated(ref3d) ) allocate( ref3d(nlev,nlon,nlat) )
           call calc_ref_direct( ref3d )
           call plot_dafcst_mpi(fstimelabel(1:15), ref3d, dafcst_ostep)
-          if ( OUT_GRADS_DAFCST ) then ! Output of dacycle-forecast in GrADS format
+          if ( OUT_GRADS_DAFCST ) then ! Output of dacycle-forecast in GrADS/NetCDF format
             call write_grd_dafcst_mpi(fstimelabel(1:15), ref3d, dafcst_ostep)
           endif
           if ( OUT_GRADS_DAFCST_ALL ) then ! Output of dacycle-forecast in GrADS format (all variables)
