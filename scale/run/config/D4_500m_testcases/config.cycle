@@ -36,7 +36,7 @@ DIRECT_TRANSFER=1
 DACYCLE_RUN_FCST=1
 
 # Maximum number of dacycle forecasts 
-MAX_DACYCLE_RUN_FCST=60
+MAX_DACYCLE_RUN_FCST=120
 
 # Number of dafcst members
 NUM_DACYCLE_FCST_MEM=10
