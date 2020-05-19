@@ -57,7 +57,7 @@ OUT_GRADS_DAFCST=1
 OUT_GRADS_DAFCST_ALL=0
 
 # NetCDF output from dafcst
-OUT_NETCDF_DAFCST=1
+OUT_NETCDF_DAFCST=0
 
 # GrADS output of ensemble mean 
 OUT_MEAN_GRADS=1
