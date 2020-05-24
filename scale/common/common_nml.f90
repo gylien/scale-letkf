@@ -345,6 +345,9 @@ MODULE common_nml
   real(r_size) :: RADAR_BIAS_RAIN_CONST_DBZ = 0.0_r_size ! Simply bias correction for radar obs (rain)
   real(r_size) :: RADAR_BIAS_CLR_CONST_DBZ = 0.0_r_size ! Simply bias correction for radar obs (clear sky)
 
+  logical :: USE_PAWR_MASK = .false. ! Saitama MP-PAWR shadow mask
+  character(filelenmax) :: PAWR_MASK_FILE = '' ! data file for masking
+
   !---PARAM_LETKF_H08
   logical :: H08_REJECT_LAND = .false. ! true: reject Himawari-8 radiance over the land
   logical :: H08_RTTOV_CLD = .true. ! true: all-sky, false: CSR in RTTOV fwd model
@@ -1077,7 +1080,9 @@ subroutine read_nml_letkf_radar
     RADAR_BIAS_RAIN_CONST_DBZ, &
     RADAR_BIAS_CLR_CONST_DBZ, &
     RADAR_MAX_ABS_VR, &
-    USE_METHOD3_REF_MELT
+    USE_METHOD3_REF_MELT, &
+    USE_PAWR_MASK, &
+    PAWR_MASK_FILE
 
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_LETKF_RADAR,iostat=ierr)

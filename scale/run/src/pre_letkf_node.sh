@@ -188,6 +188,7 @@ cat $TMPDAT/conf/config.nml.letkf | \
         -e "/!--NOBS_OUT_BASENAME--/a NOBS_OUT_BASENAME = \"${NOBS_OUT_BASENAME}\"," \
         -e "/!--OBSDEP_OUT--/a OBSDEP_OUT = ${OBSDEP_OUT_TF}," \
         -e "/!--OBSDEP_OUT_BASENAME--/a OBSDEP_OUT_BASENAME = \"${TMPOUT}/${ATIME}/obs/obsdep\"," \
+        -e "/!--PAWR_MASK_FILE--/a PAWR_MASK_FILE = \"${PAWR_MASK_FILE}\"," \
         -e "/!--FILE_AGGREGATE--/a FILE_AGGREGATE = ${FILE_AGGREGATE}," \
     >> $TMPDIR/letkf.conf
 

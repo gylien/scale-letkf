@@ -794,9 +794,9 @@ subroutine read_obs_radar_toshiba(cfile, obs)
 
   integer :: access !FILE INQUIRY
   integer :: ios
-  character(len=33),parameter:: shadow_fname = "saitama-nearfield-shadow-mask.dat"
   integer(4),save :: shadow_na, shadow_ne
-  integer(1), allocatable ,save :: shadow(:,:)
+  integer(4):: tmpshadow
+  integer(2), allocatable ,save :: shadow(:,:)
   real(8),save :: shadow_del_az
 #else
   integer, parameter :: n_type = 3
@@ -873,10 +873,10 @@ subroutine read_obs_radar_toshiba(cfile, obs)
 
 !!! MP-PAWR shadow masking 
 #ifdef MPW
-  if (not(allocated(shadow))) then
+  if (use_pawr_mask.and. .not.(allocated(shadow))) then
     if (myrank_o == 0)then
-        write(*, '("reading ", A)') trim(shadow_fname)
-        open(99, file = trim(shadow_fname), status = "old", access = "stream", form = "unformatted", convert = "little_endian")
+        write(*, '("reading ", A)') trim(pawr_mask_file)
+        open(99, file = trim(pawr_mask_file), status = "old", access = "stream", form = "unformatted", convert = "little_endian")
         read(99,iostat=ios) shadow_na, shadow_ne
         if (ios.eq.0)then
           allocate(shadow(shadow_na, shadow_ne))
@@ -884,7 +884,8 @@ subroutine read_obs_radar_toshiba(cfile, obs)
           close(99)
           if(ios.ne.0) shadow=0
         else
-          write(*,*) 'file ',trim(shadow_fname) ,' not found or unsupported format.'
+          write(6,'(3A)') 'file ',trim(pawr_mask_file) ,' not found or unsupported format.'
+          stop 1
         end if 
     end if
     if (nprocs_o /= 1)then
@@ -1068,7 +1069,7 @@ subroutine read_obs_radar_toshiba(cfile, obs)
   end do
 #endif
 
-!$omp parallel do private(ia, ir, ie)
+!$omp parallel do private(ia, ir, ie,tmpshadow)
   do ie = 1, ne
      do ir = 1, nr
         do ia = 1, na
@@ -1079,11 +1080,12 @@ subroutine read_obs_radar_toshiba(cfile, obs)
 
 #ifdef MPW
            qcflag(ia, ir, ie) = 0.0d0 !valid
-           shadow_del_az = 360.0d0 / shadow_na
-            if (allocated(shadow)) then
+           if (use_pawr_mask.and.allocated(shadow)) then
+             shadow_del_az = 360.0d0 / shadow_na
              if (ie <= shadow_ne) then
-               if(shadow(nint(az(ia, ie, 1) / shadow_del_az) + 1, ie) .ne. 0) then
-                 qcflag(ia, :, ie) = 1000.0d0  !invalid
+               tmpshadow=shadow(min(shadow_na,nint(az(ia, ie, 1) / shadow_del_az) + 1), ie)
+               if(tmpshadow .ne. 0) then
+                 qcflag(ia, tmpshadow:, ie) = 1000.0d0  !invalid
                end if
              end if
            end if
@@ -1147,10 +1149,6 @@ subroutine read_obs_radar_toshiba(cfile, obs)
   if(allocated(qcflag)) deallocate(qcflag)
   if(allocated(attenuation)) deallocate(attenuation)
   if(allocated(rrange)) deallocate(rrange)
-  if(allocated(radlon)) deallocate(radlon)
-  if(allocated(radlat)) deallocate(radlat)
-  if(allocated(radz)) deallocate(radz)
-
 
   call mpi_timer('read_obs_radar_toshiba:radar_superobing:', 2, barrier=MPI_COMM_o)
 
@@ -1291,15 +1289,24 @@ subroutine read_obs_radar_toshiba(cfile, obs)
 
 #ifdef PLOT_DCL
   if (PLOT_OBS)then
-
+  
     call TIME_gettimelabel(timelabel)
     plotname = "obs_dbz_"//trim(timelabel(1:15))
-    call plot_dbz_DCL_obs(obs_ref%nobs, real(obs_ref%dat), real(obs_ref%lon), real(obs_ref%lat), real(obs_ref%lev), &
-                          nlon, nlat, real(lon), real(lat), real(dlon), real(dlat), trim(plotname))
+    call MPI_BCAST(radlon, na*ne*nr,  MPI_DOUBLE_PRECISION, 0, MPI_COMM_o, ierr)
+    call MPI_BCAST(radlat, na*ne*nr,  MPI_DOUBLE_PRECISION, 0, MPI_COMM_o, ierr)
+    call MPI_BCAST(radz,   na*ne*nr,  MPI_DOUBLE_PRECISION, 0, MPI_COMM_o, ierr)
+     call plot_dbz_DCL_obs( &
+     obs_ref%nobs, real(obs_ref%dat), real(obs_ref%lon), real(obs_ref%lat), real(obs_ref%lev), &
+     nlon, nlat, real(lon), real(lat), real(dlon), real(dlat), na, nr, ne, real(radlon), real(radlat), real(radz), &
+     trim(plotname) )
 
   endif
   call mpi_timer('read_obs_radar_toshiba:plot_obs:', 2, barrier=MPI_COMM_o)
 #endif
+  if(allocated(radlon)) deallocate(radlon)
+  if(allocated(radlat)) deallocate(radlat)
+  if(allocated(radz)) deallocate(radz)
+
 
   if ( OUT_PAWR_GRADS ) then
     if ( myrank_o == 0 ) then
