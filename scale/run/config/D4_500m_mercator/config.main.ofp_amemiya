@@ -14,8 +14,8 @@ DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
 
 
 OUTPUT="/work/hp150019/share/SCALE-LETKF-rt/result/ope"
-EXP4=d4_250m_mer
-EXP3=d3_mer
+EXP4=d4_500m
+EXP3=d3
 EXP2=d2
 
 OUTDIR="${OUTPUT}/${EXP4}"
@@ -48,6 +48,8 @@ OBS_USE_JITDT=0 # 1: Run with JIT-DT
                 # 0: No JIT-DT
 OBS_USE_JITDT_OFFLINE=0 # 1: Offilne test
                         # 0: Online (data should be transfered from NICT)
+
+PAWR_MASK_file='/work/hp150019/share/SCALE-LETKF-rt/scale_ope/scale-letkf/scale/obs/radar/saitama-shadow-mask.dat'
 
 JIT_TOP=/work/hp150019/share/c24140/jitdt
 

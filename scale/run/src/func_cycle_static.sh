@@ -1361,6 +1361,7 @@ EOF
             -e "/!--NOBS_OUT_BASENAME--/a NOBS_OUT_BASENAME = \"${NOBS_OUT_BASENAME}\"," \
             -e "/!--OBSDEP_OUT_BASENAME--/a OBSDEP_OUT_BASENAME = \"${OBSDEP_OUT_BASENAME}\"," \
             -e "/!--OBSDEP_OUT--/a OBSDEP_OUT = ${OBSDEP_OUT_TF}," \
+            -e "/!--PAWR_MASK_FILE--/a PAWR_MASK_FILE = \"${PAWR_MASK_FILE}\"," \
         >> $CONFIG_DIR/${conf_file}
 
 #    # Most of these parameters are not important for letkf
