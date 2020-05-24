@@ -22,6 +22,8 @@ OUTDIR="${OUTPUT}/${EXP4}"
 
 INDIR="${OUTDIR}"
 
+LOG_APS=1
+
 #===============================================================================
 # Location of model/data files
 
