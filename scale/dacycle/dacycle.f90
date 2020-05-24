@@ -645,7 +645,10 @@ program dacycle
 
 
       ! Do nothing if no forecasts are started from the current analysis time
-      if ( myrank_use_da .and. ( .not. any( dafcst_slist(icycle,:) ) ) )  cycle 
+!!!      if ( myrank_use_da .and. ( .not. any( dafcst_slist(icycle,:) ) ) )  cycle 
+      if ( myrank_use_da ) then
+        if ( .not. any( dafcst_slist(icycle,:) ) )   cycle 
+      end if
       ! Do nothing if myrank is running a dafcst forecast 
       if ( .not. myrank_use_da .and. ( dafcst_step < dafcst_step_max .and. dafcst_step /= -1 ) ) cycle 
 
