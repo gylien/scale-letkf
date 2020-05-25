@@ -67,7 +67,7 @@ more complete data within the data assimilation window. We can choose to use eit
 run the SCALE-LETKF near-real-time system. *GDAS is used in the current SCALE-LETKF system.*
 
 
-A data processing script is called in `get_ncep_gfs.sh` after downloading the data:
+`get_ncepobs.sh` calls a data processing script after downloading the data:
 
 - **`run/dec_prepbufr/convert.sh`: Decode BUFR data to generate a binary file for SCALE-LETKF**
 
@@ -78,6 +78,9 @@ A data processing script is called in `get_ncep_gfs.sh` after downloading the da
 2. fortran program dec_prepbufr (source available in [scale-letkf/scale/obs](https://github.com/gylien/scale-letkf/tree/master/scale/obs))
 
 *The crutial bug fix was performed in 2019.3. The error in decoding virtual temperature was fixed. See the detail [here](https://github.com/gylien/scale-letkf/commit/3ad0aba7169037bcb4c9cf0e4c7fe17fe3778f94#diff-972592ed1fe45ba69df5ed75317fc650R173). 
+
+
+**The bin file `external/ncepobs/run/dec_prepbufr_fixed` needs to be complied without -AVX512 option, as it is executed not on the calculation node but on the login node.**
 
 
 - **`run/plot/map`: generate a map of PREPBUFR observation distribution** (optional)
