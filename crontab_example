@@ -1,3 +1,7 @@
-0 2,8,14,20 * * * /work/hp150019/share/SCALE-LETKF-rt/external/ncepgfs/get_ncep_gfs.sh &> /work/hp150019/share/SCALE-LETKF-rt/external/ncepgfs/get_ncep_gfs.log 
-0 2,8,14,20 * * * /work/hp150019/share/SCALE-LETKF-rt/external/ncepgefs/get_ncep_gefs.sh &> /work/hp150019/share/SCALE-LETKF-rt/external/ncepgefs/get_ncep_gefs.log 
-0 4,10,16,22 * * * /work/hp150019/share/SCALE-LETKF-rt/external/ncepobs_gdas/get_ncep_obs.sh &> /work/hp150019/share/SCALE-LETKF-rt/external/ncepobs_gdas/get_ncep_obs.log 
+EXTDIR=/work/hp150019/share/SCALE-LETKF-rt/external
+MNTDIR=/work/hp150019/share/SCALE-LETKF-rt/admin/monitor
+0 2,8,14,20 * * * $EXTDIR/ncepgfs/get_ncep_gfs.sh &> $EXTDIR/ncepgfs/get_ncep_gfs.log 
+0 2,8,14,20 * * * $EXTDIR/ncepgefs/get_ncep_gefs.sh &> $EXTDIR/ncepgefs/get_ncep_gefs.log 
+0 4,10,16,22 * * * $EXTDIR/ncepobs_gdas/get_ncep_obs.sh &> $EXTDIR/ncepobs_gdas/get_ncep_obs.log 
+30 2,8,14,20 * * * $EXTDIR/msm/get_msm.sh &>> $EXTDIR/msm/auto_msm.log &
+* * * * * $MNTDIR/get_monitor.sh > $MNTDIR/auto_monitor.log 
