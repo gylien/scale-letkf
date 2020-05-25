@@ -66,6 +66,19 @@ See [initialization](initialize.md).
 
 Boundary and observation data need to be downloaded from NCEP websites. The scripts in `$TOPDIR/external/ncepgfs` and `$TOPDIR/external/ncepobs_gdas` do that job. To start the realtime operation, the scripts need to be automatically executed every 6 hours. 
 
+When you launch the system, try the following;  
+```
+cd $TOPDIR/external/ncepobs_gdas 
+echo "2020-05-01 00:00:00" > mtime  ### older than 12 hours from the current UTC
+./get_ncep_obs  
+./get_ncep_obs ### repeat it until it returns 'Not Found'
+cd $TOPDIR/external/ncepgfs 
+echo "2020-05-01 00:00:00" > mtime  ### older than 12 hours from the current UTC
+./get_ncep_gfs ### takes a few minutes
+./get_ncep_gfs ### repeat it until it returns 'Not Found'
+```
+And then set the crontab to let it run automatically.  
+
 See [Prepare NCEP GFS and PREPBUFR data](prepare-ncep-gfs-and-prepbufr-data.md) for the detail. 
 
 ## Prepare topography and landuse files 
