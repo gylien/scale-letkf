@@ -2226,7 +2226,9 @@ subroutine plot_dafcst_mpi(timelabel, ref3d, step)
 
     bufr3d(nlev_plot,1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(ref3d(k,1:nlon,1:nlat), r_sngl)
   enddo
-  
+
+  call MPI_ALLREDUCE(MPI_IN_PLACE, bufr3d, nlong*nlatg*nlev_plot, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr) 
+ 
   ! Gather required data for reflectivity computation
 
   nlev_plot = 0

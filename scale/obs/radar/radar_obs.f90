@@ -1124,7 +1124,6 @@ subroutine read_obs_radar_toshiba(cfile, obs)
 
   call mpi_timer('read_obs_radar_toshiba:radar_georeference:', 2, barrier=MPI_COMM_o)
 
-  deallocate(az, el)
 
 !  write(*, *) "call define_grid"
   call define_grid(lon0, lat0, nr, rrange, rrange(nr), RADAR_ZMAX, & ! input
@@ -1292,20 +1291,20 @@ subroutine read_obs_radar_toshiba(cfile, obs)
   
     call TIME_gettimelabel(timelabel)
     plotname = "obs_dbz_"//trim(timelabel(1:15))
-    call MPI_BCAST(radlon, na*ne*nr,  MPI_DOUBLE_PRECISION, 0, MPI_COMM_o, ierr)
-    call MPI_BCAST(radlat, na*ne*nr,  MPI_DOUBLE_PRECISION, 0, MPI_COMM_o, ierr)
-    call MPI_BCAST(radz,   na*ne*nr,  MPI_DOUBLE_PRECISION, 0, MPI_COMM_o, ierr)
-     call plot_dbz_DCL_obs( &
-     obs_ref%nobs, real(obs_ref%dat), real(obs_ref%lon), real(obs_ref%lat), real(obs_ref%lev), &
-     nlon, nlat, real(lon), real(lat), real(dlon), real(dlat), na, nr, ne, real(radlon), real(radlat), real(radz), &
-     trim(plotname) )
-
+    call MPI_ALLREDUCE( MPI_IN_PLACE, radlon, na*ne*nr, MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_o, ierr)
+    call MPI_ALLREDUCE( MPI_IN_PLACE, radlat, na*ne*nr, MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_o, ierr)
+    call MPI_ALLREDUCE( MPI_IN_PLACE, radz, na*ne*nr, MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_o, ierr)
+    call plot_dbz_DCL_obs( &
+    obs_ref%nobs, real(obs_ref%dat), real(obs_ref%lon), real(obs_ref%lat), real(obs_ref%lev), &
+    nlon, nlat, real(lon), real(lat), real(dlon), real(dlat), na, nr, ne, real(az(:, 1, 1)), real(radlon), real(radlat), real(radz), &
+    trim(plotname) )
   endif
   call mpi_timer('read_obs_radar_toshiba:plot_obs:', 2, barrier=MPI_COMM_o)
 #endif
   if(allocated(radlon)) deallocate(radlon)
   if(allocated(radlat)) deallocate(radlat)
   if(allocated(radz)) deallocate(radz)
+  deallocate(az, el)
 
 
   if ( OUT_PAWR_GRADS ) then

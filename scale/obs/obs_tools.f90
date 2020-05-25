@@ -464,10 +464,15 @@ subroutine read_obs_all(obs)
     end select
 
     if (myrank_da == 0) then
-      write(6,'(5A,I9,A)') 'OBS FILE [', trim(OBS_IN_NAME(iof))//trim(timelabel_obs), '] (FORMAT ', &
-                           trim(OBS_IN_FORMAT(iof)), '): TOTAL ', &
-                           obs(iof)%nobs, ' OBSERVATIONS'
-  
+      if (OBS_USE_JITDT) then
+        write(6,'(A,I9,A)') 'OBS FILE from JIT-DT : TOTAL ', &
+                             obs(iof)%nobs, ' OBSERVATIONS'
+      else
+        write(6,'(5A,I9,A)') 'OBS FILE [', trim(OBS_IN_NAME(iof))//trim(timelabel_obs), '] (FORMAT ', &
+                             trim(OBS_IN_FORMAT(iof)), '): TOTAL ', &
+                             obs(iof)%nobs, ' OBSERVATIONS'
+      end if
+
       select case (OBS_IN_FORMAT(iof))
       case (obsfmt_prepbufr)
         call obs_info_allocate(obs(iof), extended=.true.)

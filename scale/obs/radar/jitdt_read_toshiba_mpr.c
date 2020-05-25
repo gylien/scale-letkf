@@ -25,7 +25,7 @@ int jitdt_read_toshiba(int n_type, char *jitdt_place, mppawr_header hd[n_type],
   struct timeval t0, t;
   char *is_gzip;
 
-  const int opt_verbose=2;
+  const int opt_verbose=1;
 
 
   gettimeofday(&t0, NULL);
@@ -56,8 +56,8 @@ int jitdt_read_toshiba(int n_type, char *jitdt_place, mppawr_header hd[n_type],
   }
 
   for(i_type = 0; i_type < n_type; i_type++){
-    bsize[i_type] = ungzip_toshiba_mpr(bufsize, bsize[i_type], buf + i_type * bufsize);
-    if(bsize[i_type] == 0) return -8;   
+//    bsize[i_type] = ungzip_toshiba_mpr(bufsize, bsize[i_type], buf + i_type * bufsize);
+//    if(bsize[i_type] == 0) return -8;   
     ierr = decode_toshiba_mpr(bsize[i_type], buf + i_type * bufsize, opt_verbose, hd + i_type, az[i_type], el[i_type], rtdat[i_type]);
     if(ierr != 0) return ierr;
   }
