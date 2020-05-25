@@ -17,6 +17,8 @@ The original NetCDF and converted GrADS-format data is saved into `<DATA_DIR_FOR
 
 ### Precipitation data
 
+**Since the beginning of FY2020, the account of Japan Meteorological Businesss Support Center has been expired. JMA precipitation data is available through [Meteorology Research Consotium](https://www.mri-jma.go.jp/Project/cons/index.html) with a few hours delay.**
+
 JMA provides a couple of precipitation observation/forecast data sets through [Japan Meteorological Business Support Center](http://www.jmbsc.or.jp/jp/).  
 For verifications of precipitation forecast in different timescales, it is benefitable to use two different JMA datasets below. 
 
