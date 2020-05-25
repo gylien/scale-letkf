@@ -49,10 +49,11 @@ module load hdf5/1.10.5
 module load netcdf/4.7.0
 module load netcdf-fortran/4.4.5
 
+DECBIN="/work/hp150019/share/SCALE-LETKF-rt/scale_noAVX/scale-letkf/scale/obs/dec_prepbufr"
 
-#./dec_prepbufr
+[ ! -f dec_prepbufr_fixed ] && ln -s $DECBIN dec_prepbufr_fixed
+
 ./dec_prepbufr_fixed
-#./dec_prepbufr_orig
 
 touch fort.90
 mkdir -p $outdir
