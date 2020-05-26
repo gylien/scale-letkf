@@ -15,7 +15,7 @@ TOPDIR="$SCALEDIR/.."
 
 OUTPUT="${TOPDIR}/result/ope"
 EXP4=d4_500m
-EXP3=d3_1500m
+EXP3=d3
 
 #===============================================================================
 # Location of model/data files
@@ -128,7 +128,7 @@ ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait unti
                             #  0: No
                             #  1: Yes
 
-SYSNAME=d4_init_250m                 # A unique name in the machine
+SYSNAME=d4_init_500m                 # A unique name in the machine
 TMPSUBDIR="scale-letkf_${SYSNAME}_<PARENT_REF_TIME_D2>_<PARENT_REF_TIME>_<STIME>"           # (used to identify multiple runs in the same time)
 
 TMP="$DIR/tmp/$TMPSUBDIR" # Temporary directory shared among all nodes

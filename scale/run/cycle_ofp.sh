@@ -31,6 +31,10 @@ GNAME=${GNAME:-`id -ng`}
 #-------------------------------------------------------------------------------
 
 statfile=${myname%.*}.stat.$STIME
+function unlock () {
+  rm -f $statfile
+}
+trap unlock EXIT
 
 echo "prep" > $statfile
 

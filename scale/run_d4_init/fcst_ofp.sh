@@ -48,6 +48,10 @@ fi
 #-------------------------------------------------------------------------------
 
 statfile=${myname%.*}.stat.$PARENT_REF_TIME.$STIME
+function unlock () {
+  rm -f $statfile
+}
+trap unlock EXIT
 
 echo "prep" > $statfile
 
@@ -216,7 +220,7 @@ echo
 job_end_check_PJM $jobid
 res=$?
 
-echo "plot" > $statfile
+rm $statfile
 
 
 #===============================================================================

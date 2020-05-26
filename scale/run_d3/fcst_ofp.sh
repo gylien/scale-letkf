@@ -48,6 +48,10 @@ fi
 #-------------------------------------------------------------------------------
 
 statfile=${myname%.*}.stat.${PARENT_REF_TIME}.${STIME}
+function unlock () {
+  rm -f $statfile
+}
+trap unlock EXIT
 
 echo "prep" > $statfile
 rm temp.lock
