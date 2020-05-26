@@ -1,4 +1,4 @@
-name = '5000m_prcp'
+name = '1000m_dbz'
 
 'settime.gs'
 rcl = sublin(result, 1)
@@ -21,7 +21,7 @@ outf = 'out/'name'_'tfilename
 'set grads off'
 
 'domain.gs'
-'set lev 5000'
+'set lev 1000'
 
 *'d qc'
 *'d qi'
@@ -43,19 +43,18 @@ fbg=1.70
 'zs = pow(zs,'fbs')'
 'zg = 'fag'* rho * qg'
 'zg = pow(zg,'fbg')'
-'ref=10*log10(zr+zs+zg+1.01)'
+'ref=10*log10(zr+zs+zg+1.01))'
 
 *'ref=calc_ref(rho,qr,qs,qg)'
 'color_radar_share.gs'
 'd const(ref,0,-u)'
+*'d ref'
 'cbarn.gs 0.8 0 5.5 0.7 0.8 1'
-
 
 ******
 'srh=smth9(rh)'
 'srh=smth9(srh)'
 'srh=smth9(srh)'
-
 
 'set gxout contour'
 'set clevs 70 90'
@@ -63,12 +62,11 @@ fbg=1.70
 'set cthick 2'
 'set cstyle 1'
 'set clab on'
-'d srh'
-
+'d rh'
 
 'set string 1 c 5'
 'set strsiz 0.09 0.12'
-'draw string 5.5 7.5 `15000m precip  [ Run: `0'trun'`1 | VT: `0'tstring'`1 ]'
+'draw string 5.5 7.5 `11000m precip  [ Run: `0'trun'`1 | VT: `0'tstring'`1 ]'
 
 '!rm -f 'outf'_tmp.png'
 'gxprint 'outf'_tmp.png'

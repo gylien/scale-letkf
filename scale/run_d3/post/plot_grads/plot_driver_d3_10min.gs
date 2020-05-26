@@ -22,11 +22,11 @@ while (it <= tend)
 
   'sfc_prcp.gs'
   'sfc_uvt.gs'
-  '1000m_prcp.gs'
+  '1000m_dbz.gs'
   '1000m_uvw.gs'
-  '3000m_prcp.gs'
+  '3000m_dbz.gs'
   '3000m_uvw.gs'
-  '5000m_prcp.gs'
+  '5000m_dbz.gs'
   '5000m_uvw.gs'
 
 

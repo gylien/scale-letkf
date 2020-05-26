@@ -19,19 +19,6 @@ it = tstart
 while (it <= tend)
   'set t 'it
 
-  'sfc_prcp_slp.gs'
-  'sfc_wind.gs'
-  'sfc_2mtemp.gs'
-  '925_theq_wind_JMA.gs'
-  '925_rh_temp_wind.gs'
-  '850_theq_wind_JMA.gs'
-  '850_rh_temp_wind.gs'
-  '700_rh_temp_wind.gs'
-  '500_rh_temp_wind.gs'
-
-  'd3_sfc_uvt.gs'
-  'd3_sfc_prcp.gs'
-
   'd3_850_theq_wind_JMA.gs'
   'd3_850_rh_temp_wind.gs'
   'd3_700_rh_temp_wind.gs'

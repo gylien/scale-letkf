@@ -25,6 +25,12 @@ DOM=2 ### fixed
 
 OUTDIR=${OUTDIR[${DOM}]}
 
+
+#####
+OUTDIR=/work/hp150019/share/SCALE-LETKF-rt/result/verify/d2
+
+#####
+
 cd $POSTDIR
 
 FCSTLEN=86400
@@ -38,10 +44,12 @@ NP_OFILE_Y=1
 NP_OFILE=$((${NP_OFILE_X} * ${NP_OFILE_Y})) # Output file (process number) for each member
 
 #SNO_MEMBERS=${MEMBER}
-SNO_MEMBERS=1
+#SNO_MEMBERS=1
+SNO_MEMBERS=2
 #SNO_MEM_L=$(seq -f %04g ${SNO_MEMBERS})" mean mdet" # All members + mean + mdet
 #SNO_MEM_L=$(seq -f %04g ${SNO_MEMBERS})" mean" # All members + mean
-SNO_MEM_L="mdet"
+SNO_MEM_L="mean mdet"
+#SNO_MEM_L="mean"
 
 # Total SNO processes  
 NP_TOTAL=$((${SNO_MEMBERS} * ${NP_OFILE}))
@@ -220,12 +228,15 @@ done
 
 echo 'plot...'
 echo $STIME > plot.lock 
+
+for mem in  ${SNO_MEM_L} ;do # member loop
  [ ! -z "`ls out/`" ] && rm out/*
  grads -bcl "plot_driver_d2_1h.gs $OUTDIR/$STIME/fcstgp/$mem/history.ctl 1 25 1" &> plot_driver_1h.log 
  mkdir -p $OUTDIR/$STIME/fcstgpi/$mem 
  mv out/*.png $OUTDIR/$STIME/fcstgpi/$mem/
  mv out_d3/*.png $OUTDIR/$STIME/fcstgpi/$mem/
  rm plot.lock
+done
 
 echo 'done.'
 

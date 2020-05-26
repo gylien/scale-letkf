@@ -1,4 +1,4 @@
-name = '3000m_prcp'
+name = '3000m_dbz'
 
 'settime.gs'
 rcl = sublin(result, 1)
