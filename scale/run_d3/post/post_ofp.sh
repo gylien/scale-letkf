@@ -12,7 +12,7 @@ cd $POSTDIR/..
 . config.main || exit $?
 . src/func_util.sh || exit $?
 
-OUTPUT="${TOPDIR}/result/verify_temp/"
+OUTPUT="${TOPDIR}/result/ope/"
 
 PARENT_REF_TIME=$1
 STIME=$2

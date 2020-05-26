@@ -25,12 +25,6 @@ DOM=2 ### fixed
 
 OUTDIR=${OUTDIR[${DOM}]}
 
-
-#####
-OUTDIR=/work/hp150019/share/SCALE-LETKF-rt/result/verify/d2
-
-#####
-
 cd $POSTDIR
 
 FCSTLEN=86400
