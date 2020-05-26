@@ -342,7 +342,7 @@ end do
     call sgtnzu(na+7, vlons_lim, vlats_lim, 603)
  
     do is=1,nshadow
-      call sgtnzu(ipts_shadow_plot(is), vlons_shadow_plot(1:ipts_shadow_plot(is),is), vlats_shadow_plot(1:ipts_shadow_plot(is),is), 503)
+      if (ipts_shadow_plot(is).ge.4) call sgtnzu(ipts_shadow_plot(is), vlons_shadow_plot(1:ipts_shadow_plot(is),is), vlats_shadow_plot(1:ipts_shadow_plot(is),is), 503)
     end do    
 
     call system_clock(time2, timerate, timemax)
