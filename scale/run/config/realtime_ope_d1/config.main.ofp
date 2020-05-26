@@ -14,6 +14,8 @@ USERNAME=c24140
 
 ENABLE_MONITOR=1
 
+### LOG_APS=1
+
 #===============================================================================
 
 DIR="$(cd "$(pwd)/.." && pwd)"                                 # Root directory of the SCALE-LETKF

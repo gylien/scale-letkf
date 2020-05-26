@@ -149,7 +149,6 @@ cat > $jobscrp << EOF
 #PJM --omp thread=${THREADS}
 #PJM -g ${GNAME}
 ##PJM -j
-#PJM -s
 #PJM -S
 
 rm -f machinefile
@@ -158,10 +157,6 @@ for inode in \$(cat \$I_MPI_HYDRA_HOST_FILE); do
     echo "\$inode" >> machinefile
   done
 done
-
-module load hdf5/1.10.5
-module load netcdf/4.7.0
-module load netcdf-fortran/4.4.5
 
 ulimit -s unlimited
 
@@ -179,6 +174,19 @@ export KMP_HW_SUBSET=1t
 
 export HFI_NO_CPUAFFINITY=1
 unset KMP_AFFINITY
+
+export I_MPI_DEBUG=5
+
+source /work/opt/local/cores/intel/performance_snapshots_2019.6.0.602217/apsvars.sh
+source /work/opt/local/cores/intel/parallel_studio_xe_2019/bin/psxevars.sh
+source /work/opt/local/cores/intel/itac_2019/bin/itacvars.sh
+ 
+export MPS_STAT_LEVEL=4
+
+
+module load hdf5/1.10.5
+module load netcdf/4.7.0
+module load netcdf-fortran/4.4.5
 
 
 ./${job}.sh "$STIME" "$ETIME" "$ISTEP" "$FSTEP" "$CONF_MODE" || exit \$?

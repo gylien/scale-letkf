@@ -186,7 +186,12 @@ elif [ "$MPI_TYPE" = 'impi' ]; then
 
   NNP=$(cat ${NODEFILE_DIR}/${NODEFILE} | wc -l)
 
-  $MPIRUN -n $NNP -machinefile ${NODEFILE_DIR}/${NODEFILE} $PROG $CONF $STDOUT $ARGS
+  if [ ! -z $LOG_APS  ] ;then
+    PROGn=`basename $PROG`
+    $MPIRUN -n $NNP -machinefile ${NODEFILE_DIR}/${NODEFILE} aps -r=aps_result_${PROGn} $PROG $CONF $STDOUT $ARGS
+  else
+    $MPIRUN -n $NNP -machinefile ${NODEFILE_DIR}/${NODEFILE} $PROG $CONF $STDOUT $ARGS
+  fi
   res=$?
   if ((res != 0)); then
     echo "[Error] $MPIRUN -n $NNP -machinefile ${NODEFILE_DIR}/${NODEFILE} $PROG $CONF $STDOUT $ARGS" >&2
@@ -1026,6 +1031,10 @@ for p in ${JOB_LOG_TYPES}; do
   fi
 done
 
+  if [ ! -z $LOG_APS  ] ;then
+    cp -fr $JOB_DIR/aps_result_* $OUTDIR/exp/${JOB_ID}_${JOBNAME}_${STIME}
+  fi
+ 
 ( cd $SCRP_DIR && git log -1 --format="SCALE-LETKF version %h (%ai)" > $OUTDIR/exp/${JOB_ID}_${JOBNAME}_${STIME}/version )
 ( cd $SCALEDIR/scale-rm && git log -1 --format="SCALE       version %h (%ai)" >> $OUTDIR/exp/${JOB_ID}_${JOBNAME}_${STIME}/version )
 
