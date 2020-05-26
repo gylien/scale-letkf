@@ -21,7 +21,6 @@ See [directory structure](directory-structure.md) for the entire structure of th
 
 ```
 cd scale_ope
-cp scale-letkf_ope/Mkinclude_scale ./Mkinclude   ### Special config to create multiple bin/lib/include sets
 export SCALE_SYS=OFP
 export SCALE_ENABLE_OPENMP=T 
 export SCALE_USE_SINGLEFP=T ### single precision 
