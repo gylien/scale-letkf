@@ -29,8 +29,8 @@ DATA_LANDUSE="${OUTPUT}/${EXP4}"                                  # Directory of
 DATA_BDY_SCALE="${OUTPUT}/${EXP3}/ref_<PARENT_REF_TIME_D2>"   # Directory of the boundary data in SCALE history format (parent domain)
 OUTDIR="${DATA_BDY_SCALE}/<PARENT_REF_TIME>/${EXP4}"
 
-DATA_BDY_SCALE_PRC_NUM_X=32 # D3
-DATA_BDY_SCALE_PRC_NUM_Y=32 # D3
+DATA_BDY_SCALE_PRC_NUM_X=16 # D3
+DATA_BDY_SCALE_PRC_NUM_Y=16 # D3
 DATA_BDY_SCALE_PREP=                                                 # Directory of the prepared SCALE boundary files
 DATA_BDY_WRF=                                                        # Directory of the boundary data in WRF format
 DATA_BDY_NICAM=                                                      # Directory of the boundary data in NICAM format (not finished)
