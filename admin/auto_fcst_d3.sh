@@ -28,7 +28,7 @@ FCSTHOUR_DEF=7 ### 6+1
 ####PARENT_FCSTLEN=${FCSTLEN_d2}
 PARENT_FCSTLEN=64800
 
-ofp_parentdir=/work/hp150019/c24140/HPCC_SCALE-LETKF-rt/result/ope_single/d2
+ofp_parentdir=$realtimebase/result/ope_single/d2
 
 wkdir="$(cd "$( dirname "$0" )" && pwd)"
 

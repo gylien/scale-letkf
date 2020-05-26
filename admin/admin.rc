@@ -4,7 +4,8 @@ username=$(id -nu)
 groupname=$(id -ng)
 
 export GNAME=${groupname}
-export RSCGRP="regular-flat"
+#export RSCGRP="regular-flat"
+export RSCGRP="regular-cache"
 
 scale_ver="ope" 
 letkf_ver="ope" 
@@ -19,8 +20,7 @@ nmem_d3=2 ### disk saving mode
 #nmem_d2=50
 #nmem_d3=50 
 
-realtimebase="/work/${groupname}/share/SCALE-LETKF-rt"
-###realtimebase="/work/${groupname}/${username}/HPCC_SCALE-LETKF-rt"
+realtimebase="${wkdir}/.."
 
 logfile="$wkdir/${myname1}.log"
 outfile="$wkdir/${myname1}.out"
