@@ -12,6 +12,7 @@ cd $POSTDIR/..
 . config.main || exit $?
 . src/func_util.sh || exit $?
 
+OUTPUT="${TOPDIR}/result/verify_temp/"
 
 PARENT_REF_TIME=$1
 STIME=$2
@@ -43,10 +44,11 @@ NP_OFILE_Y=4
 NP_OFILE=$((${NP_OFILE_X} * ${NP_OFILE_Y})) # Output file (process number) for each member
 
 #SNO_MEMBERS=${MEMBER}
-SNO_MEMBERS=1
+SNO_MEMBERS=2
 #SNO_MEM_L=$(seq -f %04g ${SNO_MEMBERS})" mean mdet" # All members + mean + mdet
 #SNO_MEM_L=$(seq -f %04g ${SNO_MEMBERS})" mean" # All members + mean
-SNO_MEM_L="mdet"
+SNO_MEM_L="mean mdet"
+#SNO_MEM_L="mdet"
 
 # Total SNO processes  
 NP_TOTAL=$((${SNO_MEMBERS} * ${NP_OFILE}))
@@ -67,7 +69,7 @@ fi
 ###############################
 
 # Path for SNO binary
-SNOBIN_ORG=${TOPDIR}/scale_develop/bin/sno
+SNOBIN_ORG=/work/hp150019/share/SCALE-LETKF-rt/scale_develop/bin/sno
 SNOBIN=${RUNDIR}/sno
 if [ ! -e ${SNOBIN_ORG} ] ; then
   echo "No SNO binary!"
@@ -335,13 +337,15 @@ while [ -f plot.lock ] ;do
  sleep 60
 done
 
-echo 'plot...'
-echo $STIME > plot.lock 
+for mem in  ${SNO_MEM_L} ;do # member loop
+ echo 'plot' $mem'...'
+ echo $STIME > plot.lock 
  [ ! -z "`ls out/`" ] && rm out/*
  grads -bcl "plot_driver_d3_10min.gs $OUTDIR/$STIME/fcstgp/$mem/history.ctl 1 $ntime 1" &> plot.log 
  mkdir -p $OUTDIR/$STIME/fcstgpi/$mem 
  mv out/*.png $OUTDIR/$STIME/fcstgpi/$mem/
  rm plot.lock
+done
 
 echo 'done.'
 

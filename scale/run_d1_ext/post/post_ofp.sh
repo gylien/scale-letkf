@@ -63,7 +63,7 @@ fi
 ###############################
 
 # Path for SNO binary
-SNOBIN_ORG=${SCALEDIR}/../scale_develop/bin/sno
+SNOBIN_ORG=/work/hp150019/share/SCALE-LETKF-rt/scale_develop/bin/sno
 SNOBIN=${RUNDIR}/sno
 if [ ! -e ${SNOBIN_ORG} ] ; then
   echo "No SNO binary!"
