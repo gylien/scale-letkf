@@ -137,7 +137,16 @@ nows= `date -u +%s`
 pasts=`date -ud "2019-08-24 15:00:00" +%s`
 echo `expr $pasts - $nows` > time_offset.txt
 ```
-Then the time offset applies when the scripts `auto_fcst_d3.sh` and `auto_cycle_d4.sh` run.  
-There are also tools in `external/past` to imitate 6-hourly download of realtime NCEP data for past events.
+Then the time offset applies for the scripts `auto_fcst_d3.sh` and `auto_cycle_d4.sh` as well as for monitoring tools.  
 
+Set the latest analysis time in `admin_cycle.time`
+```
+echo "2019-08-24 00" > admin_cycle.time
+```
 
+To imitate 6-hourly download of realtime NCEP data for past events, `external/past/get_past.sh` can be used instead of `get_ncep_gfs.sh` and `get_ncep_obs.sh`.
+Set crontab to call it periodically. 
+```
+### crontab
+0 * * * * $EXTDIR/past/get_past.sh > $EXTDIR/past/get_past.log
+```
