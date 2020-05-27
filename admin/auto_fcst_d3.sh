@@ -14,6 +14,10 @@ function unlock () {
 }
 trap unlock EXIT
 
+wkdir="$(cd "$( dirname "$0" )" && pwd)"
+
+. ${wkdir}/admin.rc || exit $1
+
 isec=0
 cyclesec=300
 limitsec=21600
@@ -23,22 +27,24 @@ PARENT_TIME_B=`date -d "-1 year" +"%F %T"`
 
 FCSTHOUR_DEF=7 ### 6+1
 
-. admin.rc || exit $1
 
 ####PARENT_FCSTLEN=${FCSTLEN_d2}
 PARENT_FCSTLEN=64800
 
-ofp_parentdir=$realtimebase/result/ope_single/d2
-
-wkdir="$(cd "$( dirname "$0" )" && pwd)"
+ofp_parentdir=$realtimebase/result/ope/d2
 
 source ~/.bashrc
+
+time_offset=0
+[ -f "time_offset.txt" ] && time_offset=`cat time_offset.txt` 
+
 
 
 while [ $isec -le $limitsec ] ;do
 
+echo "$isec / $limitsec"
 
-START_TIME="$(date -u +'%Y-%m-%d %H:%M:%S')"
+START_TIME="$(date -ud "$time_offset second now" +'%Y-%m-%d %H:%M:%S')"
 START_TIMEf="$(date -ud "${START_TIME}" +'%Y%m%d%H%M%S')"
 
 [ -s "$timestopfile" ] && RUN_TIME_END="$(cat $timestopfile)" || RUN_TIME_END="$(date -ud "1 day $START_TIME" +'%Y-%m-%d %H:%M:%S')"
@@ -56,7 +62,7 @@ done
 
  if [ `date -d "$PARENT_TIME" +%s` -gt `date -d "$PARENT_TIME_B" +%s` ] ;then
 
-### echo "PARENT_TIME" $PARENT_TIME $PARENT_TIME_B
+# echo "PARENT_TIME" $PARENT_TIME $PARENT_TIME_B
  PARENT_TIME_B=$PARENT_TIME
 
  INIT_LIMITf="$(date -ud "$PARENT_FCSTLEN second -7200 second  ${PARENT_TIME}"  +'%Y%m%d%H%M%S')"
@@ -70,6 +76,7 @@ done
  INIT_STARTf="$(date -ud "${INIT_START}" +'%Y%m%d%H%M%S')"
 
  while [ $INIT_STARTf -le $INIT_LIMITf ]; do
+# echo "INIT_STARTf" $INIT_STARTf $INIT_LIMITf
     now="$(date -u +'%Y-%m-%d %H:%M:%S')"
     echo "$now ${PARENT_TIMEf}.${INIT_STARTf} start "
     FCSTHOUR=$FCSTHOUR_DEF
@@ -91,9 +98,6 @@ done
 
  sleep ${cyclesec}s 
  isec=`expr $isec + $cyclesec`
-
- echo "stop"
- exit 0
 
  echo "$isec / $limitsec wait..."
 done

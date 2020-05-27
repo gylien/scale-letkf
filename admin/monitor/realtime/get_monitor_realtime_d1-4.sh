@@ -10,7 +10,7 @@ time_offset=0
 nowtime="$(date -ud "$time_offset second now" +'%Y-%m-%d %H:%M:%S')"
 
 monitor_dir="$mydir/.."
-OUTBASE="${mydir}/../../../result/ope_single"
+OUTBASE="${mydir}/../../../result/ope"
 
 prev=`cat data/d1-4.txt | tail -n 1`
 if [ ! -z "$prev" ] ;then 
