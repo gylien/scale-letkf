@@ -135,7 +135,7 @@ For example,  if you want to treat the past "2019 August 24th 15 UTC" as if it i
 ```
 nows= `date -u +%s`
 pasts=`date -ud "2019-08-24 15:00:00" +%s`
-cat `expr $pasts - $nows` > time_offset.txt
+echo `expr $pasts - $nows` > time_offset.txt
 ```
 Then the time offset applies when the scripts `auto_fcst_d3.sh` and `auto_cycle_d4.sh` run.  
 There are also tools in `external/past` to imitate 6-hourly download of realtime NCEP data for past events.
