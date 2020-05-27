@@ -121,6 +121,7 @@ fi
 echo $timeref $timeobs $timegfs $timed1 $timed2 $timed3 $timed4 >> data/d1-4.txt
 tac data/d1-4.txt > data_inv/d1-4.txt 
 
+[ -f draw_d1-4 ] || dclfrt draw_d1-4.f90 -o draw_d1-4
 ./draw_d1-4 `date -ud "9 hour $nowtime" +%Y%m%d%H%M%S`
 mv ./figs/d1-4_0001.png ./figs/realtime_d1-4.png 
 mogrify -trim ./figs/realtime_d1-4.png 
