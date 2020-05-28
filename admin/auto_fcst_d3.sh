@@ -35,12 +35,16 @@ ofp_parentdir=$realtimebase/result/ope/d2
 
 source ~/.bashrc
 
+time_offset=0
+[ -f "time_offset.txt" ] && time_offset=`cat time_offset.txt` 
+
+
 
 while [ $isec -le $limitsec ] ;do
 
 echo "$isec / $limitsec"
 
-START_TIME="$(date -u +'%Y-%m-%d %H:%M:%S')"
+START_TIME="$(date -ud "$time_offset second now" +'%Y-%m-%d %H:%M:%S')"
 START_TIMEf="$(date -ud "${START_TIME}" +'%Y%m%d%H%M%S')"
 
 [ -s "$timestopfile" ] && RUN_TIME_END="$(cat $timestopfile)" || RUN_TIME_END="$(date -ud "1 day $START_TIME" +'%Y-%m-%d %H:%M:%S')"
