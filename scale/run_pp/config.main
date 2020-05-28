@@ -61,9 +61,6 @@ JMAX=`expr $NY \/ $PRC_NUM_Y`
 SCALE_NP=`expr $PRC_NUM_X \* $PRC_NUM_Y`  # D4 1km
 
 
-GNAME=`id -ng`
-UNAME=`id -nu`
-
 #OUTDIR="${TOPDIR}/result/ope_single/d4_1km"         # Directory of the prepared topo files
 #OUTPUT="${TOPDIR}/result/ope_single/d4_1km"         # Directory of the prepared topo files
 

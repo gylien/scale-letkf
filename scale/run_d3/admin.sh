@@ -43,7 +43,7 @@ if [ "$PRESET" = 'OFP' ]; then
  else
 #   NNODES=`expr \( $NMEM + 2 \) \* 16` ### D3
    NNODES=`expr \( $NMEM + 2 \) \* 4` ### D3
-    while [ $NNODES -gt 1024 ] ;do
+    while [ $NNODES -gt 256 ] ;do
       NNODES=`expr $NNODES \/ 2`
     done
   fi
@@ -227,7 +227,7 @@ fcstlen_d4=5400
 cd ../run_d4_init
  STIME_f=`date -d "${STIME:0:4}-${STIME:4:2}-${STIME:6:2} ${STIME:8:2}:${STIME:10:2}:${STIME:12:2}" +"%F %T"`
  STIME_D4_f=`date -d "${spinup_d3} second ${STIME_f}" +"%F %T"`
- while [ `date -d "$STIME_D4_f" +%s` -le `date -d "${FCSTLEN} second -${intv_d4} second ${STIME_f}" +%s` ] ;do
+ while [ `date -d "$STIME_D4_f" +%s` -le `date -d "${FCSTLEN} second -${fcstlen_d4} second ${STIME_f}" +%s` ] ;do
    STIME_D4=`date -d "${STIME_D4_f}" +%Y%m%d%H%M%S`
    sleep 17s
    ./admin.sh ${PARENT_REF_TIME} ${STIME} ${STIME_D4} ${fcstlen_d4} "00:25:00" $NMEM &>admin.log.${PARENT_REF_TIME}.${STIME}.${STIME_D4} &

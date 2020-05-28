@@ -23,13 +23,11 @@ EXP3=d3
 DATADIR="/work/hp150019/share/database" 
 SCALE_DB="/work/hp150019/share/database" 
 
-#DATA_TOPO="${OUTPUT}/${EXP4}"                                        # Directory of the prepared topo files
-DATA_TOPO="/work/gx14/c24140/SCALE-LETKF-rt/result/ope_single/${EXP4}"                                        # Directory of the prepared topo files
+DATA_TOPO="${OUTPUT}/${EXP4}"                                        # Directory of the prepared topo files
 DATA_TOPO_BDY_SCALE="${OUTPUT}/${EXP3}/const/topo"
-#DATA_LANDUSE="${OUTPUT}/${EXP4}"                                  # Directory of the prepared landuse files
-DATA_LANDUSE="/work/gx14/c24140/SCALE-LETKF-rt/result/ope_single/${EXP4}"                                  # Directory of the prepared landuse files
+DATA_LANDUSE="${OUTPUT}/${EXP4}"                                  # Directory of the prepared landuse files
 DATA_BDY_SCALE="${OUTPUT}/${EXP3}/ref_<PARENT_REF_TIME_D2>"   # Directory of the boundary data in SCALE history format (parent domain)
-OUTDIR="/work/gx14/c24140/SCALE-LETKF-rt/result/ope_single/${EXP4}"
+OUTDIR="${DATA_BDY_SCALE}/<PARENT_REF_TIME>/${EXP4}"
 
 DATA_BDY_SCALE_PRC_NUM_X=16 # D3
 DATA_BDY_SCALE_PRC_NUM_Y=16 # D3

@@ -32,15 +32,31 @@ PRESET=`hostname | cut -d '.' -f 2 | tr '[a-z]' '[A-Z]'`
 #-------------------------------------------------------------------------------
 
 if [ "$PRESET" = 'OFP' ]; then
- NNODES=`expr \( $NMEM + 2 \) ` ### D4 1km
-# NNODES=`expr \( $NMEM + 2 \) \* 64` ### D4 250m
-    while [ $NNODES -gt 2048 ] ;do
+  if [ "$CONFIG" ==  "realtime_fcst_D4_1km" ];then
+    NNODES=`expr \( $NMEM + 2 \) ` 
+  elif [ "$CONFIG" ==  "realtime_fcst_D4_500m" ];then
+    NNODES=`expr \( $NMEM + 2 \) \* 16`
+  elif [ "$CONFIG" ==  "realtime_fcst_D4_250m" ];then
+    NNODES=`expr \( $NMEM + 2 \) \* 64` 
+  else
+    echo "CONFIG="$CONFIG" not supported."
+    exit 1 
+  fi
+    while [ $NNODES -gt 256 ] ;do
       NNODES=`expr $NNODES \/ 2`
     done
  config_suffix='ofp'
  script_suffix='_ofp'
 elif [ "$PRESET" = 'OBCX' ]; then
- NNODES=`expr \( $NMEM + 2 \) \* 4` ### D4 1km
+  if [ "$CONFIG" ==  "realtime_fcst_D4_1km" ];then
+    NNODES=`expr \( $NMEM + 2 \) \* 4` 
+  elif [ "$CONFIG" ==  "realtime_fcst_D4_500m" ];then
+    NNODES=`expr \( $NMEM + 2 \) \* 64`
+  else
+    echo "CONFIG="$CONFIG" not supported."
+    exit 1 
+  fi
+  NNODES=`expr \( $NMEM + 2 \) \* 4` ### D4 1km
     while [ $NNODES -gt 256 ] ;do
       NNODES=`expr $NNODES \/ 2`
     done
