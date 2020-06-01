@@ -88,7 +88,7 @@ The progress will be shown in `admin_fcst.log`.
 
 To run it automatically, specify initial time to start. 
 ```
-nohup ./auto_fcst_d1_ext.sh "2020-01-01 06:00:00" & > auto_fcst_d1_ext.log &
+nohup ./auto_fcst_d1_ext.sh "2020-01-01 06:00:00" &> auto_fcst_d1_ext.log &
 ```
 this automatically run forecast from "2020-01-01 06:00:00" first and from "2020-01-01 12:00:00" next, and so on.
 
@@ -105,7 +105,7 @@ The progress will be shown in `admin_fcst_d1-2.log`.
 
 To run it automatically, specify initial time to start. 
 ```
-nohup ./auto_fcst_d1-2.sh "2020-01-01 06:00:00" & > auto_fcst_d1-2.log &
+nohup ./auto_fcst_d1-2.sh "2020-01-01 06:00:00" &> auto_fcst_d1-2.log &
 ```
 this automatically run forecast from "2020-01-01 06:00:00" first and from "2020-01-01 12:00:00" next, and so on.
 
@@ -120,7 +120,7 @@ The progress will be shown in `admin_fcst_d3.log`.
 
 The automatic run of D3 is a bit more complicated than D1-2 because it is designed to automatically adjust the init time to current real time.
 ```
-nohup ./auto_fcst_d3.sh & > auto_fcst_d3.log &
+nohup ./auto_fcst_d3.sh &> auto_fcst_d3.log &
 ```
 
 ### Contenious run of automatic scripts
