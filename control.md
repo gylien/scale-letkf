@@ -17,7 +17,34 @@ auto_cycle_d4.sh         ### automatically run realtime D4 DA cycle and extended
 
 time_offset.txt          ### time offset in second for past mode (optional)
 ```
+### Quick start
 
+**Before running the system, you should make sure no jobs are running.**  
+If running* files exist at the admin directory, re-login to the login node where pre-existing jobs are submitted and kill all processes.  
+Information on nodes and process IDs is included in running* files.  
+  
+After that, remove running* files and clean up run directories.
+```
+rm -f ../scale_ope/scale-letkf_ope/scale/run_d1-2/waiting_list
+rm -f ../scale_ope/scale-letkf_ope/scale/run_d1-2/*stat*
+
+rm -f ../scale_ope/scale-letkf_ope/scale/run_d3/waiting_list
+rm -f ../scale_ope/scale-letkf_ope/scale/run_d3/*stat*
+```
+  
+To launch the realtime system from an initial date, say, 00UTC 1/1/2020, execute the following commands from a login node on OFP.  
+**To monitor the bash processes, run 'ps auxf |grep {account}' on the "same" login node**  
+```
+echo '2020-01-01 00' > admin_cycle.time
+nohup ./auto_cycle.sh &> auto_cycle.log &
+nohup ./auto_fcst_d1-2.sh "2020-01-01 00:00:00" &> auto_fcst_d1-2.log &
+nohup ./auto_fcst_d3.sh &> auto_fcst_d3.log &
+```
+To run D4 cycle and forecast, re-login to ofp02 and run the following command.
+```
+nohup ./auto_cycle_d4.sh &> auto_cycle_d4.log &
+```
+  
 ### Configuration
 
 `admin.rc` sets the common configuration. 
@@ -123,7 +150,7 @@ The automatic run of D3 is a bit more complicated than D1-2 because it is design
 nohup ./auto_fcst_d3.sh &> auto_fcst_d3.log &
 ```
 
-### Contenious run of automatic scripts
+### Continuous run of automatic scripts
 While automatic run scripts like `auto_cycle.sh` is running, a temporary file such as `running_cycle` appears. It stores **the hostname (ofpXX or obcxXX) and PID** of the corresponding automatic program currently running. 
 
 To manually stop automatic scripts, **log in to the corresponding host** and kill the process with the corresponding PID.
