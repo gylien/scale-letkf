@@ -1,6 +1,19 @@
 ## Visualization of SCALE-LETKF on daweb
 
-This branch contains browser-based visualization tools for the SCALE-LETKF realtime system. 
+This branch contains browser-based visualization and monitoring tools for the SCALE-LETKF realtime system. 
+
+### Browser images
+#### D1
+<img src="img/snapshot/snap_d1.png" width=500px>
+
+#### D2
+<img src="img/snapshot/snap_d2.png" width=500px>
+
+#### D3
+<img src="img/snapshot/snap_d3.png" width=500px>
+
+#### D4
+<img src="img/snapshot/snap_d4_realtime.png" width=500px>
 
 
 ### Setup
