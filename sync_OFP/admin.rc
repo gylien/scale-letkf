@@ -1,0 +1,13 @@
+#!/bin/bash
+
+sshcommand="ssh -i $HOME/.ssh/id_rsa_OFP"
+hostname="c24140@ofp.jcahpc.jp"
+SCALEDIR_OFP="/work/hp150019/share/SCALE-LETKF-rt"
+
+DATADIR="$mydir/../data"
+
+sshagent="${HOME}/ssh-agent-log.sh"
+
+[ -f $sshagent ] && source $sshagent || echo "WARN: ssh-agent is not running."
+
+

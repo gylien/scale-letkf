@@ -1,0 +1,7 @@
+SCRPDIR=/home/amemiya/public_html/scale/sync_OFP
+* * * * * $SCRPDIR/sync_monitor.sh > /dev/null 2>&1
+40 2,8,14,20 * * * $SCRPDIR/sync_msm.sh > /dev/null 2>&1
+40 2,8,14,20 * * * $SCRPDIR/sync_gfs.sh > /dev/null 2>&1
+0,10,20,30,40,50 * * * * $SCRPDIR/sync_d1.sh > /dev/null 2>&1
+0,10,20,30,40,50 * * * * $SCRPDIR/sync_d2.sh > /dev/null 2>&1
+0,10,20,30,40,50 * * * * $SCRPDIR/sync_d3.sh > /dev/null 2>&1

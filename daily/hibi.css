@@ -1,0 +1,84 @@
+@charset "shift_jis";
+
+/* 一括で全ての要素の余白をゼロに指定 */
+* {
+  margin: 0;
+  padding: 0;
+}
+
+/* 全体的なリンク */
+
+a:link,
+a:visited,
+a:hover,
+a:active { text-decoration: underline; }
+
+a:link { color: #00f; }
+
+a:visited { color: #90f; }
+
+a:hover { color: #f00; }
+
+a:active { color: #f00; }
+
+body {
+  font-size: large;
+  text-align: left;
+  font-family: "メイリオ","ＭＳ Ｐゴシック", "MS PGothic", sans-serif;
+  line-height: 1.3em;
+  padding: 0;
+  margin: 0;
+  margin-left: 20px;
+  margin-top: 20px;
+  background-color: #f0f8ff;
+}
+h1 {
+    font-size: 125%;
+    font-family: "ヒラギノ角ゴ Pro W3", "Hiragino Kaku Gothic Pro", Osaka, "ＭＳ Ｐゴシック", "MS PGothic", sans-serif;
+    margin-top: 2em;
+  margin-bottom: 2em;
+}
+h2 {
+  font-size: 120%;
+  font-family: "ヒラギノ角ゴ Pro W3", "Hiragino Kaku Gothic Pro", Osaka, "ＭＳ Ｐゴシック", "MS PGothic", sans-serif;
+  padding: 0;
+  margin: 0;
+  margin-top: 2em;
+  margin-bottom: 1em;
+  border-bottom: 2px ridge #000
+}
+h3 {
+  font-size: 100%;
+  font-family:  "ＭＳ Ｐゴシック", "MS PGothic", sans-serif;
+  padding: 0;
+  margin: 0;
+  margin-top: 1em;
+  margin-bottom: 1em;
+  border-bottom: 1px ridge #808080
+}
+table
+{
+margin: 20px 5px;
+border:1px #000000 solid; 
+}
+
+figure
+{
+margin: 20px 5px;
+}
+
+td
+{
+border:1px #000000 solid; 
+ padding-left:10px;
+ padding-right:10px;
+}
+
+
+.commands
+{
+ padding-left:30px;
+ padding-right:10px;
+}
+
+

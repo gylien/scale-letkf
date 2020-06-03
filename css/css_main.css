@@ -1,0 +1,102 @@
+body {
+	color: #000000;
+  font-family: Trebuchet, Helvetica, sans-serif;
+	font-size: 12pt;
+	background-attachment: fixed;
+  padding: 4px 16px;
+}
+p {
+	margin-top: 8px;
+	margin-bottom: 8px;
+}
+a {
+	color: #0000FF;
+	text-decoration: none;
+}
+a:hover {
+	color: #CC5000;
+	text-decoration: underline;
+}
+a:active {
+	color: #EE3000;
+	text-decoration: underline;
+}
+ul {
+  margin-top: 8px;
+  margin-bottom: 8px;
+}
+li {
+  margin-left: -10px;
+}
+th {
+  padding: 4px 7px;
+  text-align: center;
+}
+td {
+  padding: 4px 7px;
+  text-align: center;
+}
+:target {
+  background-color: #FFFF60;
+}
+.p_title {
+	color: #000000;
+  font-family: "Palatino Linotype", "Book Antiqua", Palatino, serif;
+	font-size: 24pt;
+  margin-bottom: 16px;
+}
+.p_subtitle {
+	color: #207090;
+  font-family: Georgia, serif;
+	font-size: 16pt;
+  font-style: italic;
+	font-weight: bold;
+  margin-bottom: 20px;
+}
+.p_menu_title {
+	margin-top: 12px;
+  margin-bottom: 2px;
+  font-weight: bold;
+}
+.p_model {
+	margin-top: 6px;
+  margin-bottom: 2px;
+	font-size: 20pt;
+  font-weight: bold;
+}
+.p_h1 {
+  font-family: "Palatino Linotype", "Book Antiqua", Palatino, serif;
+  font-size: 16pt;
+  font-weight: bold;
+  margin-top: 20px;
+  margin-bottom: 12px;
+}
+.menu {
+	font-family: "Lucida Console", Monaco, monospace;
+	font-size: 11pt;
+  width: 250px;
+}
+.menu_d3 {
+	font-family: "Lucida Console", Monaco, monospace;
+	font-size: 11pt;
+  width: 300px;
+}
+.img_show {
+  margin-left: 20px;
+}
+.red {
+  color: #CC0000;
+}
+.div_box {
+  background-color: #FFFFCC;
+  border: 1px solid #000000;
+  padding: 4px 10px;
+  margin-top: 12px;
+  margin-bottom: 12px;
+}
+.refer {
+  margin-top: 0px;
+  margin-bottom: 0px;
+  margin-left: 30px;
+  text-indent: -30px;
+}
