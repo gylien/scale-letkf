@@ -50,7 +50,7 @@ OBS_USE_JITDT=0 # 1: Run with JIT-DT
 OBS_USE_JITDT_OFFLINE=1 # 1: Offilne test
                         # 0: Online (data should be transfered from NICT)
 
-PAWR_MASK_file='/work/hp150019/share/SCALE-LETKF-rt/scale_ope/scale-letkf/scale/obs/radar/saitama-shadow-mask.dat'
+PAWR_MASK_FILE='/work/hp150019/share/SCALE-LETKF-rt/scale_ope/scale-letkf/scale/obs/radar/saitama-shadow-mask.dat'
 
 JIT_TOP=/work/hp150019/share/honda/jitdt
 JIT_TARFILE=${JIT_TOP}/testdata/kobe_201901301200-09.tar

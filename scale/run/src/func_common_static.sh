@@ -129,16 +129,6 @@ if [ "$JOBTYPE" = 'cycle' ] && ((OBS_USE_JITDT != 1)); then
 fi
 
 #-------------------------------------------------------------------------------
-# radar masking 
-
-if [ "$JOBTYPE" = 'cycle' ] ; then
-  maskfile_dir=`dirname ${PAWR_MASK_FILE}`
-  maskfile=`basename ${PAWR_MASK_FILE}`
-              echo "${maskfile_dir}/${maskfile}|${maskfile}" >> ${STAGING_DIR}/${STGINLIST_OBS}
-   
-fi
-
-#-------------------------------------------------------------------------------
 # create empty directories
 
 cat >> ${STAGING_DIR}/${STGINLIST} << EOF
