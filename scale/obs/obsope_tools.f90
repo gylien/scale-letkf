@@ -1062,7 +1062,8 @@ end subroutine obsmake_cal
 !-------------------------------------------------------------------------------
 subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, stggrd)
   use scale_atmos_grid_cartesC, only: &
-      ATMOS_GRID_CARTESC_CX, ATMOS_GRID_CARTESC_CY, &
+      CX => ATMOS_GRID_CARTESC_CX, &
+      CY => ATMOS_GRID_CARTESC_CY, &
       DX, DY
   use scale_atmos_grid_cartesC_index, only: &
       IHALO, JHALO, KHALO
@@ -1081,6 +1082,7 @@ subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, stggrd)
   real(r_size) :: ri, rj, rk
   real(r_size) :: lon, lat, lev
   real(r_size) :: tmpobs
+  real(RP) :: lon_RP, lat_RP
   integer :: tmpqc
 
 !-------------------------------------------------------------------------------
@@ -1092,11 +1094,11 @@ subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, stggrd)
 
     do i = 1, nlon
       ri = real(i + IHALO, r_size)
-      call MAPPROJECTION_xy2lonlat((ri-1.0_r_size) * DX + ATMOS_GRID_CARTESC_CX(1), &
-                                   (rj-1.0_r_size) * DY + ATMOS_GRID_CARTESC_CY(1), &
-                                    lon, lat)
-      lon = lon * rad2deg
-      lat = lat * rad2deg
+      call MAPPROJECTION_xy2lonlat( real(ri - 1.0_r_size, kind=RP)*DX + CX(1), &
+                                    real(rj - 1.0_r_size, kind=RP)*DY + CY(1), &
+                                    lon_RP, lat_RP )
+      lon = real(lon_RP, kind=r_size)*rad2deg
+      lat = real(lat_RP, kind=r_size)*rad2deg
 
       do k = 1, nlev
         rk = real(k + KHALO, r_size)

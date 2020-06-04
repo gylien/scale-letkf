@@ -134,7 +134,8 @@ end subroutine finalize_mpi_scale
 !-------------------------------------------------------------------------------
 subroutine set_common_mpi_scale
   use scale_atmos_grid_cartesC, only: &
-      ATMOS_GRID_CARTESC_CX, ATMOS_GRID_CARTESC_CY, &
+      CX => ATMOS_GRID_CARTESC_CX, &
+      CY => ATMOS_GRID_CARTESC_CY, &
       DX, DY
   use scale_atmos_grid_cartesC_index, only: &
       IHALO, JHALO
@@ -147,6 +148,10 @@ subroutine set_common_mpi_scale
   real(r_size), allocatable :: height3dtmp(:,:,:)
   real(r_size), allocatable :: lon2dtmp(:,:)
   real(r_size), allocatable :: lat2dtmp(:,:)
+  real(RP), allocatable :: lon2dtmp_RP(:,:)
+  real(RP), allocatable :: lat2dtmp_RP(:,:)
+  real(RP), allocatable :: height3dtmp_RP(:,:,:)
+  real(RP) :: lon_RP, lat_RP
   integer :: i, j
   real(r_size) :: ri, rj
 
@@ -183,6 +188,9 @@ subroutine set_common_mpi_scale
       allocate (height3dtmp(nlev,nlon,nlat))
       allocate (lon2dtmp(nlon,nlat))
       allocate (lat2dtmp(nlon,nlat))
+      allocate (lon2dtmp_RP(nlon,nlat))
+      allocate (lat2dtmp_RP(nlon,nlat))
+      allocate (height3dtmp_RP(nlev,nlon,nlat))
 
       if (.not. allocated(topo2d)) then
         allocate (topo2d(nlon,nlat))
@@ -195,19 +203,24 @@ subroutine set_common_mpi_scale
         do i = 1, nlon
           ri = real(i + IHALO, r_size)
           rj = real(j + JHALO, r_size)
-          call MAPPROJECTION_xy2lonlat((ri-1.0_r_size) * DX + ATMOS_GRID_CARTESC_CX(1), &
-                                       (rj-1.0_r_size) * DY + ATMOS_GRID_CARTESC_CY(1), &
-                                        lon2d(i,j), lat2d(i,j))
+          call MAPPROJECTION_xy2lonlat( real(ri-1.0_r_size, kind=RP)*DX + CX(1), &
+                                        real(rj-1.0_r_size, kind=RP)*DY + CY(1), &
+                                        lon_RP, lat_RP )
+!                                        lon2d(i,j), lat2d(i,j))
 
-          lon2d(i,j) = lon2d(i,j) * rad2deg
-          lat2d(i,j) = lat2d(i,j) * rad2deg
+          lon2d(i,j) = real(lon_RP, kind=r_size)*rad2deg
+          lat2d(i,j) = real(lat_RP, kind=r_size)*rad2deg
         end do
       end do
 !$OMP END PARALLEL DO
 
       filename = GUES_IN_BASENAME
       call filename_replace_mem(filename, myrank_to_mem(1))
-      call read_restart_coor(filename, lon2dtmp, lat2dtmp, height3dtmp)
+      call read_restart_coor( filename, lon2dtmp_RP, lat2dtmp_RP, height3dtmp_RP )
+     
+      lon2dtmp = real(lon2dtmp_RP, kind=r_size)
+      lat2dtmp = real(lat2dtmp_RP, kind=r_size)
+      height3dtmp = real(height3dtmp_RP, kind=r_size)
 
       if (maxval(abs(lon2dtmp - lon2d)) > 1.0d-6 .or. maxval(abs(lat2dtmp - lat2d)) > 1.0d-6) then
         write (6, '(A,F15.7,A,F15.7)') '[Error] Map projection settings are incorrect! -- maxdiff(lon) = ', &
