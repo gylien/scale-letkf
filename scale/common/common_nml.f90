@@ -1100,16 +1100,12 @@ subroutine read_nml_letkf_radar
     RADAR_BIAS_RAIN_CONST_DBZ, &
     RADAR_BIAS_CLR_CONST_DBZ, &
     RADAR_MAX_ABS_VR, &
-<<<<<<< HEAD
     USE_METHOD3_REF_MELT, &
     USE_PAWR_MASK, &
-    PAWR_MASK_FILE
-=======
+    PAWR_MASK_FILE, &
     RADAR_THIN_LETKF_METHOD, &
     RADAR_THIN_LETKF_HGRID, &
-    RADAR_THIN_LETKF_VGRID, &
-    USE_METHOD3_REF_MELT
->>>>>>> Add PAWR thinning in LETKF
+    RADAR_THIN_LETKF_VGRID
 
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_LETKF_RADAR,iostat=ierr)
