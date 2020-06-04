@@ -132,10 +132,7 @@ fi
 # radar masking 
 
 if [ "$JOBTYPE" = 'cycle' ] ; then
-  maskfile_dir=`dirname ${PAWR_MASK_FILE}`
-  maskfile=`basename ${PAWR_MASK_FILE}`
-              echo "${maskfile_dir}/${maskfile}|${maskfile}" >> ${STAGING_DIR}/${STGINLIST_OBS}
-   
+  PAWR_MASK_FILE=$DIR/obs/radar/saitama-shadow-mask.dat 
 fi
 
 #-------------------------------------------------------------------------------
