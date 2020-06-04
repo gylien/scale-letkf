@@ -336,6 +336,12 @@ MODULE common_nml
   real(r_size) :: RADAR_SO_SIZE_HORI = 1000.0d0
   real(r_size) :: RADAR_SO_SIZE_VERT = 1000.0d0
   real(r_size) :: RADAR_MAX_ABS_VR = 100.0d0
+  integer :: RADAR_THIN_LETKF_METHOD = 0 ! Thinning method
+                                         ! 0: No thinning
+                                         ! 1: Nearest 8 grids & their columns and
+                                         ! rows + staggered grids
+  integer :: RADAR_THIN_LETKF_HGRID = 1 ! Horizontal thinning level in obs_local
+  integer :: RADAR_THIN_LETKF_VGRID = 1 ! Vertical thinning level in obs_local
 
   integer :: RADAR_THIN_HORI = 1 ! Thinning horizontal interval (# of grids)
   integer :: RADAR_THIN_VERT = 1 ! Thinning vertical interval (# of grids)
@@ -1080,9 +1086,16 @@ subroutine read_nml_letkf_radar
     RADAR_BIAS_RAIN_CONST_DBZ, &
     RADAR_BIAS_CLR_CONST_DBZ, &
     RADAR_MAX_ABS_VR, &
+<<<<<<< HEAD
     USE_METHOD3_REF_MELT, &
     USE_PAWR_MASK, &
     PAWR_MASK_FILE
+=======
+    RADAR_THIN_LETKF_METHOD, &
+    RADAR_THIN_LETKF_HGRID, &
+    RADAR_THIN_LETKF_VGRID, &
+    USE_METHOD3_REF_MELT
+>>>>>>> Add PAWR thinning in LETKF
 
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_LETKF_RADAR,iostat=ierr)
