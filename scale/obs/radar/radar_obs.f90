@@ -873,26 +873,26 @@ subroutine read_obs_radar_toshiba(cfile, obs)
 
 !!! MP-PAWR shadow masking 
 #ifdef MPW
-  if (use_pawr_mask.and. .not.(allocated(shadow))) then
+  if ( USE_PAWR_MASK .and. .not. (allocated(shadow)) ) then
     if (myrank_o == 0)then
         write(*, '("reading ", A)') trim(pawr_mask_file)
         open(99, file = trim(pawr_mask_file), status = "old", access = "stream", form = "unformatted", convert = "little_endian")
         read(99,iostat=ios) shadow_na, shadow_ne
-        if (ios.eq.0)then
+        if ( ios == 0 )then
           allocate(shadow(shadow_na, shadow_ne))
           read(99,iostat=ios) shadow
           close(99)
-          if(ios.ne.0) shadow=0
+          if( ios /= 0 ) shadow = 0
         else
           write(6,'(3A)') 'file ',trim(pawr_mask_file) ,' not found or unsupported format.'
           stop 1
         end if 
     end if
-    if (nprocs_o /= 1)then
+    if ( nprocs_o /= 1 )then
       call MPI_BCAST(shadow_na, 1, MPI_INTEGER4, 0, MPI_COMM_o, ierr)
       call MPI_BCAST(shadow_ne, 1, MPI_INTEGER4, 0, MPI_COMM_o, ierr)
       if (myrank_o /= 0) allocate(shadow(shadow_na,shadow_ne))
-      call MPI_BCAST(shadow, shadow_na*shadow_ne, MPI_INTEGER1, 0, MPI_COMM_o, ierr)
+      call MPI_BCAST(shadow, shadow_na*shadow_ne, MPI_INTEGER2, 0, MPI_COMM_o, ierr)
     end if
   end if
 #endif
@@ -1080,11 +1080,11 @@ subroutine read_obs_radar_toshiba(cfile, obs)
 
 #ifdef MPW
            qcflag(ia, ir, ie) = 0.0d0 !valid
-           if (use_pawr_mask.and.allocated(shadow)) then
+           if ( USE_PAWR_MASK .and. allocated(shadow) ) then
              shadow_del_az = 360.0d0 / shadow_na
              if (ie <= shadow_ne) then
-               tmpshadow=shadow(min(shadow_na,nint(az(ia, ie, 1) / shadow_del_az) + 1), ie)
-               if(tmpshadow .ne. 0) then
+               tmpshadow = shadow(min(shadow_na,nint(az(ia, ie, 1) / shadow_del_az) + 1), ie)
+               if(tmpshadow /= 0) then
                  qcflag(ia, tmpshadow:, ie) = 1000.0d0  !invalid
                end if
              end if
