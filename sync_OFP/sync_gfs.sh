@@ -4,11 +4,7 @@ mydir=`dirname $0`
 
 source $mydir/admin.rc
 
-<<<<<<< HEAD
 GFSDIR_OFP=$SCALEDIR_OFP/external/ncepgfs
-=======
-GFSDIR_OFP=$SCALEDIR/external/ncepgfs
->>>>>>> 504b3ad... initial commit
 GFSDIR=$DATADIR/gfs
 
 testfile="sfc_wind_f432000.png"

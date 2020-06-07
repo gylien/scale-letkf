@@ -48,16 +48,11 @@ $datadir = 'data';
  $TimeMarker[$i] = date('YmdHis',$InitTimeU + $i * 30) ;
 }
 #--
-<<<<<<< HEAD
   $time_offset=file_get_contents('time_offset.txt');
   $nowU = date("U") + intval($time_offset);
   $nowdate = date("Y n/j",$nowU+9*3600);
   $nowY = date("Y",$nowU);
  
-=======
-
->>>>>>> 504b3ad... initial commit
-
 
 $s = 0 ;
 $path = "$datadir/" . "$sets[$s]";
@@ -369,14 +364,8 @@ function change_level(ele) {
 <div align="left">
   <p class="p_title">Model forecasts quicklook for domain 4 : realtime </p>
 <?php
-<<<<<<< HEAD
  if (intval($time_offset) < 0){
  echo  "<p class=\"p_title\"><span style=\"color:red\">past mode : ".$nowdate." </p>\n";
-=======
- $time_offset=file_get_contents('time_offset.txt');
- if (intval($time_offset) < 0){
- echo  "<p class=\"p_title\"><span style=\"color:red\">past mode : offset ".$time_offset." s </p>\n";
->>>>>>> 504b3ad... initial commit
  }
  if (intval($time_offset) > 0){
  echo  "<p class=\"p_title\"><span style=\"color:red\">future mode : offset +".$time_offset." s </p>\n";

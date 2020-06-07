@@ -75,9 +75,6 @@ done
 
 cd $mydir/..
 php ./monitor_plot_d2.php
-<<<<<<< HEAD
 php ./monitor_plot_d3.php
-=======
->>>>>>> 504b3ad... initial commit
 
 

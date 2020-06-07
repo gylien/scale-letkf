@@ -78,10 +78,7 @@ $path_nodata_msm = $datadir."/nodata_Tokyo.png";
 
   $time_offset=file_get_contents('time_offset.txt');
   $nowU = date("U") + intval($time_offset);
-<<<<<<< HEAD
   $nowdate = date("Y n/j",$nowU+9*3600);
-=======
->>>>>>> 504b3ad... initial commit
   $nowY = date("Y",$nowU);
  
 
@@ -127,12 +124,7 @@ $n_imgs[$s]=0;
 for ($r_index = 0; $r_index < $n_rtimes[$s]; $r_index++) {
 if (isset($InitTimes[$s][$r_index])) {
 for ($p = 0; $p < $n_prod_msm; $p++) {
-<<<<<<< HEAD
 $path = "$datadir/" . $sets[$s] . "/".$nowY.$InitTimes[$s][$r_index]. "0000/" .  $prods[$p] ; ###
-=======
-$path = "$datadir/" . $sets[$s] . "/2020".$InitTimes[$s][$r_index]. "0000/" .  $prods[$p] ; ###
->>>>>>> 504b3ad... initial commit
-
 $imgs = scandir($path);
 
 $n_img = 0;
@@ -506,14 +498,8 @@ function change_Image2_byMarker(ele) {
 <div align="left">
   <p class="p_title">Model forecasts quicklook for domain 3</p>
 <?php
-<<<<<<< HEAD
  if (intval($time_offset) < 0){
  echo  "<p class=\"p_title\"><span style=\"color:red\">past mode : ".$nowdate." </p>\n";
-=======
- $time_offset=file_get_contents('time_offset.txt');
- if (intval($time_offset) < 0){
- echo  "<p class=\"p_title\"><span style=\"color:red\">past mode : offset ".$time_offset." s </p>\n";
->>>>>>> 504b3ad... initial commit
  }
  if (intval($time_offset) > 0){
  echo  "<p class=\"p_title\"><span style=\"color:red\">future mode : offset +".$time_offset." s </p>\n";
@@ -539,11 +525,7 @@ for ($n = 0; $n < $n_prod; $n++) {
 </td>
   <td valign="bottom" style="text-align: center" width="200px">
 <?php
-<<<<<<< HEAD
 if (array_sum($n_imgs) == 0)
-=======
-if ($n_imgs[0] == 0 and $n_imgs[1]==0)
->>>>>>> 504b3ad... initial commit
   echo "        <input type=\"button\" name=\"animation\" id=\"animation\" value=\"Animation\" disabled>\n";
 else
   echo "        <input type=\"button\" name=\"animation\" id=\"animation\" value=\"Animation\" onClick=\"animation_image();\">\n";

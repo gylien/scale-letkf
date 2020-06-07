@@ -11,11 +11,7 @@ TEMPDIR=$DATADIR/d4/temp
 wait_sec=5
 limit_sec=600
 levels='z01127m z01957m z03048m z04480m z06360m z08829m'
-<<<<<<< HEAD
 num_fcst_past=20
-=======
-num_fcst_past=5
->>>>>>> 504b3ad... initial commit
 
 sec=0
 
@@ -96,16 +92,8 @@ fi
 done
 fi
 
-<<<<<<< HEAD
-
 done ### levels
 
-
-
-=======
-done ### levels
-
->>>>>>> 504b3ad... initial commit
 touch previous.time
 
 cd $mydir/..

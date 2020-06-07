@@ -54,11 +54,6 @@ date_default_timezone_set('UTC');
  
   $nowU = date("U") + intval($time_offset);
   $nowH = date("H:i",$nowU);
-<<<<<<< HEAD
-=======
-  echo $time_offset.' '.$nowH; 
-
->>>>>>> 504b3ad... initial commit
 
   $latestU = $nowU - $nowU % $CycleSecond ;
   $Xoffset = ( $nowU % $CycleSecond ) / $CycleSecond * $Xsize ; 

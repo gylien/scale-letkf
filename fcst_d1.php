@@ -72,17 +72,11 @@ if (isset($_GET['set2']) && ($_GET['set2'] <= $n_set))
 
 
 #--
-<<<<<<< HEAD
  $time_offset=file_get_contents('time_offset.txt');
  $nowtime = date("U") + intval($time_offset)+ 9*3600;
  $nowdate = date("Y n/j",$nowtime);
  $nowY = date("Y",$nowtime);
 
-
- 
-=======
-
->>>>>>> 504b3ad... initial commit
 $prod_index = 0;
 $prod = $prods[$prod_index];
 if (isset($_GET['prod'])) {
@@ -109,11 +103,7 @@ if (isset($_GET['prod2'])) {
 for ($s = 0; $s < $n_set ; $s++) {
  for ($r_index = 0; $r_index < $max_rtime ; $r_index++) {
  if (isset($InitTimes[$s][$r_index])) {
-<<<<<<< HEAD
   $rtimes[$s][$r_index] = $nowY.strval($InitTimes[$s][$r_index])."0000";
-=======
-  $rtimes[$s][$r_index] = "2020".strval($InitTimes[$s][$r_index])."0000";
->>>>>>> 504b3ad... initial commit
   $n_rtimes[$s] = $r_index + 1;
 }
 }
@@ -380,14 +370,8 @@ function change_Image2_byMarker(ele) {
 <div align="left">
   <p class="p_title">Model forecasts quicklook for domain 1</p>
 <?php
-<<<<<<< HEAD
  if (intval($time_offset) < 0){
  echo  "<p class=\"p_title\"><span style=\"color:red\">past mode : ".$nowdate." </p>\n";
-=======
- $time_offset=file_get_contents('time_offset.txt');
- if (intval($time_offset) < 0){
- echo  "<p class=\"p_title\"><span style=\"color:red\">past mode : offset ".$time_offset." s </p>\n";
->>>>>>> 504b3ad... initial commit
  }
  if (intval($time_offset) > 0){
  echo  "<p class=\"p_title\"><span style=\"color:red\">future mode : offset +".$time_offset." s </p>\n";
