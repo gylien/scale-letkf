@@ -707,10 +707,10 @@ SUBROUTINE set_letkf_obs
 if (myrank_a < nprocs_d ) then
       write (6, '(2I6,2I6,6F9.2,2I4)') obs(iof)%elm(iidx), &
                                          obs(iof)%typ(iidx), &
-                                         !obs(iof)%lon(iidx)*0.001, &
-                                         !obs(iof)%lat(iidx)*0.001, &
-                                         nint( obsda%ri(n) ), &
-                                         nint( obsda%rj(n) ), &
+                                         obs(iof)%lon(iidx)*0.001, &
+                                         obs(iof)%lat(iidx)*0.001, &
+                                         !nint( obsda%ri(n) ), &
+                                         !nint( obsda%rj(n) ), &
                                          obs(iof)%lev(iidx)*0.001, &
                                          obs(iof)%dat(iidx), &
                                          obsda%lev(n) * MEMBER / max(mem_ref,1) * 0.001, &

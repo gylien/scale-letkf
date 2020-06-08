@@ -141,13 +141,14 @@ cat > $jobscrp << EOF
 ##PJM -j
 #PJM -s
 
+
 module unload impi
 module unload intel
-module load intel/2018.1.163
-
-module load hdf5/1.8.17
-module load netcdf/4.4.1
-module load netcdf-fortran/4.4.3
+module load intel/2019.5.281
+ 
+module load hdf5/1.10.5
+module load netcdf/4.7.0
+module load netcdf-fortran/4.4.5
 
 
 #rm -f machinefile

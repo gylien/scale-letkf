@@ -8,7 +8,7 @@
 
 PRESET='OFP'
 OFP_MODE="regular-flat"
-#OFP_MODE="debug-flat"
+OFP_MODE="debug-flat"
 
 
 EXP=2000m_NODA_0306
@@ -100,7 +100,7 @@ MEMBER=320           # Ensemble size
 
 NNODES=111
 NNODES=105
-#NNODES=110
+NNODES=110
 NNODES=1
 
 

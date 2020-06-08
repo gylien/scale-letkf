@@ -100,7 +100,6 @@ MEMBER=320           # Ensemble size
 
 NNODES=321
 
-NNODES=1
 
 PPN=64              # Number of processes per node
 

@@ -9,7 +9,7 @@ OBSTYPE="RADAR"
 #OBSTYPE="LT"
 #OBSTYPE="FP" # Flash point
 #OBSTYPE="CONV"
-#OBSTYPE="ALL"
+OBSTYPE="ALL"
 
 # Generate new obs format file
 OBSSIM_OBSOUT=".false." # anal/gues
@@ -24,33 +24,21 @@ TYPE=fcst
 
 
 
-EXP=2000m_DA_0306_TEST_Him8
-EXP=2000m_NODA_0306
 
-EXP=2000m_DA_0306_R_FP_180km
-EXP=2000m_DA_0306_R_FP_60km
-EXP=2000m_DA_0306
 
-EXP=2000m_DA_0306_R_FP_DEBUG32_LOC90km_SINGLE0.1_I98_J106
 
-EXP=2000m_DA_0306_R_FP_DEBUG32_LOC90km
 
-EXP=2000m_DA_0306_FP_M32_LOC90km
+EXP=2000m_DA_0513_FP_M32_LOC90km
 
-#EXP=2000m_DA_0306_FP_M32_LOC90km_HT8
+EXP=2000m_NODA_0601
+EXP=2000m_DA_0601
 
-EXP=2000m_NODA_0306
-#EXP=2000m_NODA_0306_NOMELT
 
-EXP=2000m_DA_0306_FP_M32_LOC90km_QC5
-
-EXP=2000m_DA_0306_FP_M32_LOC90km_ZMAX23
-
-EXP=2000m_DA_0306_FP_M01_LOC90km
-
-EXP=2000m_DA_0306_FP_M32_LOC150km
-
-#EXP=2000m_DA_0306_FP_M32_LOC30km
+EXP=2000m_DA_0601_NOFP
+EXP=2000m_DA_0601_FP_M32_LOC90km
+EXP=2000m_DA_0601_FP_M32_LOC90km_TEST
+EXP=2000m_DA_0601_FP_M32_LOC30km_TEST
+#EXP=2000m_DA_0601_FP_M01_LOC90km
 
 . config/${EXP}/config.main.$SYS
 . config/${EXP}/config.fcst
@@ -61,7 +49,6 @@ OBSSIM_RADAR_LAT=180
 
 
 
-tstart='2001-01-01 1:05:00'
 tstart='2001-01-01 1:10:00'
 tstart='2001-01-01 1:15:00'
 tstart='2001-01-01 1:20:00'
@@ -72,8 +59,12 @@ tstart='2001-01-01 1:30:00'
 #tend='2001-01-01 2:00:00'
 #tstart='2001-01-01 1:00:00'
 #tstart='2001-01-01 1:40:00'
-tend=$tstart
-#tend='2001-01-01 1:25:00'
+#tend=$tstart
+tstart='2001-01-01 1:05:00'
+tend='2001-01-01 1:30:00'
+
+tstart='2001-01-01 1:05:00'
+tend='2001-01-01 2:00:00'
 
 if [ "$TYPE" == "fcst" ] || [ "$TYPE" == "hist" ]; then
   tstart='2001-01-01 1:00:00'
@@ -84,9 +75,8 @@ if [ "$TYPE" == "fcst" ] || [ "$TYPE" == "hist" ]; then
   TE=121
 
 
+  tstart='2001-01-01 0:00:00'
   tstart='2001-01-01 1:00:00'
-  #tstart='2001-01-01 1:10:00'
-  #tstart='2001-01-01 1:20:00'
   tstart='2001-01-01 1:30:00'
 
   #tstart='2001-01-01 1:25:00'
@@ -94,16 +84,21 @@ if [ "$TYPE" == "fcst" ] || [ "$TYPE" == "hist" ]; then
 
   tend=$tstart
   TS=1
-  #FCSTLEN=5400 
-  #TE=19
+  FCSTLEN=5400 
+  TE=19
 
-#  FCSTLEN=3600 
-#  TE=13
+  #FCSTLEN=3600 
+  #TE=13
+
+  #FCSTLEN=1200 
+  #TE=5
+  #TE=2
 
   FCSTLEN=1800 
   TE=7
-  #TE=2
 
+  #FCSTLEN=300 
+  #TE=2
 
   if [ "$TYPE" == "hist" ] ; then
     TE=2
@@ -128,8 +123,8 @@ SMEM=0 #
 #SMEM=252 # 
 EMEM=${SMEM} # mean
 
-
-
+SMEM=0
+EMEM=0
 
 
 #--SMEM--
@@ -272,8 +267,9 @@ cat > $RUNSH << EOF
 
 #PJM -N OBSSIM
 ##PJM -L rscgrp=regular-flat
+#PJM -L rscgrp=regular-cache
 ##PJM -L rscgrp=debug-flat
-#PJM -L rscgrp=debug-cache
+##PJM -L rscgrp=debug-cache
 #PJM -L node=<TNODE_CNT>
 ##PJM -L node=$((SCALE_NP/PPN))
 #PJM -L elapse=00:30:00
@@ -294,11 +290,12 @@ export FORT_FMT_RECL=400
 
 module unload impi
 module unload intel
-module load intel/2018.1.163
+module load intel/2019.5.281
+ 
+module load hdf5/1.10.5
+module load netcdf/4.7.0
+module load netcdf-fortran/4.4.5
 
-module load hdf5/1.8.17
-module load netcdf/4.4.1
-module load netcdf-fortran/4.4.3
 ulimit -s unlimited
 export OMP_STACKSIZE=128m
 
@@ -414,7 +411,8 @@ while (($(date -ud "$ctime" '+%s') <= $(date -ud "$tend" '+%s'))); do # -- time
   cp $RTTOV_SCCOEF ${WDIR}
 
   # copy common parts of obssim.conf 
-  RUNCONF=${WDIR}/OBSSIM_$(printf %03d $VCODE_CNT).conf
+  #RUNCONF=${WDIR}/OBSSIM_$(printf %03d $VCODE_CNT).conf
+  RUNCONF=${WDIR}/obssim.conf.$VCODE_CNT
   rm -f $RUNCONF
 
 cat ${RUNCONF_COMMON} > ${RUNCONF}
@@ -458,8 +456,8 @@ EOF
 
 
 
-  echo "mpiexec.hydra -n ${SCALE_NP} ${LETKF_RUN}/../obs/obssim ${RUNCONF} ${WDIR}/log/NOUT-${TNODE_CNT} &" >> $RUNSH
-#  echo "mpiexec -n ${SCALE_NP} ${LETKF_RUN}/../obs/obssim ${RUNCONF} ${WDIR}/NOUT" >> $RUNSH
+  echo "mpiexec.hydra -n ${SCALE_NP} ${LETKF_RUN}/../obs/obssim obssim.conf.\$PJM_BULKNUM ${WDIR}/log/NOUT-${TNODE_CNT} " >> $RUNSH
+#  echo "mpiexec.hydra -n ${SCALE_NP} ${LETKF_RUN}/../obs/obssim ${RUNCONF} ${WDIR}/log/NOUT-${TNODE_CNT} &" >> $RUNSH
 
 #  TNODE_CNT=$(expr ${TNODE_CNT} + ${MEM_NP})   
   TNODE_CNT=$(( TNODE_CNT + MEM_NP / PPN  ))   
@@ -479,7 +477,8 @@ sed -i -e  's/<TPRC>/'$((TNODE_CNT*SCALE_NP))'/g' $RUNSH
 
 
 cd $WDIR
-pjsub $RUNSH
+#pjsub $RUNSH
+pjsub --bulk --sparam 1-${VCODE_CNT} $RUNSH
 cd -
 
 exit

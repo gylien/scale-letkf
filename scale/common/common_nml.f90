@@ -89,6 +89,7 @@ MODULE common_nml
   real(r_size) :: GROSS_ERROR_LT = -1.0d0 ! < 0: same as GROSS_ERROR
 
   real(r_size) :: Q_UPDATE_TOP = 0.0d0     ! water vapor and hydrometeors are updated only below this pressure level (Pa)
+  real(r_size) :: Q_UPDATE_LOW_HEIGHT = -99.0d0     ! water vapor is updated only above this pressure level (m)
   real(r_size) :: Q_SPRD_MAX = -1.0D0      ! maximum q (ensemble spread)/(ensemble mean) (only effective when > 0)
 
   real(r_size) :: BOUNDARY_BUFFER_WIDTH = 0.0d0
@@ -459,6 +460,7 @@ subroutine read_nml_letkf
     GROSS_ERROR_TCP, &
     GROSS_ERROR_LT, &
     Q_UPDATE_TOP, &
+    Q_UPDATE_LOW_HEIGHT, &
     Q_SPRD_MAX, &
     BOUNDARY_BUFFER_WIDTH, &
     POSITIVE_DEFINITE_Q, &

@@ -1,0 +1,4 @@
+# Results of *DA*0306 are obtained with
+# /work/hp150019/f22013/SCALE-LETKF/scale-LT/scale_lt_devel_20200224/scalelib/src/atmos-physics/microphysics/used-for-0306expGRL-scale_atmos_phy_mp_sn14.F90
+# which does not include modifications by Y.Sato (05/28/2020)
+# If you want to reproduce the *DA*0306* results, you should replace the file and recompile

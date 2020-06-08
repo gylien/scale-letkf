@@ -237,7 +237,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
         END IF
 
         ! weight parameter based on grid locations (not for cov inflation purpose)     !GYL
-        CALL relax_beta(rig1(ij),rjg1(ij),mean3d(ij,ilev,iv3d_p),n,beta)               !GYL
+        CALL relax_beta(rig1(ij),rjg1(ij),ilev,mean3d(ij,ilev,iv3d_p),n,beta)               !GYL
 
         IF(beta == 0.0d0) THEN                                                         !GYL
           ! no analysis update needed
@@ -383,7 +383,7 @@ if (mod(ij,2)==0 .and. mod(ilev,2)==0)print *,"DEBUG999 QSPRD",q_sprd,q_mean
           END IF
 
           ! weight parameter based on grid locations (not for cov inflation purpose)   !GYL
-          CALL relax_beta(rig1(ij),rjg1(ij),mean3d(ij,ilev,iv3d_p),nv3d+n,beta)        !GYL
+          CALL relax_beta(rig1(ij),rjg1(ij),ilev,mean3d(ij,ilev,iv3d_p),nv3d+n,beta)        !GYL
 
           IF(beta == 0.0d0) THEN                                                       !GYL
             ! no analysis update needed
@@ -1458,13 +1458,17 @@ end subroutine obs_local_cal
 !-------------------------------------------------------------------------------
 ! Relaxation parameter based on grid locations (not for covariance inflation purpose)
 !-------------------------------------------------------------------------------
-subroutine relax_beta(ri, rj, rlev, nvar, beta)
+subroutine relax_beta(ri, rj, k, rlev, nvar, beta)
   use scale_grid, only: &
-    DX, DY
+    DX, DY, &
+    GRID_CZ
   use scale_grid_index, only: &
-    IHALO, JHALO
+    IHALO, JHALO, &
+    KHALO
+
   implicit none
   real(r_size), intent(in) :: ri, rj, rlev
+  integer, intent(in) :: k
   integer, intent(in) :: nvar
   real(r_size), intent(out) :: beta
   real(r_size) :: dist_bdy
@@ -1479,6 +1483,16 @@ subroutine relax_beta(ri, rj, rlev, nvar, beta)
       return
     end if
   end if
+  !
+  ! Lower-limit of Q update levels
+  if ( GRID_CZ(KHALO+k) < Q_UPDATE_LOW_HEIGHT ) then
+    if (nvar == iv3d_q ) then
+      beta = 0.0d0
+      return
+    end if
+
+  endif
+
   !
   ! Boundary buffer
   !
