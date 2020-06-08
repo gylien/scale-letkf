@@ -1158,6 +1158,7 @@ subroutine read_obs_radar_toshiba(cfile, obs)
   call MPI_BCAST(grid_ze, nobs_sp, MPI_DOUBLE_PRECISION, 0, MPI_COMM_o, ierr)
   call MPI_BCAST(grid_vr, nobs_sp, MPI_DOUBLE_PRECISION, 0, MPI_COMM_o, ierr)
   call MPI_BCAST(grid_count_ze, nobs_sp, MPI_INTEGER8, 0, MPI_COMM_o, ierr)
+  call MPI_BCAST(grid_count_vr, nobs_sp, MPI_INTEGER8, 0, MPI_COMM_o, ierr)
   call mpi_timer('read_obs_radar_toshiba:plot_comm:', 2, barrier=MPI_COMM_o)
 
 
