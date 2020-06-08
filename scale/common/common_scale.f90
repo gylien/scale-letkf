@@ -1804,7 +1804,7 @@ end subroutine state_trans_inv
 subroutine state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
   use scale_atmos_grid_cartesC_index, only: &
       IHALO, JHALO, KHALO, &
-      IS, IE, JS, JE, KS, KE, KA
+      IS, IE, IA, JS, JE, JA, KS, KE, KA
   use scale_comm_cartesC, only: &
       COMM_vars8, &
       COMM_wait
@@ -1845,9 +1845,9 @@ subroutine state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
   !---------------------------------------------------------
 
   call scale_calc_z(topo, height)
-  v3dgh_RP(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_hgt) = height
-  v3dgh_RP(KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_hgt) = topo
-  v3dgh_RP(1,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_hgt) = 0.0_RP
+  v3dgh_RP(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_hgt) = real(height, kind=RP)
+  v3dgh_RP(KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_hgt) = real(topo, kind=RP)
+  v3dgh_RP(1:KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_hgt) = 0.0_RP
 
 
 
@@ -1890,11 +1890,11 @@ subroutine state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
 
 !$OMP PARALLEL DO PRIVATE(i,j,iv3d) SCHEDULE(STATIC) COLLAPSE(2)
   do iv3d = 1, nv3dd
-    do j  = JS, JE
-      do i  = IS, IE
-        v3dgh_RP(   1:KS-1,i,j,iv3d) = v3dgh_RP(KS,i,j,iv3d)
-        v3dgh_RP(KE+1:KA,  i,j,iv3d) = v3dgh_RP(KE,i,j,iv3d)
-      end do
+    do j  = 1, JA
+    do i  = 1, IA
+      v3dgh_RP(   1:KS-1,i,j,iv3d) = v3dgh_RP(KS,i,j,iv3d)
+      v3dgh_RP(KE+1:KA,  i,j,iv3d) = v3dgh_RP(KE,i,j,iv3d)
+    end do
     end do
   end do
 !$OMP END PARALLEL DO
