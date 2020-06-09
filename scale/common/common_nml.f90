@@ -203,10 +203,18 @@ MODULE common_nml
   integer :: OUT_GRADS_DAFCST_ALL_ZSKIP = 1 ! Outut Z interval
   logical :: OUT_GRADS_DA_ALL = .false. ! Outut dacycle analysis/guess in GrADS format
   integer :: OUT_GRADS_DA_ALL_ZSKIP = 1  ! Output Z interval
-  logical :: OUT_NETCDF_DAFCST = .false. ! Outut dacycle forecast in NETCDF format (radar reflectivity)
+       
+                                          ! NetCDF output (radar reflectivity)
+  logical :: OUT_NETCDF_DAFCST = .false.  ! Outut dacycle forecast 
+  integer :: OUT_NETCDF_DAFCST_DSTEP = 10 ! Outut interval for forecast
+                                          ! every OUT_NETCDF_DAFCST_DSTEP*LCYCLE (sec) 
+  integer :: OUT_NETCDF_DAFCST_DHORI = 4  ! Outut interval of horizontal thinning for forecast
+  integer :: OUT_NETCDF_DAFCST_NZLEV = 10 ! Outut vertical levels for forecast 
+  real(r_size) :: OUT_NETCDF_DAFCST_DZ = 1.0d3 ! Outut vertical level interval (m)
   integer :: OUT_NETCDF_ZLEV_MIN = 1
   integer :: OUT_NETCDF_ZLEV_MAX = 42
   integer :: OUT_NETCDF_ZLEV_INTV = 1
+
   character(filelenmax) :: OUT_GRADS_DA_ALL_PATH = "" ! Output path
   logical :: OUT_PAWR_GRADS = .false. ! Outut PAWR obs in GrADS format
   character(filelenmax) :: OUT_PAWR_GRADS_PATH = "" ! Output path
@@ -754,6 +762,10 @@ subroutine read_nml_letkf
     NOBS_OUT, &
     NOBS_OUT_BASENAME, &
     OUT_NETCDF_DAFCST, &
+    OUT_NETCDF_DAFCST_DSTEP, &
+    OUT_NETCDF_DAFCST_NZLEV, &
+    OUT_NETCDF_DAFCST_DZ, &
+    OUT_NETCDF_DAFCST_DHORI, &
     OUT_NETCDF_ZLEV_MIN, &
     OUT_NETCDF_ZLEV_MAX, &
     OUT_NETCDF_ZLEV_INTV, &

@@ -929,17 +929,22 @@ subroutine write_dafcst_nc( filename, step, nlev_plot, ref3d )
   real, allocatable :: tlevs(:)
   integer :: i, j, k
 
+  integer :: nlong_, nlatg_
+
+  nlong_ = nlong / OUT_NETCDF_DAFCST_DHORI
+  nlatg_ = nlatg / OUT_NETCDF_DAFCST_DHORI
+
   if ( step == 0 ) then
 
-    tlev = int( DACYCLE_RUN_FCST_TIME / OUT_DAFCST_DSEC ) + 1
+    tlev = int( DACYCLE_RUN_FCST_TIME / OUT_DAFCST_DSEC / OUT_NETCDF_DAFCST_DSTEP ) + 1
     allocate( tlevs(tlev) )
 
     ! Create the file. 
     call ncio_create( trim(filename), nf90_clobber, ncid )
 
     ! Define the dimensions. 
-    call ncio_check( nf90_def_dim( ncid, trim(lon_name), nlong, lon_dimid) )
-    call ncio_check( nf90_def_dim( ncid, trim(lat_name), nlatg, lat_dimid) )
+    call ncio_check( nf90_def_dim( ncid, trim(lon_name), nlong_, lon_dimid) )
+    call ncio_check( nf90_def_dim( ncid, trim(lat_name), nlatg_, lat_dimid) )
     call ncio_check( nf90_def_dim( ncid, trim(z_name), nlev_plot, z_dimid) )
     call ncio_check( nf90_def_dim( ncid, trim(t_name), tlev, t_dimid) )
 
@@ -961,7 +966,7 @@ subroutine write_dafcst_nc( filename, step, nlev_plot, ref3d )
     enddo
 
     do i = 1, tlev
-      tlevs(i) = real( i - 1 ) * real( OUT_DAFCST_DSEC, kind=r_sngl )
+      tlevs(i) = real( i - 1 ) * real( OUT_DAFCST_DSEC*OUT_NETCDF_DAFCST_DSTEP, kind=r_sngl )
     enddo
 
 
@@ -980,16 +985,20 @@ subroutine write_dafcst_nc( filename, step, nlev_plot, ref3d )
     call ncio_check( nf90_enddef(ncid) )
 
     ! Write the coordinate variable data. 
-    call ncio_check( nf90_put_var(ncid, lat_varid, lats) )
-    call ncio_check( nf90_put_var(ncid, lon_varid, lons) )
+    call ncio_check( nf90_put_var(ncid, lat_varid, lats(1:nlatg:OUT_NETCDF_DAFCST_DHORI)) )
+    call ncio_check( nf90_put_var(ncid, lon_varid, lons(1:nlong:OUT_NETCDF_DAFCST_DHORI)) )
     call ncio_check( nf90_put_var(ncid, t_varid, tlevs) )
 
-    j = 0
-    do k = max( 1, OUT_NETCDF_ZLEV_MIN), min( nlev, OUT_NETCDF_ZLEV_MAX), OUT_NETCDF_ZLEV_INTV
-       j = j + 1
-       zlevs(j) = real( CZ(KHALO+k), kind=r_sngl )
-
+    do k = 1, OUT_NETCDF_DAFCST_NZLEV
+       zlevs(k) = k*OUT_NETCDF_DAFCST_DZ
     enddo
+
+!    j = 0
+!    do k = max( 1, OUT_NETCDF_ZLEV_MIN), min( nlev, OUT_NETCDF_ZLEV_MAX), OUT_NETCDF_ZLEV_INTV
+!       j = j + 1
+!       zlevs(j) = real( CZ(KHALO+k), kind=r_sngl )
+!
+!    enddo
 
     call ncio_check( nf90_put_var(ncid, z_varid, zlevs ) )
 
@@ -1002,11 +1011,13 @@ subroutine write_dafcst_nc( filename, step, nlev_plot, ref3d )
 
   endif
 
-  count = (/ nlev_plot, nlong, nlatg, 1 /)
-  start = (/ 1, 1, 1, step+1 /)
+  count = (/ nlev_plot, nlong_, nlatg_, 1 /)
+  start = (/ 1, 1, 1, step/OUT_NETCDF_DAFCST_DSTEP+1 /)
 
   ! Write the data.
-  call ncio_check( nf90_put_var(ncid, ref_varid, ref3d, start = start, &
+  call ncio_check( nf90_put_var(ncid, ref_varid, &
+                   ref3d(1:nlev_plot,1:nlong:OUT_NETCDF_DAFCST_DHORI,1:nlatg:OUT_NETCDF_DAFCST_DHORI), &
+                   start = start, &
                    count = count) )
 
   call ncio_close( ncid )
