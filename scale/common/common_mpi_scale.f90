@@ -1865,6 +1865,8 @@ subroutine write_grd_dafcst_mpi( timelabel, ref3d, step )
   use scale_atmos_grid_cartesC_index, only: &
     IS, IE, JS, JE, KS, KE, &
     KHALO
+  use scale_atmos_grid_cartesC, only: &
+    CZ => ATMOS_GRID_CARTESC_CZ
   use scale_io, only: &
     H_LONG
 
@@ -1884,36 +1886,65 @@ subroutine write_grd_dafcst_mpi( timelabel, ref3d, step )
   real(r_sngl), allocatable :: bufr3d(:,:,:)
   integer :: nlev_plot
 
+  real(RP) :: lev0, lev1, lev_ref
+  integer :: kk
+  real(RP) :: rat
 
   call rank_1d_2d(myrank_d, proc_i, proc_j)
   ishift = proc_i * nlon
   jshift = proc_j * nlat
 
   if ( OUT_NETCDF_DAFCST ) then
+    if ( step > 0 .and. mod( step, OUT_NETCDF_DAFCST_DSTEP) /= 0 ) return
 
     ncfilename = trim(DACYCLE_RUN_FCST_OUTNAME)//"/fcst_ref3d_"//trim(timelabel)//".nc"
 
-
-    nlev_plot = 0
-    do k = max( 1, OUT_NETCDF_ZLEV_MIN), min( nlev, OUT_NETCDF_ZLEV_MAX), OUT_NETCDF_ZLEV_INTV
-       nlev_plot = nlev_plot + 1
-    enddo
+    nlev_plot = OUT_NETCDF_DAFCST_NZLEV
     if ( .not. allocated(bufr3d) ) allocate( bufr3d(nlev_plot,nlong,nlatg))
-
     bufr3d(:,:,:) = 0.0
 
-    nlev_plot = 0
-    do k = max( 1, OUT_NETCDF_ZLEV_MIN), min( nlev, OUT_NETCDF_ZLEV_MAX), OUT_NETCDF_ZLEV_INTV
-       nlev_plot = nlev_plot + 1
-       bufr3d(nlev_plot, 1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(ref3d(k,1:nlon,1:nlat), r_sngl)
-       call MPI_ALLREDUCE( MPI_IN_PLACE, bufr3d(nlev_plot,:,:), nlong*nlatg, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr)
+    nlev_plot = 1
+    do k = 1, nlev-1
+      lev0 = CZ(KHALO+k)
+      lev1 = CZ(KHALO+k+1)
+      lev_ref = nlev_plot*OUT_NETCDF_DAFCST_DZ 
+
+      if ( lev0 <= lev_ref .and. lev_ref < lev1 ) then
+        rat = (lev_ref - lev0) / ( lev1 - lev0 )
+
+        ! vertical interpolation
+        bufr3d(nlev_plot, 1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = (1.0 - rat) * real(ref3d(k,1:nlon,1:nlat), r_sngl) &
+                                                                             + rat * real(ref3d(k+1,1:nlon,1:nlat), r_sngl)
+
+        call MPI_ALLREDUCE( MPI_IN_PLACE, bufr3d(nlev_plot,:,:), nlong*nlatg, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr)
+
+        nlev_plot = nlev_plot + 1
+        if ( nlev_plot > OUT_NETCDF_DAFCST_NZLEV ) exit
+      endif
     enddo
+    nlev_plot = OUT_NETCDF_DAFCST_NZLEV
+
+!    nlev_plot = 0
+!    do k = max( 1, OUT_NETCDF_ZLEV_MIN), min( nlev, OUT_NETCDF_ZLEV_MAX), OUT_NETCDF_ZLEV_INTV
+!       nlev_plot = nlev_plot + 1
+!    enddo
+!    if ( .not. allocated(bufr3d) ) allocate( bufr3d(nlev_plot,nlong,nlatg))
+!
+!    bufr3d(:,:,:) = 0.0
+!
+!    nlev_plot = 0
+!    do k = max( 1, OUT_NETCDF_ZLEV_MIN), min( nlev, OUT_NETCDF_ZLEV_MAX), OUT_NETCDF_ZLEV_INTV
+!       nlev_plot = nlev_plot + 1
+!       bufr3d(nlev_plot, 1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(ref3d(k,1:nlon,1:nlat), r_sngl)
+!       call MPI_ALLREDUCE( MPI_IN_PLACE, bufr3d(nlev_plot,:,:), nlong*nlatg, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr)
+!    enddo
+
     if ( myrank_d == 0 ) then
       call write_dafcst_nc( trim(ncfilename), step, nlev_plot, bufr3d )
     endif
     return
 
-  endif
+  endif ! OUT_NETCDF_DAFCST
 
 
   if ( myrank_d == 0 ) then
