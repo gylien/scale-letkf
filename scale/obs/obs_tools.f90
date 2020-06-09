@@ -801,7 +801,7 @@ subroutine calc_ref_direct( ref3d )
                         0.0_r_size, 0.0_r_size,          & ! az and radar_z: dummy
                        ref3d(k-KHALO,i-IHALO,j-JHALO),   & ! [OUT]
                        vr3d(k-KHALO,i-IHALO,j-JHALO) ) ! vr3d: dummy ! [OUT]
-      if ( ref3d(k-KHALO,i-IHALO,j-JHALO) < MIN_RADAR_REF ) then
+      if ( ref3d(k-KHALO,i-IHALO,j-JHALO) <= MIN_RADAR_REF ) then
         ref3d(k-KHALO,i-IHALO,j-JHALO) = MIN_RADAR_REF_DBZ + LOW_REF_SHIFT
       else
         ref3d(k-KHALO,i-IHALO,j-JHALO) = 10.0_r_size * log10(ref3d(k-KHALO,i-IHALO,j-JHALO)) ! dBZ
