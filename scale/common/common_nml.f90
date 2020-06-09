@@ -345,6 +345,7 @@ MODULE common_nml
 
   integer :: RADAR_THIN_HORI = 1 ! Thinning horizontal interval (# of grids)
   integer :: RADAR_THIN_VERT = 1 ! Thinning vertical interval (# of grids)
+  logical :: RADAR_USE_VR_STD = .true.  !If we are going to use the wind std threshold within each box.
 
   logical :: RADAR_BIAS_COR_RAIN = .false. ! Simple bias correction for radar obs (rain)
   logical :: RADAR_BIAS_COR_CLR = .false. ! Simple bias correction for radar obs (clear sky)
@@ -1082,6 +1083,7 @@ subroutine read_nml_letkf_radar
     RADAR_SO_SIZE_VERT, &
     RADAR_THIN_HORI, &
     RADAR_THIN_VERT, &
+    RADAR_USE_VR_STD, &
     RADAR_BIAS_COR_RAIN, &
     RADAR_BIAS_COR_CLR, &
     RADAR_BIAS_RAIN_CONST_DBZ, &
