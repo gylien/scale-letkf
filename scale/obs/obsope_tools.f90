@@ -427,6 +427,10 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
                                     obs(iof)%lon(n), obs(iof)%lat(n), obs(iof)%lev(n), v3dg, v2dg, obsda%val(nn), obsda%qc(nn))
               if (obsda%qc(nn) == iqc_ref_low) obsda%qc(nn) = iqc_good ! when process the observation operator, we don't care if reflectivity is too small
 
+              call itpl_3d( v3dg(:,:,:,iv3dd_p), rkz, ril, rjl, obsda%pm(nn) )
+              call itpl_3d( v3dg(:,:,:,iv3dd_t), rkz, ril, rjl, obsda%tm(nn) )
+              call itpl_3d( v3dg(:,:,:,iv3dd_q), rkz, ril, rjl, obsda%qv(nn) )
+
               !!!!!! may not need to do this at this stage !!!!!!
               !if (obs(iof)%elm(n) == id_radar_ref_obs) then
               !  obsda%val(nn) = 10.0d0 * log10(obsda%val(nn))
@@ -471,7 +475,8 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
       ! Prepare variables that will need to be communicated if obsda_return is given
       ! 
       if (present(obsda_return)) then
-        call obs_da_value_partial_reduce_iter(obsda_return, it, 1, nobs, obsda%val, obsda%qc)
+        call obs_da_value_partial_reduce_iter(obsda_return, it, 1, nobs, obsda%val, obsda%qc, &
+                                              obsda%qv, obsda%tm, obsda%pm )
 
         write (timer_str, '(A30,I4,A2)') 'obsope_cal:partial_reduce  (t=', it, '):'
         call mpi_timer(trim(timer_str), 2)
