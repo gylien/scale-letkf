@@ -5,26 +5,30 @@ SCALE_RM_OBJDIR = $(TOPDIR)/scale-rm/src/.libs
 
 include $(TOPDIR)/sysdep/Makedef.$(SCALE_SYS)
 
-SCALE_ENABLE_OPENMP = T
-
 include $(TOPDIR)/Mkinclude
 
 #------
 
-LETKF_SYS = Linux64
-include ../arch/configure.user.$(LETKF_SYS)
+include ../arch/configure.user.$(SCALE_SYS)
+
+NETCDF_INC = $(SCALE_NETCDF_INCLUDE)
+NETCDF_LIB = $(SCALE_NETCDF_LIBS)
+
+LAPACK_LIB = -mkl=sequential
+
+#BUFR_LIB  = -L/data/opt/bufrlib/10.1.0_intel/lib -lbufrlib
 
 #------
 
-TOPDIR    = ../../..
-SCALE_INC = -I$(TOPDIR)/include
-SCALE_LIB = -L$(TOPDIR)/lib -lscale
-SCALE_RM_OBJDIR = $(TOPDIR)/scale-rm/src/.libs
+FOPTS_SCALE = $(FFLAGS)
 
-include $(TOPDIR)/sysdep/Makedef.$(SCALE_SYS)
-include $(TOPDIR)/Mkinclude
+FOPTS     = $(FOPTS_SCALE) 
 
-#------
+FBYTESWAP = -convert little_endian
+FFREE     = -free
+FFIXED    = -fixed
+
+#-----
 
 ifeq ($(SCALE_USER_VER),T)
 FOPTS     += -DSCALEUV
