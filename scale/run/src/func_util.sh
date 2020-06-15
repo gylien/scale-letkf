@@ -204,28 +204,6 @@ elif [ "$MPI_TYPE" = 'impi' ]; then
     exit $res
   fi
 
-elif [ "$MPI_TYPE" = 'K' ]; then
-
-  NNP=$(cat ${NODEFILE_DIR}/${NODEFILE} | wc -l)
-
-  if [ "$PRESET" = 'K_rankdir' ]; then
-    mpiexec -n $NNP -of-proc $STDOUT $PROG $CONF '' $ARGS
-    res=$?
-    if ((res != 0)); then
-      echo "[Error] mpiexec -n $NNP -of-proc $STDOUT $PROG $CONF '' $ARGS" >&2
-      echo "        Exit code: $res" >&2
-      exit $res
-    fi
-  else
-    mpiexec -n $NNP -vcoordfile "${NODEFILE_DIR}/${NODEFILE}" -of-proc $STDOUT $PROG $CONF '' $ARGS
-    res=$?
-    if ((res != 0)); then 
-      echo "[Error] mpiexec -n $NNP -vcoordfile \"${NODEFILE_DIR}/${NODEFILE}\" -of-proc $STDOUT $PROG $CONF '' $ARGS" >&2
-      echo "        Exit code: $res" >&2
-      exit $res
-    fi
-  fi
-
 fi
 
 #-------------------------------------------------------------------------------
@@ -325,26 +303,6 @@ elif [ "$MPI_TYPE" = 'impi' ]; then
     echo "[Error] $MPIRUN -n $NNP -machinefile ${NODEFILE_DIR}/${NODEFILE} -gwdir $SCRP_DIR $pdbash_exec $SCRIPT $ARGS" >&2
     echo "        Exit code: $res" >&2
     exit $res
-  fi
-
-elif [ "$MPI_TYPE" = 'K' ]; then
-
-  if [ "$PROC_OPT" == 'one' ]; then
-    mpiexec -n 1 $pdbash_exec $SCRIPT $ARGS
-    res=$?
-    if ((res != 0)); then
-      echo "[Error] mpiexec -n 1 $pdbash_exec $SCRIPT $ARGS" >&2
-      echo "        Exit code: $res" >&2
-      exit $res
-    fi
-  else
-    mpiexec $pdbash_exec $SCRIPT $ARGS
-    res=$?
-    if ((res != 0)); then
-      echo "[Error] mpiexec $pdbash_exec $SCRIPT $ARGS" >&2
-      echo "        Exit code: $res" >&2
-      exit $res
-    fi
   fi
 
 fi
@@ -580,49 +538,6 @@ fi
 
 #===============================================================================
 
-stage_K_inout () {
-#-------------------------------------------------------------------------------
-# Print stage-in/out scripts for K-computer jobs based on the staging lists
-#
-# Usage: stage_out [USE_RANKDIR]
-#
-#   USE_RANKDIR  Whether enable the rank-directory?
-#                0: No (default)
-#                1: Yes
-#
-# Other input variables:
-#   $SCRP_DIR
-#   $STAGING_DIR
-#   $STGINLIST_SHARE
-#   $STGINLIST_LOCAL
-#   $STGOUTLIST_SHARE
-#   $STGOUTLIST_LOCAL
-#   $NNODES
-#   $jobscrp
-#-------------------------------------------------------------------------------
-
-USE_RANKDIR="${1:-0}"
-
-#-------------------------------------------------------------------------------
-
-if [ -s "${STAGING_DIR}/${STGINLIST_SHARE}.1" ] || [ -s "${STAGING_DIR}/${STGINLIST_SHARE}" ]; then
-  bash $SCRP_DIR/src/stage_in_K.sh $NNODES ${STAGING_DIR}/${STGINLIST_SHARE} $USE_RANKDIR share $TMPS 1>> $jobscrp || exit $?
-fi
-if [ -s "${STAGING_DIR}/${STGINLIST_LOCAL}.1" ] || [ -s "${STAGING_DIR}/${STGINLIST_LOCAL}" ]; then
-  bash $SCRP_DIR/src/stage_in_K.sh $NNODES ${STAGING_DIR}/${STGINLIST_LOCAL} $USE_RANKDIR local $TMPS 1>> $jobscrp || exit $?
-fi
-if [ -s "${STAGING_DIR}/${STGOUTLIST_SHARE}.1" ] || [ -s "${STAGING_DIR}/${STGOUTLIST_SHARE}" ]; then
-  bash $SCRP_DIR/src/stage_out_K.sh $NNODES ${STAGING_DIR}/${STGOUTLIST_SHARE} $USE_RANKDIR share 1>> $jobscrp || exit $?
-fi
-if [ -s "${STAGING_DIR}/${STGOUTLIST_LOCAL}.1" ] || [ -s "${STAGING_DIR}/${STGOUTLIST_LOCAL}" ]; then
-  bash $SCRP_DIR/src/stage_out_K.sh $NNODES ${STAGING_DIR}/${STGOUTLIST_LOCAL} $USE_RANKDIR local 1>> $jobscrp || exit $?
-fi
-
-#-------------------------------------------------------------------------------
-}
-
-#===============================================================================
-
 bdy_setting () {
 #-------------------------------------------------------------------------------
 # Calculate scale_init namelist settings for boundary files
@@ -762,11 +677,7 @@ local scrpname=$(basename $JOBSCRP)
 
 #-------------------------------------------------------------------------------
 
-if [ "$PRESET" = 'K_micro' ] ; then 
-  res=$(cd $rundir && pjsub $scrpname -g $(id -ng)s 2>&1)
-else
-  res=$(cd $rundir && pjsub $scrpname 2>&1)
-fi
+res=$(cd $rundir && pjsub $scrpname 2>&1)
 echo $res
 
 if [ -z "$(echo $res | grep 'ERR')" ]; then

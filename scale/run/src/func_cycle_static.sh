@@ -20,6 +20,7 @@ staging_list_common_static cycle
 mkdir -p ${TMPROOT}/topo
 mkdir -p ${TMPROOT}/landuse
 mkdir -p ${TMPROOT}/dat
+mkdir -p ${TMPROOT}/log
 
 mtot=$((MEMBER+1))
 mmean=$((MEMBER+1))
@@ -32,7 +33,9 @@ fi
 
 for m in $(seq $MEMBER); do
   name_m[$m]=$(printf $MEMBER_FMT $m)
+  mkdir -p $TMP/${name_m[$m]}
 done
+mkdir -p $TMP/sprd
 
 totalnp=$((PPN*NNODES))
 SCALE_NP_TOTAL=0
@@ -100,7 +103,8 @@ while ((time <= ETIME)); do
           for q in $(seq ${mem_np_[$d]}); do
             pathin="${DATA_TOPO[$d]}/const/${CONNECTOR_TOPO}topo$(scale_filename_sfx $((q-1)))"
             path="topo/topo.d$(printf $DOMAIN_FMT $d)$(scale_filename_sfx $((q-1)))"
-            echo "${pathin}|${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+${SCALE_NP_S[$d]}+q))]}
+            #echo "${pathin}|${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+${SCALE_NP_S[$d]}+q))]}
+            ln -sf $pathin $TMP/$path
           done
         done
       done
@@ -109,7 +113,8 @@ while ((time <= ETIME)); do
         for q in $(seq ${mem_np_[$d]}); do
           pathin="${DATA_TOPO[$d]}/const/${CONNECTOR_TOPO}topo$(scale_filename_sfx $((q-1)))"
           path="topo/topo.d$(printf $DOMAIN_FMT $d)$(scale_filename_sfx $((q-1)))"
-          echo "${pathin}|${path}" >> ${STAGING_DIR}/${STGINLIST}
+          #echo "${pathin}|${path}" >> ${STAGING_DIR}/${STGINLIST}
+          ln -sf $pathin $TMP/$path
         done
       done
     fi
@@ -132,7 +137,8 @@ while ((time <= ETIME)); do
           for q in $(seq ${mem_np_[$d]}); do
             pathin="${DATA_LANDUSE[$d]}/const/${CONNECTOR_LANDUSE}landuse$(scale_filename_sfx $((q-1)))"
             path="landuse/landuse.d$(printf $DOMAIN_FMT $d)$(scale_filename_sfx $((q-1)))"
-            echo "${pathin}|${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+${SCALE_NP_S[$d]}+q))]}
+            #echo "${pathin}|${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+${SCALE_NP_S[$d]}+q))]}
+            ln -sf $pathin $TMP/$path
           done
         done
       done
@@ -141,7 +147,8 @@ while ((time <= ETIME)); do
         for q in $(seq ${mem_np_[$d]}); do
           pathin="${DATA_LANDUSE[$d]}/const/${CONNECTOR_LANDUSE}landuse$(scale_filename_sfx $((q-1)))"
           path="landuse/landuse.d$(printf $DOMAIN_FMT $d)$(scale_filename_sfx $((q-1)))"
-          echo "${pathin}|${path}" >> ${STAGING_DIR}/${STGINLIST}
+          #echo "${pathin}|${path}" >> ${STAGING_DIR}/${STGINLIST}
+          ln -sf $pathin $TMP/$path
         done
       done
     fi
@@ -156,14 +163,16 @@ while ((time <= ETIME)); do
           for q in $(seq ${mem_np_[1]}); do
             pathin="${DATA_BDY_SCALE_PREP[1]}/${time}/bdy/${BDY_MEAN}${CONNECTOR}boundary$(scale_filename_sfx $((q-1)))"
             path="mean/bdy_$(datetime_scale $time)$(scale_filename_sfx $((q-1)))"
-            echo "${pathin}|${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
+            #echo "${pathin}|${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
+            ln -sf $pathin $TMP/$path
           done
           if ((USE_INIT_FROM_BDY == 1)); then
             for d in $(seq $DOMNUM); do
               for q in $(seq ${mem_np_[$d]}); do
                 pathin="${DATA_BDY_SCALE_PREP[$d]}/${time}/bdy/${BDY_MEAN}${CONNECTOR}init_bdy$(scale_filename_sfx $((q-1)))"
                 path="mean/init.d$(printf $DOMAIN_FMT $d)_$(datetime_scale $time)$(scale_filename_sfx $((q-1)))"
-                echo "${pathin}|${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+${SCALE_NP_S[$d]}+q))]}
+                #echo "${pathin}|${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+${SCALE_NP_S[$d]}+q))]}
+                ln -sf $pathin $TMP/$path
               done
             done
           fi
@@ -172,14 +181,16 @@ while ((time <= ETIME)); do
         for q in $(seq ${mem_np_[1]}); do
           pathin="${DATA_BDY_SCALE_PREP[1]}/${time}/bdy/${BDY_MEAN}${CONNECTOR}boundary$(scale_filename_sfx $((q-1)))"
           path="mean/bdy_$(datetime_scale $time)$(scale_filename_sfx $((q-1)))"
-          echo "${pathin}|${path}" >> ${STAGING_DIR}/${STGINLIST}
+          #echo "${pathin}|${path}" >> ${STAGING_DIR}/${STGINLIST}
+          ln -sf $pathin $TMP/$path
         done
         if ((USE_INIT_FROM_BDY == 1)); then
           for d in $(seq $DOMNUM); do
             for q in $(seq ${mem_np_[$d]}); do
               pathin="${DATA_BDY_SCALE_PREP[$d]}/${time}/bdy/${BDY_MEAN}${CONNECTOR}init_bdy$(scale_filename_sfx $((q-1)))"
               path="mean/init.d$(printf $DOMAIN_FMT $d)_$(datetime_scale $time)$(scale_filename_sfx $((q-1)))"
-              echo "${pathin}|${path}" >> ${STAGING_DIR}/${STGINLIST}
+              #echo "${pathin}|${path}" >> ${STAGING_DIR}/${STGINLIST}
+              ln -sf $pathin $TMP/$path
             done
           done
         fi
@@ -189,14 +200,16 @@ while ((time <= ETIME)); do
         for q in $(seq ${mem_np_[1]}); do
           pathin="${DATA_BDY_SCALE_PREP[1]}/${time}/bdy/${name_m[$m]}${CONNECTOR}boundary$(scale_filename_sfx $((q-1)))"
           path="${name_m[$m]}/bdy_$(datetime_scale $time)$(scale_filename_sfx $((q-1)))"
-          echo "${pathin}|${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
+          #echo "${pathin}|${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
+          ln -sf $pathin $TMP/$path
         done
         if ((USE_INIT_FROM_BDY == 1)); then
           for d in $(seq $DOMNUM); do
             for q in $(seq ${mem_np_[$d]}); do
               pathin="${DATA_BDY_SCALE_PREP[$d]}/${time}/bdy/${name_m[$m]}${CONNECTOR}init_bdy$(scale_filename_sfx $((q-1)))"
               path="${name_m[$m]}/init.d$(printf $DOMAIN_FMT $d)_$(datetime_scale $time)$(scale_filename_sfx $((q-1)))"
-              echo "${pathin}|${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+${SCALE_NP_S[$d]}+q))]}
+              #echo "${pathin}|${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+${SCALE_NP_S[$d]}+q))]}
+              ln -sf $pathin $TMP/$path
             done
           done
         fi
@@ -212,7 +225,8 @@ while ((time <= ETIME)); do
         for q in $(seq ${mem_np_[$d]}); do
           pathin="${DATA_ADDINFL[$d]}/const/addi/${name_m[$m]}${CONNECTOR}init$(scale_filename_sfx $((q-1)))"
           path="${name_m[$m]}/addi.d$(printf $DOMAIN_FMT $d)$(scale_filename_sfx $((q-1)))"
-          echo "${pathin}|${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+${SCALE_NP_S[$d]}+q))]}
+          #echo "${pathin}|${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+${SCALE_NP_S[$d]}+q))]}
+          ln -sf $pathin $TMP/$path
         done
       done
     done
@@ -634,14 +648,16 @@ while ((time <= ETIME)); do
               for q in $(seq $mem_np_bdy_); do
                 pathin="${DATA_BDY_SCALE}/${time_bdy}/${BDY_SCALE_DIR}/${mem_bdy}${CONNECTOR_BDY}history$(scale_filename_bdy_sfx $((q-1)))"
                 path="${name_m[$m]}/bdyorg_$(datetime_scale $time_bdy_start_prev)_$(printf %05d $((ibdy-1)))$(scale_filename_bdy_sfx $((q-1)))"
-                echo "${pathin}|${path}" >> ${STAGING_DIR}/${STGINLIST_BDYDATA}
+                #echo "${pathin}|${path}" >> ${STAGING_DIR}/${STGINLIST_BDYDATA}
+                ln -sf $pathin $TMP/$path
               done
             done
           else
             for q in $(seq $mem_np_bdy_); do
               pathin="${DATA_BDY_SCALE}/${time_bdy}/${BDY_SCALE_DIR}/${BDY_MEAN}${CONNECTOR_BDY}history$(scale_filename_bdy_sfx $((q-1)))"
               path="mean/bdyorg_$(datetime_scale $time_bdy_start_prev)_$(printf %05d $((ibdy-1)))$(scale_filename_bdy_sfx $((q-1)))"
-              echo "${pathin}|${path}" >> ${STAGING_DIR}/${STGINLIST_BDYDATA}
+              #echo "${pathin}|${path}" >> ${STAGING_DIR}/${STGINLIST_BDYDATA}
+              ln -sf $pathin $TMP/$path
             done
           fi
 
@@ -685,7 +701,8 @@ while ((time <= ETIME)); do
                   pathin="${data_bdy_i}/${mem_bdy}/${filename_prefix[$ifile]}${time_bdy}${filename_suffix[$ifile]}"
                 fi
                 path="${name_m[$m]}/bdyorg_${filenamein_prefix[$ifile]}$(datetime_scale $time_bdy_start_prev)_$(printf %05d $((ibdy-1)))${filenamein_suffix[$ifile]}"
-                echo "${pathin}|${path}" >> ${STAGING_DIR}/${STGINLIST_BDYDATA}
+                #echo "${pathin}|${path}" >> ${STAGING_DIR}/${STGINLIST_BDYDATA}
+                ln -sf  $pathin $TMP/$path
               done
             done
           else
@@ -696,7 +713,8 @@ while ((time <= ETIME)); do
                 pathin="${data_bdy_i}/${BDY_MEAN}/${filename_prefix[$ifile]}${time_bdy}${filename_suffix[$ifile]}"
               fi
               path="mean/bdyorg_${filenamein_prefix[$ifile]}$(datetime_scale $time_bdy_start_prev)_$(printf %05d $((ibdy-1)))${filenamein_suffix[$ifile]}"
-              echo "${pathin}|${path}" >> ${STAGING_DIR}/${STGINLIST_BDYDATA}
+              #echo "${pathin}|${path}" >> ${STAGING_DIR}/${STGINLIST_BDYDATA}
+              ln -sf  $pathin $TMP/$path
             done
           fi
 
@@ -782,26 +800,22 @@ while ((time <= ETIME)); do
           #  sed -e "/!--MAKE_BOUNDARY--/a MAKE_BOUNDARY = .false.,")"
           #------
         fi
-        mkdir -p $CONFIG_DIR/${name_m[$m]}
-        conf_file="${name_m[$m]}/init.d${dfmt}_${time}.conf"
-        echo "  $conf_file"
-        echo "$conf" > $CONFIG_DIR/${conf_file}
+        conf_file="$TMP/${name_m[$m]}/init.d${dfmt}_${time}.conf"
+        echo "$conf" > ${conf_file}
 
-        if ((stage_config == 1)); then
-          if ((DISK_MODE == 3)); then
-            for q in $(seq $mem_np_); do
-              echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
-            done
-          else
-            echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> ${STAGING_DIR}/${STGINLIST}
-          fi
-        fi
+#        if ((stage_config == 1)); then
+#          if ((DISK_MODE == 3)); then
+#            for q in $(seq $mem_np_); do
+#              echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
+#            done
+#          else
+#            echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> ${STAGING_DIR}/${STGINLIST}
+#          fi
+#        fi
       done # [ d in $(seq $DOMNUM) ]
 
       if ((BDY_FORMAT == 4 && (BDY_ENS == 0 || m == 1))); then
-        mkdir -p $CONFIG_DIR/${mem_bdy}
-        conf_file="${mem_bdy}/gradsbdy.conf"
-        echo "  $conf_file"
+        conf_file="$TMP/${mem_bdy}/gradsbdy.conf"
         if ((nbdy <= 1)); then
           bdy_no_suffix="_$(printf %05d 0)"
         else
@@ -811,11 +825,11 @@ while ((time <= ETIME)); do
             sed -e "s#--DIR--/bdyatm#${TMPROOT_BDYDATA}/${mem_bdy}/bdyorg_atm_$(datetime_scale $time_bdy_start_prev)${bdy_no_suffix}#g" \
                 -e "s#--DIR--/bdysfc#${TMPROOT_BDYDATA}/${mem_bdy}/bdyorg_sfc_$(datetime_scale $time_bdy_start_prev)${bdy_no_suffix}#g" \
                 -e "s#--DIR--/bdyland#${TMPROOT_BDYDATA}/${mem_bdy}/bdyorg_lnd_$(datetime_scale $time_bdy_start_prev)${bdy_no_suffix}#g" \
-            > $CONFIG_DIR/${conf_file}
+            > ${conf_file}
 
-        if ((stage_config == 1)); then
-          echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> ${STAGING_DIR}/${STGINLIST_BDYDATA}
-        fi
+        #if ((stage_config == 1)); then
+        #  #echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> ${STAGING_DIR}/${STGINLIST_BDYDATA}
+        #fi
       fi # [ BDY_FORMAT == 4 && (BDY_ENS == 0 || m == 1) ]
     done # [ m in $(seq $mtot) ]
 
@@ -952,10 +966,8 @@ while ((time <= ETIME)); do
           fi
         fi
       fi
-      mkdir -p $CONFIG_DIR/${name_m[$m]}
-      conf_file="${name_m[$m]}/run.d${dfmt}_${time}.conf"
-      echo "  $conf_file"
-      echo "$conf" > $CONFIG_DIR/${conf_file}
+      conf_file="$TMP/${name_m[$m]}/run.d${dfmt}_${time}.conf"
+      echo "$conf" > ${conf_file}
 
       if [ -e "$SCRP_DIR/config.nml.scale_user" ]; then
         conf="$(cat $SCRP_DIR/config.nml.scale_user)"
@@ -971,18 +983,18 @@ while ((time <= ETIME)); do
                 sed -e "/!--LAND_RESTART_IN_BASENAME--/a LAND_RESTART_IN_BASENAME = \"${mem_bdy}/init_bdy.d${dfmt}_$(datetime_scale $time)\",")"
           fi
         fi
-        echo "$conf" >> $CONFIG_DIR/${conf_file}
+        echo "$conf" >> ${conf_file}
       fi
 
-      if ((stage_config == 1)); then
-        if ((DISK_MODE == 3)); then
-          for q in $(seq $mem_np_); do
-            echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
-          done
-        else
-          echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> ${STAGING_DIR}/${STGINLIST}
-        fi
-      fi
+#      if ((stage_config == 1)); then
+#        if ((DISK_MODE == 3)); then
+#          for q in $(seq $mem_np_); do
+#            echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
+#          done
+#        else
+#          echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> ${STAGING_DIR}/${STGINLIST}
+#        fi
+#      fi
     done # [ d in $(seq $DOMNUM) ]
   done # [ m in $(seq $mtot) ]
 
@@ -1033,13 +1045,12 @@ while ((time <= ETIME)); do
     if ((d == 1)); then
       conf_file_src=$SCRP_DIR/config.nml.letkf
       conf_file_src2=$SCRP_DIR/config.nml.scale
-      conf_file="letkf_${atime}.conf"
+      conf_file="$TMP/letkf_${atime}.conf"
     else
       conf_file_src=$SCRP_DIR/config.nml.letkf.d$d
       conf_file_src2=$SCRP_DIR/config.nml.scale.d$d
-      conf_file="letkf.d${dfmt}_${atime}.conf"
+      conf_file="$TMP/letkf.d${dfmt}_${atime}.conf"
     fi
-    echo "  $conf_file"
     cat $SCRP_DIR/config.nml.ensmodel | \
         sed -e "/!--MEMBER--/a MEMBER = $MEMBER," \
             -e "/!--CONF_FILES--/a CONF_FILES = \"letkf.d<domain>_${atime}.conf\"," \
@@ -1048,7 +1059,7 @@ while ((time <= ETIME)); do
             -e "/!--MEM_NODES--/a MEM_NODES = $mem_nodes," \
             -e "/!--NUM_DOMAIN--/a NUM_DOMAIN = $DOMNUM," \
             -e "/!--PRC_DOMAINS--/a PRC_DOMAINS = $PRC_DOMAINS_LIST" \
-        > $CONFIG_DIR/${conf_file}
+        > ${conf_file}
 
     cat $conf_file_src | \
         sed -e "/!--OBS_IN_NUM--/a OBS_IN_NUM = $OBSNUM," \
@@ -1074,16 +1085,16 @@ while ((time <= ETIME)); do
             -e "/!--RELAX_SPREAD_OUT_BASENAME--/a RELAX_SPREAD_OUT_BASENAME = \"rtpsinfl.d${dfmt}_$(datetime_scale $atime).nc\"," \
             -e "/!--NOBS_OUT--/a NOBS_OUT = ${NOBS_OUT_TF}," \
             -e "/!--NOBS_OUT_BASENAME--/a NOBS_OUT_BASENAME = \"nobs.d${dfmt}_$(datetime_scale $atime).nc\"," \
-        >> $CONFIG_DIR/${conf_file}
+        >> ${conf_file}
 
     # Most of these parameters are not important for letkf
     cat $conf_file_src2 | \
         sed -e "/!--FILE_AGGREGATE--/a FILE_AGGREGATE = ${FILE_AGGREGATE}," \
-        >> $CONFIG_DIR/${conf_file}
+        >> ${conf_file}
 
-    if ((stage_config == 1)); then
-      echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> ${STAGING_DIR}/${STGINLIST}
-    fi
+#    if ((stage_config == 1)); then
+#      echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> ${STAGING_DIR}/${STGINLIST}
+#    fi
   done # [ d in $(seq $DOMNUM) ]
 
   #-------------------

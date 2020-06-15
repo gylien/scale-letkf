@@ -43,10 +43,14 @@ done
 #fi
 
 if [ "$TOPO_FORMAT" != 'prep' ]; then
-  echo "${DATADIR}/topo/${TOPO_FORMAT}/Products/|dat/topo/${TOPO_FORMAT}/Products/" >> ${STAGING_DIR}/${STGINLIST_CONSTDB}
+  mkdir -p $TMP/dat/topo/${TOPO_FORMAT}
+  ln -sf ${DATADIR}/topo/${TOPO_FORMAT}/Products $TMP/dat/topo/${TOPO_FORMAT}/Products
+  #echo "${DATADIR}/topo/${TOPO_FORMAT}/Products/|dat/topo/${TOPO_FORMAT}/Products/" >> ${STAGING_DIR}/${STGINLIST_CONSTDB}
 fi
 if [ "$LANDUSE_FORMAT" != 'prep' ]; then
-  echo "${DATADIR}/landuse/${LANDUSE_FORMAT}/Products/|dat/landuse/${LANDUSE_FORMAT}/Products/" >> ${STAGING_DIR}/${STGINLIST_CONSTDB}
+  mkdir -p $TMP/dat/landuse/${LANDUSE_FORMAT}
+  ln -sf ${DATADIR}/landuse/${LANDUSE_FORMAT}/Products $TMP/dat/landuse/${LANDUSE_FORMAT}/Products
+  #echo "${DATADIR}/landuse/${LANDUSE_FORMAT}/Products/|dat/landuse/${LANDUSE_FORMAT}/Products/" >> ${STAGING_DIR}/${STGINLIST_CONSTDB}
 fi
 
 #-------------------------------------------------------------------------------
@@ -57,7 +61,8 @@ if [ "$JOBTYPE" = 'cycle' ]; then
   while ((time <= $(datetime $ETIME $LCYCLE s))); do
     for iobs in $(seq $OBSNUM); do
       if [ "${OBSNAME[$iobs]}" != '' ] && [ -e ${OBS}/${OBSNAME[$iobs]}_${time}.dat ]; then
-        echo "${OBS}/${OBSNAME[$iobs]}_${time}.dat|obs.${OBSNAME[$iobs]}_${time}.dat" >> ${STAGING_DIR}/${STGINLIST_OBS}
+        #echo "${OBS}/${OBSNAME[$iobs]}_${time}.dat|obs.${OBSNAME[$iobs]}_${time}.dat" >> ${STAGING_DIR}/${STGINLIST_OBS}
+        ln -sf "${OBS}/${OBSNAME[$iobs]}_${time}.dat $TMP/obs.${OBSNAME[$iobs]}_${time}.dat"
       fi
     done
     time=$(datetime $time $LCYCLE s)
@@ -67,16 +72,16 @@ fi
 #-------------------------------------------------------------------------------
 # create empty directories
 
-cat >> ${STAGING_DIR}/${STGINLIST} << EOF
-|mean/
-|log/
-EOF
-
-if [ "$JOBTYPE" = 'cycle' ]; then
-  cat >> ${STAGING_DIR}/${STGINLIST} << EOF
-|sprd/
-EOF
-fi
+#cat >> ${STAGING_DIR}/${STGINLIST} << EOF
+#|mean/
+#|log/
+#EOF
+#
+#if [ "$JOBTYPE" = 'cycle' ]; then
+#  cat >> ${STAGING_DIR}/${STGINLIST} << EOF
+#|sprd/
+#EOF
+#fi
 
 #-------------------------------------------------------------------------------
 # time-invariant outputs
@@ -181,10 +186,10 @@ for it in $(seq $nitmax); do
           -e "/!--MEM_NODES--/a MEM_NODES = $mem_nodes," \
           -e "/!--NUM_DOMAIN--/a NUM_DOMAIN = $DOMNUM," \
           -e "/!--PRC_DOMAINS--/a PRC_DOMAINS = $PRC_DOMAINS_LIST" \
-      > $CONFIG_DIR/${conf_file}
-  if ((stage_config == 1)); then
-    echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> ${STAGING_DIR}/${STGINLIST}
-  fi
+      > $TMP/${conf_file}
+#  if ((stage_config == 1)); then
+#    echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> ${STAGING_DIR}/${STGINLIST}
+#  fi
 done
 
 #-------------------------------------------------------------------------------
@@ -215,7 +220,7 @@ fi
 
 mkdir -p ${OUTDIR[1]}/config
 
-cp -fr $CONFIG_DIR/* ${OUTDIR[1]}/config
+cp -fr $CONFIG_DIR/*.conf ${OUTDIR[1]}/config/
 
 #-------------------------------------------------------------------------------
 }

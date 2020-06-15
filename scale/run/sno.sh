@@ -8,7 +8,8 @@
 #  https://github.com/gylien/scale-letkf/blob/realtime_fcst_D1-3_ope/scale/run_d1-2/config/online_NRT_5.3.X/sno_bulk.sh
 #
 
-STIME=<STIME>
+#STIME=<STIME>
+STIME='20180701060000'
 
 . config.main || exit $?
 RUNDIR="${TMP}/../run_sno_<STIME>"
@@ -26,17 +27,19 @@ NP_OFILE_Y=1
 # Do not edit!
 NP_OFILE=$((${NP_OFILE_X} * ${NP_OFILE_Y})) # Output file (process number) for each member
 
-SNO_MEMBERS=${MEMBER}
+SNO_MEMBERS=$((${MEMBER} + 2))
+SNO_MEM_L=$(seq -f %04g ${MEMBER})" mean mdet" # All members + mean + mdet
 #SNO_MEMBERS=1
-SNO_MEM_L=$(seq -f %04g ${SNO_MEMBERS})" mean mdet" # All members + mean + mdet
-#SNO_MEM_L=$(seq -f %04g ${SNO_MEMBERS})" mean" # All members + mean
 #SNO_MEM_L="mdet"
+echo $SNO_MEMBERS
+echo $SNO_MEM_L
 
 # Total SNO processes  
 NP_TOTAL=$((${SNO_MEMBERS} * ${NP_OFILE}))
 
 # Convert variables (Other variables will NOT be included in converted files)
-VARS='"U", "V", "T", "QV", "QHYD", "DENS", "PREC", "MSLP", "Gprs", "PW", "ENGT", "ENGP", "ENGI", "ENGK", "MSE" , "Uprs", "Vprs", "Tprs", "Gprs", "QVprs","QHYDprs"'
+#VARS='"U", "V", "T", "QV", "QHYD", "DENS", "PREC", "MSLP", "Gprs", "PW", "ENGT", "ENGP", "ENGI", "ENGK", "MSE" , "Uprs", "Vprs", "Tprs", "Gprs", "QVprs","QHYDprs"'
+VARS='"U", "V", "T", "QV", "DENS", "PREC", "MSLP"'
 
 TOPO=0 # Process topography file? # 1: Yes, 0: No
 if (( TOPO > 0 )) ; then

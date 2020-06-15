@@ -27,13 +27,7 @@ PRESET='OFP'
 
 #-------------------------------------------------------------------------------
 
-if [ "$PRESET" = 'K' ] || [ "$PRESET" = 'K_rankdir' ]; then
-  config_suffix='K'
-  script_suffix='_K'
-elif [ "$PRESET" = 'K_micro' ]; then
-  config_suffix='K'
-  script_suffix='_K_micro'
-elif [ "$PRESET" = "OFP" ]; then
+if [ "$PRESET" = "OFP" ]; then
   config_suffix='ofp'
   script_suffix='_ofp'
 else
@@ -97,7 +91,7 @@ fi
 
 #-------------------------------------------------------------------------------
 
-if [ "$PRESET" = 'K' ] || [ "$PRESET" = 'K_rankdir' ] || [ "$PRESET" = 'K_micro' ] || [ "$PRESET" = "OFP" ]; then
+if [ "$PRESET" = "OFP" ]; then
   jobname="${SCPNAME}_${SYSNAME}"
   jobid=$(grep 'pjsub Job' ${SCPNAME}${script_suffix}.log | cut -d ' ' -f6)
   logdir="$OUTDIR/exp/${jobid}_${SCPNAME}_${STIME}"

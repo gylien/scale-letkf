@@ -78,12 +78,10 @@ config_file_list $TMPS/config || exit $?
 #-------------------------------------------------------------------------------
 # Add shell scripts and node distribution files into the staging list
 
-cat >> ${STAGING_DIR}/${STGINLIST} << EOF
-${SCRP_DIR}/config.rc|config.rc
-${SCRP_DIR}/config.${job}|config.${job}
-${SCRP_DIR}/${job}.sh|${job}.sh
-${SCRP_DIR}/src/|src/
-EOF
+cp ${SCRP_DIR}/config.rc ${TMP}/
+cp ${SCRP_DIR}/config.${job} ${TMP}/
+cp ${SCRP_DIR}/${job}.sh ${TMP}/
+cp -r ${SCRP_DIR}/src ${TMP}/
 
 #===============================================================================
 # Stage in
@@ -157,7 +155,7 @@ echo
 
 backup_exp_setting $job $TMP $jobid ${job}_job.sh 'o e'
 
-config_file_save $TMPS/config || exit $?
+config_file_save $TMPS || exit $?
 
 archive_log
 
