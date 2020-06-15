@@ -1,0 +1,144 @@
+#!/bin/bash
+#===============================================================================
+#
+#  Settings for cycle.sh
+#
+#===============================================================================
+
+
+#STIME='20190819130000'
+#ETIME='20190819135930'
+
+#STIME='20190903070000'
+#ETIME='20190903075930'
+
+STIME='20190824150000'
+ETIME='20190824155930'
+
+#STIME='20190910090000'
+#ETIME='20190910095930'
+
+
+#ETIME=$STIME
+
+TIME_LIMIT='2:30:00'
+CYCLE=
+CYCLE_SKIP=1
+
+ISTEP=
+FSTEP= 
+
+CONF_MODE="static"
+DACYCLE=1
+DIRECT_TRANSFER=1
+
+# Run fcst from analysis ensemble mean by dacycle-forecast members
+DACYCLE_RUN_FCST=0
+
+# Maximum number of dacycle forecasts 
+MAX_DACYCLE_RUN_FCST=0
+
+# Number of dafcst members
+NUM_DACYCLE_FCST_MEM=10
+
+# Forecast time for dacycle-forecast members that will be initiated from the analysis ensemble mean
+DACYCLE_RUN_FCST_TIME=1800 # sec
+
+# Cycle # of 1st dacycle-forecast start
+ICYC_DACYCLE_RUN_FCST=1
+
+# Cycle # of 1st DA cycle starts after spin-up forecast
+ICYC_DACYCLE_RUN_ANALYSIS=1
+
+# GrADS output from dafcst
+OUT_GRADS_DAFCST=0
+
+# GrADS output from dafcst (all variables: u, v, w, t, p, qv, qc, qr, qi, qs, qg, PW, PRCP)
+OUT_GRADS_DAFCST_ALL=0
+
+# NetCDF output from dafcst
+OUT_NETCDF_DAFCST=0
+
+# GrADS output of ensemble mean 
+OUT_MEAN_GRADS=0
+
+# Output PAWR obs (GrADS)
+OUT_PAWR_GRADS=0
+
+# Use mdet for extended forecasts
+USE_MDET_FCST=0
+
+# Observation departure output
+OBSDEP_OUT=0
+
+#===============================================================================
+# Forecast settings
+
+FCSTOUT=30
+ADAPTINFL=0      # Adaptive inflation
+                 #  0: OFF
+                 #  1: ON
+ADDINFL=0        # Additive inflation
+                 #  0: OFF
+                 #  1: ON
+
+#===============================================================================
+
+MAKEINIT=0       # 0: No
+                 # 1: Yes
+
+#===============================================================================
+# Diagnostic output settings
+
+                 #      anal              gues              history
+                 #      mean/sprd members mean/sprd members mean members
+OUT_OPT=7        # 1:   o         o       o         o       o    o
+                 # 2:   o         o       o         o       o
+                 # 3:   o         o       o         o
+                 # 4:   o         o       o
+                 # 5:   o         *       o                               * = every $OUT_CYCLE_SKIP cycles and the last cycle
+                 # 6:   o         **      o                               ** = only the last cycle
+                 # 7:   o         **
+
+OUT_CYCLE_SKIP=1
+
+                 #      topo
+TOPOOUT_OPT=2    # 1:   o
+                 # 2:   (none)
+
+                 #      landuse
+LANDUSEOUT_OPT=2 # 1:   o
+                 # 2:   (none)
+
+                 #      bdy
+                 #      mean members
+BDYOUT_OPT=3     # 1:   o    o
+                 # 2:   o
+                 # 3:   (none)
+
+                 #      obsgues obsanal obsdep
+OBSOUT_OPT=4     # 1:   o       o       o
+                 # 2:   o               o
+                 # 3:                   o
+                 # 4:   (none)
+
+                 #      topo landuse bdy perturb        scale
+                 #      log  log     log (not finished) log
+LOG_OPT=2        # 1:   o    o       o   o              o
+                 # 2:   o    o       o                  o
+                 # 3:                                   o
+                 # 4:   (none)
+
+LOG_TYPE=2       # 1:   Only save the log file from the head process
+                 # 2:   Save all log files
+                 # 3:   Save all log files in an archive file
+                 # 4:   Save all log files in a compressed archive file
+
+SPRD_OUT=0       # 0: No
+                 # 1: Yes
+RTPS_INFL_OUT=0  # 0: No
+                 # 1: Yes
+NOBS_OUT=0       # 0: No
+                 # 1: Yes
+
+#===============================================================================
