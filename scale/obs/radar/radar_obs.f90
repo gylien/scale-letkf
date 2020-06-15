@@ -423,6 +423,10 @@ SUBROUTINE calc_ref_vr(qv,qc,qr,qci,qs,qg,u,v,w,t,p,az,elev,ref,vr)
       fws= qr / ( qr + qs )
     ENDIF
 
+    if ( .not. USE_METHOD3_REF_MELT ) then
+      Fs = 0.0_r_size
+      Fg = 0.0_r_size
+    endif 
 
     !Correct the rain, snow and hail mixing ratios assuming
     !that we have a mixture due to melting.
@@ -457,9 +461,11 @@ SUBROUTINE calc_ref_vr(qv,qc,qr,qci,qs,qg,u,v,w,t,p,az,elev,ref,vr)
 
     ENDIF
     IF( qmg .GT. 0.0d0 )THEN
-    zmg=( 0.809 + 10.13*fwg -5.98*(fwg**2) )*1.0d5
-    zmg= zmg * ( ro * qmg * 1.0d3 )**( 1.48 + 0.0448*fwg - 0.0313*(fwg**2) )
-    ENDIF
+!!!    zmg=( 0.809 + 10.13*fwg -5.98*(fwg**2) )*1.0d5
+!!!    zmg= zmg * ( ro * qmg * 1.0d3 )**( 1.48 + 0.0448*fwg - 0.0313*(fwg**2) ) !!! hail
+    zmg=( 0.0358 + 5.27*fwg -9.51*(fwg**2) + 4.68 *(fwg**3) )*1.0d5
+    zmg= zmg * ( ro * qmg * 1.0d3 )**( 1.70 + 0.020*fwg + 0.287 * (fwg**2) - 0.186*(fwg**3) ) !!! graupel (A. Amemiya 2020)
+     ENDIF
 
     ref = zr +  zg  + zs + zms + zmg
 
@@ -749,7 +755,12 @@ END SUBROUTINE write_obs_radar
 !-----------------------------------------------------------------------
 subroutine read_obs_radar_toshiba(cfile, obs)
   use iso_c_binding
+#ifdef MPW
+  use read_toshiba_mpr_f
+#else
   use read_toshiba_f
+#endif
+
 #ifdef JITDT
   use jitdt_read_toshiba_f
 #endif
@@ -773,19 +784,38 @@ subroutine read_obs_radar_toshiba(cfile, obs)
 !  REAL(r_sngl) :: tmp
 !  INTEGER :: n,iunit,ios
 
-  integer, parameter :: n_type = 3
   character(len=1024) :: jitdt_place
+#ifdef MPW
+  integer, parameter :: n_type = 2
+  character(len=4), parameter :: file_type_sfx(n_type) = &
+   (/'.ze', '.vr'/)
+  logical, parameter :: input_is_dbz = .true.
+  integer, parameter :: opt_verbose = 0 !!! for MP-PAWR toshiba format    
+
+  integer :: access !FILE INQUIRY
+  integer :: ios
+  integer(4),save :: shadow_na, shadow_ne
+  integer(4):: tmpshadow
+  integer(2), allocatable ,save :: shadow(:,:)
+  real(8),save :: shadow_del_az
+#else
+  integer, parameter :: n_type = 3
   character(len=4), parameter :: file_type_sfx(n_type) = &
     (/'.ze', '.vr', '.qcf'/)
   logical, parameter :: input_is_dbz = .true.
+#endif
 
+#ifdef MPW
+  type(c_mppawr_header) :: hd(n_type)
+#else
   type(c_pawr_header) :: hd(n_type)
+#endif
 !  real(kind=c_float) :: az(AZDIM, ELDIM, n_type)
 !  real(kind=c_float) :: el(AZDIM, ELDIM, n_type)
 !  real(kind=c_float) :: rtdat(RDIM, AZDIM, ELDIM, n_type)
-  real(kind=c_float), allocatable :: rtdat(:, :, :, :)
-  real(kind=c_float), allocatable :: az(:, :, :)
-  real(kind=c_float), allocatable :: el(:, :, :)
+  real(kind=c_float), allocatable, save :: rtdat(:, :, :, :)
+  real(kind=c_float), allocatable, save :: az(:, :, :)
+  real(kind=c_float), allocatable, save :: el(:, :, :)
   integer :: j, ierr, ierr2
   character(len=3) :: fname
   integer, save::i=0
@@ -799,13 +829,15 @@ subroutine read_obs_radar_toshiba(cfile, obs)
   real(r_size), allocatable :: grid_lon_vr(:),  grid_lat_vr(:),  grid_z_vr(:)
 
   character(len=1024) :: input_fname(n_type)
-  integer na, nr, ne, ia, ir, ie
-  real(r_size) :: lon0, lat0, z0
+  integer ia, ir, ie
   real(r_size) :: dlon, dlat
-  real(r_size) :: missing
   integer :: nlon , nlat , nlev
   integer(8) nobs_sp
 
+  integer,save :: na, nr, ne
+  real(r_size),save :: lon0, lat0, z0
+  real(r_size),save :: missing
+  integer,save :: range_res
 
   real(r_size) :: max_obs_ze , min_obs_ze , max_obs_vr , min_obs_vr 
   integer :: nobs_ze, nobs_vr
@@ -824,163 +856,248 @@ subroutine read_obs_radar_toshiba(cfile, obs)
   character(len=8)  :: date
   character(len=10) :: time
   character(len=90) :: plotname
-  character(len=19) :: timelabel
 #endif
+  character(len=19) :: timelabel
 
-  integer :: range_res
+  integer :: ii, jj, kk
+
+  real(r_sngl), allocatable :: ref3d(:,:,:)
+  character(len=255) :: filename
+  integer :: irec, iunit, iolen
+  integer :: k
 
   call mpi_timer('', 3)
 
-  if ( OBS_JITDT_CHECK_RADAR_TIME .and. minval(utime_obs) >= 0 ) then
-    if ( .not. obs_da_same_time(utime_obs) ) then
-      if (myrank_o == 0 ) then
-        write(6,'(a)') "Obs & analysis times are different!"
-        write(6,'(a,i4.4,i2.2,i2.2,1x,i2.2,1a,i2.2,1a,i2.2)') "SCALE-LETKF:",TIME_NOWDATE(1),TIME_NOWDATE(2),TIME_NOWDATE(3),&
-                                                                     TIME_NOWDATE(4),":",TIME_NOWDATE(5),":",TIME_NOWDATE(6)
-        write(6,'(a,i4.4,i2.2,i2.2,1x,i2.2,1a,i2.2,1a,i2.2)') "PAWR OBS (previous):",utime_obs(1),utime_obs(2),utime_obs(3),&
-                                                                             utime_obs(4),":",utime_obs(5),":",utime_obs(6)
-        obs%nobs = 0
-      endif
+  RADAR_SO_SIZE_HORI = max( real( DX, kind=r_size ), RADAR_SO_SIZE_HORI )
+  RADAR_SO_SIZE_HORI = max( real( DY, kind=r_size ), RADAR_SO_SIZE_HORI )
 
-      return
+!!! MP-PAWR shadow masking 
+#ifdef MPW
+  if ( USE_PAWR_MASK .and. .not. (allocated(shadow)) ) then
+    if (myrank_o == 0)then
+        write(*, '("reading ", A)') trim(pawr_mask_file)
+        open(99, file = trim(pawr_mask_file), status = "old", access = "stream", form = "unformatted", convert = "little_endian")
+        read(99,iostat=ios) shadow_na, shadow_ne
+        if ( ios == 0 )then
+          allocate(shadow(shadow_na, shadow_ne))
+          read(99,iostat=ios) shadow
+          close(99)
+          if( ios /= 0 ) shadow = 0
+        else
+          write(6,'(3A)') 'file ',trim(pawr_mask_file) ,' not found or unsupported format.'
+          stop 1
+        end if 
+    end if
+    if ( nprocs_o /= 1 )then
+      call MPI_BCAST(shadow_na, 1, MPI_INTEGER4, 0, MPI_COMM_o, ierr)
+      call MPI_BCAST(shadow_ne, 1, MPI_INTEGER4, 0, MPI_COMM_o, ierr)
+      if (myrank_o /= 0) allocate(shadow(shadow_na,shadow_ne))
+      call MPI_BCAST(shadow, shadow_na*shadow_ne, MPI_INTEGER2, 0, MPI_COMM_o, ierr)
+    end if
+  end if
+#endif
+
+  if ( .not. OBS_JITDT_CHECK_RADAR_TIME .or. obs_da_time_compare(utime_obs) == -1 ) then !!! read new data 
+
+    if ( .not. (allocated(rtdat)) ) allocate(rtdat(RDIM, AZDIM, ELDIM, n_type))
+    if ( .not. (allocated(az)) ) allocate(az(AZDIM, ELDIM, n_type))
+    if ( .not. (allocated(el)) ) allocate(el(AZDIM, ELDIM, n_type))
+
+    if (LOG_LEVEL >= 3 .and. myrank_o == 0) then
+      write(*, *) RDIM, AZDIM, ELDIM
+      write(*, *) "dx = ", RADAR_SO_SIZE_HORI
+      write(*, *) "dy = ", RADAR_SO_SIZE_HORI
+      write(*, *) "dz = ", RADAR_SO_SIZE_VERT
     endif
 
-  endif
-
-  allocate(rtdat(RDIM, AZDIM, ELDIM, n_type))
-  allocate(az(AZDIM, ELDIM, n_type))
-  allocate(el(AZDIM, ELDIM, n_type))
-
-  RADAR_SO_SIZE_HORI = max(real(DX,kind=r_size),RADAR_SO_SIZE_HORI)
-  RADAR_SO_SIZE_HORI = max(real(DY,kind=r_size),RADAR_SO_SIZE_HORI)
-
-  if (LOG_LEVEL >= 3 .and. myrank_o == 0) then
-    write(*, *) RDIM, AZDIM, ELDIM
-    write(*, *) "dx = ", RADAR_SO_SIZE_HORI
-    write(*, *) "dy = ", RADAR_SO_SIZE_HORI
-    write(*, *) "dz = ", RADAR_SO_SIZE_VERT
-  endif
-
-  if (myrank_o == 0) then
 #ifdef JITDT
-    if (OBS_USE_JITDT) then
-  !    jitdt_place = trim(OBS_JITDT_DATADIR) !// '/'
-      jitdt_place = trim(OBS_JITDT_IP)
-      write(*, *) "jitdt_place = ", trim(jitdt_place)
-  
-      ierr = jitdt_read_toshiba(n_type, jitdt_place, hd, az, el, rtdat)
-  
-      call mpi_timer('read_obs_radar_toshiba:jitdt_read_toshiba:', 2)
-    else
+    do while ( .not. OBS_JITDT_CHECK_RADAR_TIME .or. obs_da_time_compare(utime_obs) < 0 ) 
+        if (OBS_USE_JITDT) then
+        !    jitdt_place = trim(OBS_JITDT_DATADIR) !// '/'
+          if (myrank_o == 0)then
+            jitdt_place = trim(OBS_JITDT_IP)
+            write(*, *) "jitdt_place = ", trim(jitdt_place)    
+            ierr = jitdt_read_toshiba(n_type, jitdt_place, hd, az, el, rtdat)    
+            call mpi_timer('read_obs_radar_toshiba:jitdt_read_toshiba:', 2)
+          end if
+          call MPI_BCAST(ierr, 1, MPI_INTEGER, 0, MPI_COMM_o, ie)
+          if (ierr /= 0) then
+            obs%nobs = 0
+            return
+          endif
+        else
 #endif
-      do j = 1, n_type
-        input_fname(j) = trim(cfile)
-        call str_replace(input_fname(j), '<type>', trim(file_type_sfx(j)), pos)
-        if (pos == 0) then
-          write (6, '(5A)') "[Error] Keyword '<type>' is not found in '", trim(cfile), "'."
-          stop 1
-        end if
-      end do
-  
-      if (LOG_LEVEL >= 3) then
-        write(*, *) "file1 = ", trim(input_fname(1))
-        write(*, *) "file2 = ", trim(input_fname(2))
-        write(*, *) "file3 = ", trim(input_fname(3))
-      endif
-  
-      do j = 1, n_type
-        ierr = read_toshiba(input_fname(j), hd(j), az(:, :, j), el(:, :, j), rtdat(:, :, :, j))
-        if (LOG_LEVEL >= 3) then
-          write(*, *) "return code = ", ierr
+        if (myrank_o == 0)then
+          do j = 1, n_type
+            input_fname(j) = trim(cfile)
+            call str_replace(input_fname(j), '<type>', trim(file_type_sfx(j)), pos)
+            if (pos == 0) then
+              write (6, '(5A)') "[Error] Keyword '<type>' is not found in '", trim(cfile), "'."
+              stop 1
+            end if
+          end do
+        
+          if (LOG_LEVEL >= 3) then
+            write(*, *) "file1 = ", trim(input_fname(1))
+            write(*, *) "file2 = ", trim(input_fname(2))
+#ifndef MPW
+            write(*, *) "file3 = ", trim(input_fname(3))
+#endif
+          endif
+
+         endif
+
+          do j = 1, n_type
+            if (myrank_o == 0)then
+#ifdef MPW
+              ierr = read_toshiba_mpr(input_fname(j), opt_verbose, hd(j), az(:, :, j), el(:, :, j), rtdat(:, :, :, j))
+#else
+              ierr = read_toshiba(input_fname(j), hd(j), az(:, :, j), el(:, :, j), rtdat(:, :, :, j))
+#endif
+              if (LOG_LEVEL >= 3) then
+                write(*, *) "return code = ", ierr
+              endif
+            end if
+            call MPI_BCAST(ierr, 1, MPI_INTEGER, 0, MPI_COMM_o, ie)
+            if (ierr /= 0) then
+              obs%nobs = 0
+              return
+            endif
+          end do
+        
+#ifdef JITDT
+        end if ! OBS_USE_JITDT
+#endif
+      call mpi_timer('read_obs_radar_toshiba:read_toshiba:', 2, barrier=MPI_COMM_o)
+ 
+      ! Set obs information
+      if (myrank_o == 0) then
+        lon0 = hd(1)%longitude
+        lat0 = hd(1)%latitude
+        z0 = hd(1)%altitude
+        missing = real(hd(1)%mesh_offset, r_size)
+        range_res = hd(1)%range_res
+      
+        nr = hd(1)%range_num
+#ifdef MPW
+        na = hd(1)%ray_num
+#else
+        na = hd(1)%sector_num
+#endif
+        ne = hd(1)%el_num
+    
+        call jst2utc(hd(1)%s_yr, hd(1)%s_mn, hd(1)%s_dy, hd(1)%s_hr, hd(1)%s_mi, hd(1)%s_sc, 0.0_DP, utime_obs)
+        if (myrank_o == 0 ) then
+          write(6,'(a)') "get new data ..."
+          write(6,'(a,i4.4,i2.2,i2.2,1x,i2.2,1a,i2.2,1a,i2.2)') "SCALE-LETKF:",&
+                TIME_NOWDATE(1),TIME_NOWDATE(2),TIME_NOWDATE(3),&
+                TIME_NOWDATE(4),":",TIME_NOWDATE(5),":",TIME_NOWDATE(6)
+          write(6,'(a,i4.4,i2.2,i2.2,1x,i2.2,1a,i2.2,1a,i2.2)') "PAWR OBS:",&
+                utime_obs(1),utime_obs(2),utime_obs(3),&
+                utime_obs(4),":",utime_obs(5),":",utime_obs(6)
         endif
-      end do
-  
+       
+      endif ! [ myrank_o == 0 ]
+
+      ! broadcast obs information
+      call  pawr_toshiba_hd_mpi(lon0, lat0, z0, missing,&
+                               range_res, na, nr, ne, &
+                               AZDIM, ELDIM, n_type, RDIM, &
+                               az, el, rtdat, utime_obs)
+      call mpi_timer('read_obs_radar_toshiba:comm:', 2, barrier=MPI_COMM_o)
+      
+
 #ifdef JITDT
-    end if
+      if ( .not. OBS_JITDT_CHECK_RADAR_TIME) exit
+    enddo !!! while
+
+    if ( OBS_JITDT_CHECK_RADAR_TIME .and. obs_da_time_compare(utime_obs) == 1 ) then !!! data is available but model is behind obs time
+
+      if (myrank_o == 0 ) then
+        write(6,'(a)') "Model is behind observation !"
+        write(6,'(a,i4.4,i2.2,i2.2,1x,i2.2,1a,i2.2,1a,i2.2)') "SCALE-LETKF:",&
+              TIME_NOWDATE(1),TIME_NOWDATE(2),TIME_NOWDATE(3),&
+              TIME_NOWDATE(4),":",TIME_NOWDATE(5),":",TIME_NOWDATE(6)
+        write(6,'(a,i4.4,i2.2,i2.2,1x,i2.2,1a,i2.2,1a,i2.2)') "PAWR OBS:",&
+              utime_obs(1),utime_obs(2),utime_obs(3),&
+              utime_obs(4),":",utime_obs(5),":",utime_obs(6)
+      endif
+        obs%nobs = 0
+      return
+    endif
 #endif
-  end if  ! myrank_o == 0
-
-  call mpi_timer('read_obs_radar_toshiba:read_toshiba:', 2, barrier=MPI_COMM_o )
-  if ( nprocs_o > 1 ) then
-    call MPI_BCAST( ierr, 1, MPI_INTEGER, 0, MPI_COMM_o, ierr2 )
-  endif
-
-  if ( ierr /= 0 ) then 
-    obs%nobs = 0
+  elseif ( obs_da_time_compare(utime_obs) == 0 ) then !!! use previous obs data
+      if (myrank_o == 0 ) then
+        write(6,'(a)') "Model reaches previous obs time."
+        write(6,'(a,i4.4,i2.2,i2.2,1x,i2.2,1a,i2.2,1a,i2.2)') "SCALE-LETKF:",&
+          TIME_NOWDATE(1),TIME_NOWDATE(2),TIME_NOWDATE(3),&
+          TIME_NOWDATE(4),":",TIME_NOWDATE(5),":",TIME_NOWDATE(6)
+      endif
+  else !!! model is behind obs
+    if (myrank_o == 0 ) then
+      write(6,'(a)') "Model is still behind observation !"
+      write(6,'(a,i4.4,i2.2,i2.2,1x,i2.2,1a,i2.2,1a,i2.2)') "SCALE-LETKF:",&
+            TIME_NOWDATE(1),TIME_NOWDATE(2),TIME_NOWDATE(3),&
+            TIME_NOWDATE(4),":",TIME_NOWDATE(5),":",TIME_NOWDATE(6)
+      write(6,'(a,i4.4,i2.2,i2.2,1x,i2.2,1a,i2.2,1a,i2.2)') "PAWR OBS (previous):",&
+            utime_obs(1),utime_obs(2),utime_obs(3),&
+            utime_obs(4),":",utime_obs(5),":",utime_obs(6)
+    endif ! [ myrank_o == 0 ]
+      obs%nobs = 0
     return
   endif
 
-  ! Set obs information
-  if (myrank_o == 0) then
-    lon0 = hd(1)%longitude
-    lat0 = hd(1)%latitude
-    z0 = hd(1)%altitude
-    missing = real(hd(1)%mesh_offset, r_size)
-    range_res = hd(1)%range_res
-
-    na = hd(1)%sector_num
-    nr = hd(1)%range_num
-    ne = hd(1)%el_num
-
-    call jst2utc(hd(1)%s_yr, hd(1)%s_mn, hd(1)%s_dy, hd(1)%s_hr, hd(1)%s_mi, hd(1)%s_sc, 0.0_DP, utime_obs)
-
-  endif
-
-  ! broadcast obs information
-  call  pawr_toshiba_hd_mpi(lon0, lat0, z0, missing,&
-                           range_res, na, nr, ne, &
-                           AZDIM, ELDIM, n_type, RDIM, &
-                           az, el, rtdat, utime_obs)
-
-  call mpi_timer('read_obs_radar_toshiba:comm:', 2, barrier=MPI_COMM_o)
-
   if (LOG_LEVEL >= 2 .and. myrank_o == 0) then
-    write(*, '(I4.4, "-", I2.2, "-", I2.2, "T", I2.2, ":", I2.2, ":", I2.2, &
-         &     " -> ", I4.4, "-", I2.2, "-", I2.2, "T", I2.2, ":", I2.2, ":", I2.2)') &
-         & hd(1)%s_yr, hd(1)%s_mn, hd(1)%s_dy, hd(1)%s_hr, hd(1)%s_mi, hd(1)%s_sc, &
-         & hd(1)%e_yr, hd(1)%e_mn, hd(1)%e_dy, hd(1)%e_hr, hd(1)%e_mi, hd(1)%e_sc
-    write(*, *) lon0, lat0, z0
-    write(*, *) hd(1)%range_num, hd(1)%sector_num, hd(1)%el_num
+!    write(*, '(I4.4, "-", I2.2, "-", I2.2, "T", I2.2, ":", I2.2, ":", I2.2, &
+!         &     " -> ", I4.4, "-", I2.2, "-", I2.2, "T", I2.2, ":", I2.2, ":", I2.2)') &
+!         & hd(1)%s_yr, hd(1)%s_mn, hd(1)%s_dy, hd(1)%s_hr, hd(1)%s_mi, hd(1)%s_sc, &
+!         & hd(1)%e_yr, hd(1)%e_mn, hd(1)%e_dy, hd(1)%e_hr, hd(1)%e_mi, hd(1)%e_sc
+    write(*, '(I4.4, "-", I2.2, "-", I2.2, "T", I2.2, ":", I2.2, ":", I2.2)') &
+         & utime_obs(1), utime_obs(2), utime_obs(3), utime_obs(4), utime_obs(5), utime_obs(6)
+     write(*, *) lon0, lat0, z0
+    write(*, *)   na,   nr, ne
     write(*, *) "missing = ", missing
   endif
 
-  if ( OBS_JITDT_CHECK_RADAR_TIME ) then
-    if ( .not. obs_da_same_time(utime_obs) ) then
-      if (myrank_o == 0 ) then
-        write(*,*) "Obs & analysis times are different!"
-        write(6,'(a,i4.4,i2.2,i2.2,1x,i2.2,1a,i2.2,1a,i2.2)') "SCALE-LETKF:",TIME_NOWDATE(1),TIME_NOWDATE(2),TIME_NOWDATE(3),&
-                                                                     TIME_NOWDATE(4),":",TIME_NOWDATE(5),":",TIME_NOWDATE(6)
-        write(6,'(a,i4.4,i2.2,i2.2,1x,i2.2,1a,i2.2,1a,i2.2)') "PAWR OBS:",utime_obs(1),utime_obs(2),utime_obs(3),&
-                                                                          utime_obs(4),":",utime_obs(5),":",utime_obs(6)
-        obs%nobs = 0
-      endif
-
-      return
-    endif
-  endif
 
   allocate(ze(na, nr, ne), vr(na, nr, ne), qcflag(na, nr, ne), attenuation(na, nr, ne))
 
+#ifndef MPW
   valid_qcf = 0
   do j = 1, 8  
     if(qcf_mask(j) > 0) valid_qcf = ibset(valid_qcf, j - 1) 
   end do
+#endif
 
-!$omp parallel do private(ia, ir, ie)
+!$omp parallel do private(ia, ir, ie,tmpshadow)
   do ie = 1, ne
      do ir = 1, nr
         do ia = 1, na
            ze(ia, ir, ie) = rtdat(ir, ia, ie, 1)
            vr(ia, ir, ie) = rtdat(ir, ia, ie, 2)                                                                      
-           tmp_qcf = int(rtdat(ir, ia, ie, 3), int1)
 
  !          qcf_count(tmp_qcf)=qcf_count(tmp_qcf)+1
-           
-           if(iand(valid_qcf, tmp_qcf) == 0) then      
-              qcflag(ia, ir, ie) = 0.0d0 !valid
-           else
-              qcflag(ia, ir, ie) = 1000.0d0 !invalid
+
+#ifdef MPW
+           qcflag(ia, ir, ie) = 0.0d0 !valid
+           if ( USE_PAWR_MASK .and. allocated(shadow) ) then
+             shadow_del_az = 360.0d0 / shadow_na
+             if (ie <= shadow_ne) then
+               tmpshadow = shadow(min(shadow_na,nint(az(ia, ie, 1) / shadow_del_az) + 1), ie)
+               if(tmpshadow /= 0) then
+                 qcflag(ia, tmpshadow:, ie) = 1000.0d0  !invalid
+               end if
+             end if
            end if
+#else
+           tmp_qcf = int(rtdat(ir, ia, ie, 3), int1)
+           if(iand(valid_qcf, tmp_qcf) == 0) then      
+             qcflag(ia, ir, ie) = 0.0d0 !valid
+           else
+             qcflag(ia, ir, ie) = 1000.0d0 !invalid
+           end if
+#endif
+
            if(vr(ia, ir, ie) > RADAR_MAX_ABS_VR .or. vr(ia, ir, ie) < -RADAR_MAX_ABS_VR) vr(ia, ir, ie) = missing
            attenuation(ia, ir, ie) = 1.0d0 !not implemented yet
         end do
@@ -1007,7 +1124,6 @@ subroutine read_obs_radar_toshiba(cfile, obs)
 
   call mpi_timer('read_obs_radar_toshiba:radar_georeference:', 2, barrier=MPI_COMM_o)
 
-  deallocate(az, el)
 
 !  write(*, *) "call define_grid"
   call define_grid(lon0, lat0, nr, rrange, rrange(nr), RADAR_ZMAX, & ! input
@@ -1032,10 +1148,6 @@ subroutine read_obs_radar_toshiba(cfile, obs)
   if(allocated(qcflag)) deallocate(qcflag)
   if(allocated(attenuation)) deallocate(attenuation)
   if(allocated(rrange)) deallocate(rrange)
-  if(allocated(radlon)) deallocate(radlon)
-  if(allocated(radlat)) deallocate(radlat)
-  if(allocated(radz)) deallocate(radz)
-
 
   call mpi_timer('read_obs_radar_toshiba:radar_superobing:', 2, barrier=MPI_COMM_o)
 
@@ -1046,14 +1158,17 @@ subroutine read_obs_radar_toshiba(cfile, obs)
   call MPI_BCAST(grid_ze, nobs_sp, MPI_DOUBLE_PRECISION, 0, MPI_COMM_o, ierr)
   call MPI_BCAST(grid_vr, nobs_sp, MPI_DOUBLE_PRECISION, 0, MPI_COMM_o, ierr)
   call MPI_BCAST(grid_count_ze, nobs_sp, MPI_INTEGER8, 0, MPI_COMM_o, ierr)
+  call MPI_BCAST(grid_count_vr, nobs_sp, MPI_INTEGER8, 0, MPI_COMM_o, ierr)
   call mpi_timer('read_obs_radar_toshiba:plot_comm:', 2, barrier=MPI_COMM_o)
 
 
 !!!!! check
 !write(*,*) nlon,nlat,nlev,nobs_sp
 
-
-
+  if ( OUT_PAWR_GRADS ) then
+    if (.not. allocated(ref3d) ) allocate(ref3d(nlon,nlat,nlev))
+    ref3d = undef
+  endif
 
   obs%meta(1) = lon0
   obs%meta(2) = lat0
@@ -1062,8 +1177,18 @@ subroutine read_obs_radar_toshiba(cfile, obs)
   obs%nobs = 0
   obs_ref%nobs = 0
   do idx = 1, nobs_sp
+
+    ! Thinning
+    ii = nint( ( grid_lon_ze(idx) - lon(1) ) / dlon ) + 1
+    jj = nint( ( grid_lat_ze(idx) - lat(1) ) / dlat ) + 1
+    kk = nint( ( grid_z_ze(idx) - z(1) ) / RADAR_SO_SIZE_VERT ) + 1
+
+    if ( mod(ii, RADAR_THIN_HORI) /= 0 .or. mod(jj, RADAR_THIN_HORI) /= 0 .or. &
+         mod(kk, RADAR_THIN_VERT) /= 0 ) cycle
+
     if (grid_count_ze(idx) > 0) then
       obs%nobs = obs%nobs + 1
+
       ! Count refrectivity obs ( > MIN_RADAR_REF ) below RADAR_ZMAX
       if ( grid_ze(idx) > MIN_RADAR_REF .and. grid_z_ze(idx) < RADAR_ZMAX ) then
         obs_ref%nobs = obs_ref%nobs + 1
@@ -1085,6 +1210,24 @@ subroutine read_obs_radar_toshiba(cfile, obs)
   min_obs_vr = huge(1.0d0)
   max_obs_vr = -huge(1.0d0)
   do idx = 1, nobs_sp
+
+    ii = nint( ( grid_lon_ze(idx) - lon(1) ) / dlon ) + 1
+    jj = nint( ( grid_lat_ze(idx) - lat(1) ) / dlat ) + 1
+    kk = nint( ( grid_z_ze(idx) - z(1) ) / RADAR_SO_SIZE_VERT ) + 1
+    if ( OUT_PAWR_GRADS ) then
+      if ( ii > 0 .and. ii <= nlon .and. &
+           jj > 0 .and. jj <= nlat .and. &
+           kk > 0 .and. kk <= nlev .and. &
+           grid_count_ze(idx) > 0 .and. &
+           grid_ze(idx) > 0.0_r_size ) then
+        ref3d(ii,jj,kk) = 10.0*log10(grid_ze(idx))
+      endif
+    endif
+
+    ! Thinning
+    if ( mod(ii, RADAR_THIN_HORI) /= 0 .or. mod(jj, RADAR_THIN_HORI) /= 0 .or. &
+         mod(kk, RADAR_THIN_VERT) /= 0 ) cycle
+
     if (grid_count_ze(idx) > 0) then
       n = n + 1
       obs%elm(n) = id_radar_ref_obs
@@ -1092,6 +1235,12 @@ subroutine read_obs_radar_toshiba(cfile, obs)
       obs%lat(n) = grid_lat_ze(idx)
       obs%lev(n) = grid_z_ze(idx)
       obs%dat(n) = grid_ze(idx)
+      ! Add RADAR_BIAS_CONST_DBZ in dBZ
+      if ( RADAR_BIAS_COR_RAIN .and. grid_ze(idx) > MIN_RADAR_REF ) then 
+        obs%dat(n) = grid_ze(idx) * RADAR_BIAS_RAIN_CONST
+      elseif ( RADAR_BIAS_COR_CLR .and. grid_ze(idx) < MIN_RADAR_REF )  then
+        obs%dat(n) = grid_ze(idx) * RADAR_BIAS_CLR_CONST
+      endif
       obs%err(n) = OBSERR_RADAR_REF
       obs%typ(n) = 22
       obs%dif(n) = 0.0d0
@@ -1105,7 +1254,12 @@ subroutine read_obs_radar_toshiba(cfile, obs)
         obs_ref%lon(n_ref) = grid_lon_ze(idx)
         obs_ref%lat(n_ref) = grid_lat_ze(idx)
         obs_ref%lev(n_ref) = grid_z_ze(idx)
-        obs_ref%dat(n_ref) = grid_ze(idx)
+        if ( RADAR_BIAS_COR_RAIN ) then
+          ! Add RADAR_BIAS_CONST_DBZ in dBZ
+          obs_ref%dat(n_ref) = grid_ze(idx) * RADAR_BIAS_RAIN_CONST
+        else
+          obs_ref%dat(n_ref) = grid_ze(idx)
+        end if
       end if
     end if
 
@@ -1135,15 +1289,47 @@ subroutine read_obs_radar_toshiba(cfile, obs)
 
 #ifdef PLOT_DCL
   if (PLOT_OBS)then
-
+  
     call TIME_gettimelabel(timelabel)
     plotname = "obs_dbz_"//trim(timelabel(1:15))
-    call plot_dbz_DCL_obs(obs_ref%nobs, real(obs_ref%dat), real(obs_ref%lon), real(obs_ref%lat), real(obs_ref%lev), &
-                          nlon, nlat, real(lon), real(lat), real(dlon), real(dlat), trim(plotname))
-
+    call MPI_ALLREDUCE( MPI_IN_PLACE, radlon, na*ne*nr, MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_o, ierr)
+    call MPI_ALLREDUCE( MPI_IN_PLACE, radlat, na*ne*nr, MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_o, ierr)
+    call MPI_ALLREDUCE( MPI_IN_PLACE, radz, na*ne*nr, MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_o, ierr)
+    call plot_dbz_DCL_obs( &
+    obs_ref%nobs, real(obs_ref%dat), real(obs_ref%lon), real(obs_ref%lat), real(obs_ref%lev), &
+    nlon, nlat, real(lon), real(lat), real(dlon), real(dlat), na, nr, ne, real(az(:,1,1)), real(radlon), real(radlat), real(radz), &
+     trim(plotname) )
   endif
   call mpi_timer('read_obs_radar_toshiba:plot_obs:', 2, barrier=MPI_COMM_o)
 #endif
+  if(allocated(radlon)) deallocate(radlon)
+  if(allocated(radlat)) deallocate(radlat)
+  if(allocated(radz)) deallocate(radz)
+  deallocate(az, el)
+
+  if ( OUT_PAWR_GRADS ) then
+    if ( myrank_o == 0 ) then
+      call TIME_gettimelabel(timelabel)
+      filename = trim(OUT_PAWR_GRADS_PATH)//"/pawr_ref3d_"//trim(timelabel(1:15))//".grd"
+      iunit = 55
+      inquire (iolength=iolen) iolen
+      open(iunit, file=trim(filename), form='unformatted', access='direct', &
+            status='unknown', convert='big_endian', recl=nlon*nlat*iolen)
+      irec = 0
+
+      do k = 1, nlev
+        irec = irec + 1
+        write(iunit, rec=irec) ref3d(:,:,k)
+      enddo
+      write(6,'(a)') 'PAWR GrADS info'
+      write(6,'(i5,2f13.8)') nlon, lon(1), dlon
+      write(6,'(i5,2f13.8)') nlat, lat(1), dlat
+      write(6,'(i5,2f13.8)') nlev, z(1), RADAR_SO_SIZE_VERT
+      write(6,'(a)') ''
+
+      close( iunit )
+    endif
+  endif
 
   call obs_info_deallocate( obs_ref )
   if (myrank_o /= 0) then
@@ -1175,6 +1361,8 @@ subroutine read_obs_radar_toshiba(cfile, obs)
 !  if(allocated(radlon)) deallocate(radlon)
 !  if(allocated(radlat)) deallocate(radlat)
 !  if(allocated(radz)) deallocate(radz)
+
+
 
   if(allocated(grid_index)) deallocate(grid_index)
   if(allocated(grid_ze)) deallocate(grid_ze)
@@ -1299,9 +1487,9 @@ subroutine read_obs_radar_jrc(cfile, obs)
   obs%meta(3) = 82.0_r_size
 
   ! count number of obs 
-  do k = 1, zdim
-    do j = 1, ydim
-      do i = 1, xdim
+  do k = 1, zdim, RADAR_THIN_VERT
+    do j = 1, ydim, RADAR_THIN_HORI
+      do i = 1, xdim, RADAR_THIN_HORI
         if (zh3d(i,j,k) /= fill_zh .and. vr3d(i,j,k) /= fill_vr)then
           obs%nobs = obs%nobs + 2
         endif
@@ -1320,9 +1508,9 @@ subroutine read_obs_radar_jrc(cfile, obs)
   min_obs_vr = huge(1.0)
   max_obs_vr = -huge(1.0)
 
-  do k = 1, zdim
-    do j = 1, ydim
-      do i = 1, xdim
+  do k = 1, zdim, RADAR_THIN_VERT
+    do j = 1, ydim, RADAR_THIN_HORI
+      do i = 1, xdim, RADAR_THIN_HORI
         if (zh3d(i,j,k) /= fill_zh .and. vr3d(i,j,k) /= fill_vr)then
           ! zh
           n = n + 1
@@ -1331,6 +1519,12 @@ subroutine read_obs_radar_jrc(cfile, obs)
           obs%lat(n) = real(lat1d(j), kind=r_size)
           obs%lev(n) = real(z1d(k), kind=r_size)
           obs%dat(n) = real(zh3d(i,j,k) * sf_zh, kind=r_size)
+          ! Add RADAR_BIAS_CONST_DBZ in dBZ
+          if ( RADAR_BIAS_COR_RAIN .and. obs%dat(n) > MIN_RADAR_REF ) then
+            obs%dat(n) = real(zh3d(i,j,k) * sf_zh, kind=r_size) * RADAR_BIAS_RAIN_CONST
+          elseif ( RADAR_BIAS_COR_CLR .and. obs%dat(n) < MIN_RADAR_REF ) then
+            obs%dat(n) = real(zh3d(i,j,k) * sf_zh, kind=r_size) * RADAR_BIAS_CLR_CONST
+          endif
           obs%err(n) = OBSERR_RADAR_REF
           obs%typ(n) = 22
           obs%dif(n) = 0.0_r_size
@@ -1372,24 +1566,41 @@ subroutine read_obs_radar_jrc(cfile, obs)
   return
 end subroutine read_obs_radar_jrc
 
-function obs_da_same_time(utime_obs)
+function obs_da_time_compare(utime_obs)
+  use scale_calendar, only: &
+      calendar_date2daysec
   use scale_time, only: &
       TIME_NOWDATE
   implicit none
 
   integer :: utime_obs(6)
+  integer :: obs_da_time_compare
   integer :: i
-  logical :: obs_da_same_time
 
-  obs_da_same_time = .true.
-  do i = 1, 6
-    if (utime_obs(i) /= TIME_NOWDATE(i)) then
-      obs_da_same_time = .false.
-      exit
-    endif
-  enddo
+  real(r_dble) :: abssec,abssec_obs
+  integer :: iabsday
 
-end function obs_da_same_time
+  integer,parameter :: timeslot_sec = 30 
+
+  if (minval(utime_obs) < 0)then
+   obs_da_time_compare = -1 !!! no obs 
+   return
+  endif
+
+  call calendar_date2daysec(iabsday,abssec_obs,utime_obs,0.D0,0)
+  abssec_obs = abssec_obs + real(iabsday*86400)
+  call calendar_date2daysec(iabsday,abssec,TIME_NOWDATE,0.D0,0)
+  abssec     = abssec     + real(iabsday*86400)
+
+if (int(abssec_obs) - int(abssec) .gt. timeslot_sec/2 )then
+  obs_da_time_compare = 1
+elseif (int(abssec) - int(abssec_obs) .ge. timeslot_sec/2 )then
+  obs_da_time_compare = -1
+else
+  obs_da_time_compare = 0
+endif
+return
+end function obs_da_time_compare
 
 !=======================================================================
 end module radar_obs

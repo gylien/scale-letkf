@@ -18,7 +18,6 @@ module common_scalerm
     nitmax, &
     myrank_to_mem, &
     myrank_to_pe, &
-    myrank_use, &
     myrank_use_da, &
     myrank_use_obs, &
     mydom, &
@@ -434,8 +433,11 @@ subroutine scalerm_setup(execname)
         scalerm_memf = memf_mdet
       else if (scalerm_mem <= mem_da+MAX_DACYCLE_RUN_FCST .and. scalerm_mem > mem_da) then
 
-        scalerm_memf = memf_mean
-
+        if ( USE_MDET_FCST ) then
+          scalerm_memf = memf_mdet
+        else
+          scalerm_memf = memf_mean
+        endif
 !        write (fmttmp, '(I2)') memflen
 !        write (scalerm_memf, '(I'//trim(fmttmp)//'.'//trim(fmttmp)//')')  min(scalerm_mem - mem_da, MEMBER)
         myrank_use_da = .false.
@@ -445,7 +447,16 @@ subroutine scalerm_setup(execname)
         scalerm_memf_ini = trim(scalerm_memf_dafcst) ! init file
         scalerm_memf_dafcst = "f"//trim(scalerm_memf_dafcst)
 
-        scalerm_memf_bdy = memf_mean
+        if ( USE_DIF_BDY_DAFCST ) then
+          scalerm_memf_bdy = trim( scalerm_memf_dafcst )
+        else
+          scalerm_memf_bdy = memf_mean
+        endif
+
+        if ( USE_DIF_INIT_DAFCST ) then
+          scalerm_memf_ini = trim( scalerm_memf_dafcst ) 
+        endif
+
 
         ! Dacycle-forecast members read different restart files.
         !
@@ -985,7 +996,7 @@ subroutine scalerm_finalize(execname)
     exec_model = .true.
   end if
 
-  if (myrank_use .and. scalerm_run) then
+  if ( scalerm_run ) then
     if (execname_ == 'SCALERM' .or. execname_ == 'DACYCLE') then
       ! check data
       if( ATMOS_sw_check ) call ATMOS_vars_restart_check
@@ -995,8 +1006,8 @@ subroutine scalerm_finalize(execname)
       call PROF_rapend  ('Monit', 2)
 
       call PROF_rapstart('File', 2)
-
       call FILE_HISTORY_finalize
+
     end if
 
     if (exec_model) then
@@ -1010,29 +1021,29 @@ subroutine scalerm_finalize(execname)
   end if
 
   call FILE_Close_All
+  call PROF_rapend  ('File', 2)
 
-  if (myrank_use .and. scalerm_run) then
+  if ( scalerm_run ) then
     if (execname_ == 'SCALERM' .or. execname_ == 'DACYCLE') then
-      call PROF_rapend  ('File', 2)
-
-      call PROF_rapend  ('All', 1)
     end if
 
-    if (exec_model) then
-      call PROF_rapreport
-    end if
+    call PROF_rapend  ('All', 1)
+    call PROF_rapreport
+
   end if
 
-  if (myrank_use) then
-    if (NUM_DOMAIN <= 1) then ! When NUM_DOMAIN >= 2, 'PRC_MPIfinish' in SCALE library will free the communicator
-      call MPI_COMM_FREE(MPI_COMM_d, ierr)
-    end if
-    call MPI_COMM_FREE(MPI_COMM_a, ierr)
-    if ( myrank_use_da ) then
-      call MPI_COMM_FREE(MPI_COMM_da, ierr)
-    endif
-!    call MPI_COMM_FREE(MPI_COMM_u, ierr)
-  end if
+!  if (myrank_use) then
+!    if (NUM_DOMAIN <= 1) then ! When NUM_DOMAIN >= 2, 'PRC_MPIfinish' in SCALE library will free the communicator
+!      call MPI_COMM_FREE(MPI_COMM_d, ierr)
+!    end if
+!
+!    if ( myrank_use_obs ) then
+!      call MPI_COMM_FREE(MPI_COMM_o, ierr)
+!    endif
+!    call MPI_COMM_FREE(MPI_COMM_da, ierr)
+!    call MPI_COMM_FREE(MPI_COMM_a, ierr)
+!!    call MPI_COMM_FREE(MPI_COMM_u, ierr)
+!  end if
 
   ! stop MPI
 !  call PRC_MPIfinish
@@ -1172,6 +1183,129 @@ subroutine resume_state(do_restart_read)
 
   return
 end subroutine resume_state
+
+subroutine set_dafcst( ncycle, dafcst_slist, dafcst_list_last, dafcst_list_sum )
+  use scale_time, only: &
+    TIME_NOWDATE, &
+    TIME_gettimelabel
+  use mod_admin_time, only: &
+    TIME_DTSEC_ATMOS_DA
+  use common_scale, only: &
+    advance_nowdate
+  use scale_precision, only: &
+    RP, DP
+  implicit none
+
+  integer, intent(in) :: ncycle
+  logical, intent(out) :: dafcst_slist( ncycle, ncycle )
+  integer, intent(out) :: dafcst_list_last( ncycle )
+  integer, intent(out) :: dafcst_list_sum( ncycle )
+  integer :: n, nf, mem_f
+  integer :: time_nowdate_org(6)
+
+  logical :: START_FCST
+  character(12) :: str
+  character(len=19) :: timelabel
+
+  integer :: dummy( ncycle )
+
+  time_nowdate_org = TIME_NOWDATE
+
+  dafcst_slist = .false.
+  write(str, '(i8)') NUM_DACYCLE_FCST_MEM
+
+  if ( myrank_a == 0 ) then
+    write(6,'(a)')"### Summary of DA cycles and forecasts ###"
+    write(6,'(a9,1x,a15,1x,3a12)') "  Cycle #", "           time", "  start fcst", "  fcst count", " fcst member"
+  endif
+
+  nf = 0
+  mem_f = 0
+  do n = 1, ncycle
+
+    call advance_nowdate( TIME_NOWDATE, TIME_DTSEC_ATMOS_DA )
+    call TIME_gettimelabel( timelabel )
+
+    if ( ( n >= ICYC_DACYCLE_RUN_FCST ) .and. ( nf < MAX_DACYCLE_RUN_FCST ) ) then
+      START_FCST = .true.
+      nf = nf + 1
+      mem_f = mem_f + 1
+      if ( mem_f > NUM_DACYCLE_FCST_MEM ) then
+        mem_f = 1
+      endif
+
+      dafcst_slist( n, mem_f ) = .true.
+
+    else
+      START_FCST = .false.
+    endif
+
+
+    if ( myrank_a == 0 ) then
+      write(6,'(i9,1x,a15,1x,l12,i12,i12)') n, timelabel(1:15), START_FCST, nf, mem_f
+    endif
+
+  enddo
+  TIME_NOWDATE = time_nowdate_org
+
+  if ( myrank_a == 0 ) then
+    write(6,'(a)')"### Summary of dafcst ###"
+    write(6,'(a9,1x,a15,1x,a)')"cycle", "time,","flag for fcst membsers"
+
+    if ( NUM_DACYCLE_FCST_MEM > 0 ) then
+      do n = 1, ncycle
+        call advance_nowdate( TIME_NOWDATE, TIME_DTSEC_ATMOS_DA )
+        call TIME_gettimelabel( timelabel )
+  
+        write(6,'(i9,1x,a15,1x,' // trim(str) // 'l3)') n, timelabel(1:15), dafcst_slist(n,1:NUM_DACYCLE_FCST_MEM)
+      enddo
+    else
+      write(6,'(a)')"No dafcst"
+    endif
+
+    write(6,'(a)')""
+  endif
+
+  do n = 1, ncycle
+    dummy(n) = n
+  enddo
+  do n = 1, NUM_DACYCLE_FCST_MEM
+    dafcst_list_last(n) = maxval( dummy, dafcst_slist(:,n) )
+  enddo
+
+  do n = 1, ncycle
+    dummy(n) = 1
+  enddo
+  do n = 1, NUM_DACYCLE_FCST_MEM
+    dafcst_list_sum(n) = sum( dummy, dafcst_slist(:,n) )
+  enddo
+
+  TIME_NOWDATE = time_nowdate_org
+
+  return
+end subroutine set_dafcst
+
+function true_mem( dafcst_slist1d )
+  implicit none
+
+  integer :: true_mem
+  logical, intent(in) :: dafcst_slist1d( NUM_DACYCLE_FCST_MEM )
+
+  integer :: m
+
+  true_mem = -1
+  do m = 1, NUM_DACYCLE_FCST_MEM
+    if ( dafcst_slist1d(m) ) then
+      true_mem = m
+    endif
+  enddo
+
+  if ( true_mem < 1 ) then
+    write(6,'(a)')"Error in true_mem/dafcst_slist"
+    stop
+  endif
+
+end function true_mem
 
 !===============================================================================
 end module common_scalerm

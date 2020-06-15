@@ -3,8 +3,9 @@ include ../configure
 PROGS   = obsope #obsmake obssim #dec_prepbufr
 
 OBJS    = obs_tools.o obsope_tools.o \
-          radar_obs.o radar_tools.o read_toshiba.o read_toshiba_f.o
-
+          radar_obs.o radar_tools.o \
+	  read_toshiba$(TOSHIBA_OPT).o read_toshiba$(TOSHIBA_OPT)_f.o
+ 
 COMMON_DIR = ../common
 
 COMMON_OBJS = $(COMMON_DIR)/SFMT.o           \
@@ -32,7 +33,7 @@ LIBS    += $(RT_INCLUDE) $(RT_LDFLAGS)
 endif
 
 ifeq ($(ENABLE_JITDT),T)
-OBJS    += jitdt_read_toshiba.o jitdt_read_toshiba_f.o
+OBJS    += jitdt_read_toshiba$(TOSHIBA_OPT).o jitdt_read_toshiba_f.o
 INCS    += $(JITDT_INC)
 LIBS    += $(JITDT_LIB)
 endif
@@ -74,32 +75,35 @@ obj:	$(OBJS)
 obs_tools.o:	obs_tools.f90 radar_obs.o $(COMMON_DIR)
 	$(FC) $(FOPTS) -c $< -I$(COMMON_DIR) $(INCS) -I$(SCALE_RM_OBJDIR)
 obsope_tools.o:	obsope_tools.f90 obs_tools.o $(COMMON_DIR)
-	$(FC) $(FOPTS) -c $< -I$(COMMON_DIR) $(INCS)
+	$(FC) $(FOPTS) -c $< -I$(COMMON_DIR) $(INCS) -I$(SCALE_RM_OBJDIR)
 
 ifeq ($(ENABLE_JITDT),T)
 ifeq ($(ENABLE_PLOT_DCL),T)
-radar_obs.o:	radar/radar_obs.f90 radar_tools.o read_toshiba_f.o jitdt_read_toshiba_f.o ../common/plot_dbz_DCL_obs.o $(COMMON_DIR)
+radar_obs.o:	radar/radar_obs.f90 radar_tools.o read_toshiba$(TOSHIBA_OPT)_f.o jitdt_read_toshiba_f.o ../common/plot_dbz_DCL_obs.o $(COMMON_DIR)
 else
-radar_obs.o:	radar/radar_obs.f90 radar_tools.o read_toshiba_f.o jitdt_read_toshiba_f.o  $(COMMON_DIR)
+radar_obs.o:	radar/radar_obs.f90 radar_tools.o read_toshiba$(TOSHIBA_OPT)_f.o jitdt_read_toshiba_f.o  $(COMMON_DIR)
 endif
 else
 ifeq ($(ENABLE_PLOT_DCL),T)
-radar_obs.o:	radar/radar_obs.f90 radar_tools.o read_toshiba_f.o ../common/plot_dbz_DCL_obs.o $(COMMON_DIR)
+radar_obs.o:	radar/radar_obs.f90 radar_tools.o read_toshiba$(TOSHIBA_OPT)_f.o ../common/plot_dbz_DCL_obs.o $(COMMON_DIR)
 else
-radar_obs.o:	radar/radar_obs.f90 radar_tools.o read_toshiba_f.o $(COMMON_DIR)
+radar_obs.o:	radar/radar_obs.f90 radar_tools.o read_toshiba$(TOSHIBA_OPT)_f.o $(COMMON_DIR)
 endif
 endif
 	$(FC) $(FOPTS) -c $< -I$(COMMON_DIR) $(INCS)
 radar_tools.o:	radar/radar_tools.f90 $(COMMON_DIR)
 	$(FC) $(FOPTS) -c $< -I$(COMMON_DIR) $(INCS)
 
-read_toshiba.o:	radar/read_toshiba.c radar/read_toshiba.h
+read_toshiba$(TOSHIBA_OPT).o:	radar/read_toshiba$(TOSHIBA_OPT).c radar/read_toshiba$(TOSHIBA_OPT).h
 	$(CC) $(COPTS) -c $<
-read_toshiba_f.o:	radar/read_toshiba_f.f90 read_toshiba.o
+read_toshiba$(TOSHIBA_OPT)_f.o:	radar/read_toshiba$(TOSHIBA_OPT)_f.f90 read_toshiba$(TOSHIBA_OPT).o
 	$(FC) $(FOPTS) -c $<
-jitdt_read_toshiba.o:	radar/jitdt_read_toshiba.c radar/jitdt_read_toshiba.h
+jitdt_read_toshiba$(TOSHIBA_OPT).o:	radar/jitdt_read_toshiba$(TOSHIBA_OPT).c radar/jitdt_read_toshiba$(TOSHIBA_OPT).h
 	$(CC) $(COPTS) -c $< $(JITDT_INC)
-jitdt_read_toshiba_f.o:	radar/jitdt_read_toshiba_f.f90 jitdt_read_toshiba.o read_toshiba_f.o
+jitdt_read_toshiba_mpr.o:	radar/jitdt_read_toshiba_mpr.c radar/jitdt_read_toshiba_mpr.h
+	$(CC) $(COPTS) -c $< $(JITDT_INC)
+
+jitdt_read_toshiba_f.o:	radar/jitdt_read_toshiba_f.f90 jitdt_read_toshiba$(TOSHIBA_OPT).o read_toshiba$(TOSHIBA_OPT)_f.o
 	$(FC) $(FOPTS) -c $<
 
 $(COMMON_DIR):	FORCE

@@ -31,8 +31,8 @@ OBS_OBJS = $(OBS_DIR)/obs_tools.o \
            $(OBS_DIR)/obsope_tools.o \
            $(OBS_DIR)/radar_obs.o \
            $(OBS_DIR)/radar_tools.o \
-           $(OBS_DIR)/read_toshiba.o \
-           $(OBS_DIR)/read_toshiba_f.o
+           $(OBS_DIR)/read_toshiba$(TOSHIBA_OPT).o \
+           $(OBS_DIR)/read_toshiba$(TOSHIBA_OPT)_f.o
 
 SCALE_RM_OBJS = $(shell ls $(SCALE_RM_OBJDIR)/*.o | grep -v "scale-rm.o\|scale-rm_pp.o\|scale-rm_init.o")
 
@@ -42,7 +42,7 @@ LIBS    += $(RT_INCLUDE) $(RT_LDFLAGS)
 endif
 
 ifeq ($(ENABLE_JITDT),T)
-OBS_OBJS += $(OBS_DIR)/jitdt_read_toshiba.o \
+OBS_OBJS += $(OBS_DIR)/jitdt_read_toshiba$(TOSHIBA_OPT).o \
             $(OBS_DIR)/jitdt_read_toshiba_f.o
 INCS    += $(JITDT_INC)
 LIBS    += $(JITDT_LIB)

@@ -26,6 +26,7 @@ if [ -z "$DIRNAME" ]; then
   exit 1
 fi
 
+rm -fr $DIRNAME || exit $?
 mkdir -p $DIRNAME || exit $?
 
 if [ ! -d "$DIRNAME" ]; then
@@ -36,8 +37,6 @@ if [ ! -O "$DIRNAME" ]; then
   echo "[Error] $FUNCNAME: '$DIRNAME' is not owned by you." >&2
   exit 1
 fi
-
-rm -fr $DIRNAME/* || exit $?
 
 #-------------------------------------------------------------------------------
 }
@@ -193,7 +192,12 @@ elif [ "$MPI_TYPE" = 'impi' ]; then
 
   NNP=$(cat ${NODEFILE_DIR}/${NODEFILE} | wc -l)
 
-  $MPIRUN -n $NNP -machinefile ${NODEFILE_DIR}/${NODEFILE} numactl --preferred=1 $PROG $CONF $iters $STDOUT $ARGS
+  if [ ! -z $LOG_APS  ] ;then
+    PROGn=`basename $PROG`
+    $MPIRUN -n $NNP -machinefile ${NODEFILE_DIR}/${NODEFILE} aps -r=aps_result_${PROGn} numactl --preferred=1 $PROG $CONF $STDOUT $ARGS
+  else
+    $MPIRUN -n $NNP -machinefile ${NODEFILE_DIR}/${NODEFILE} numactl --preferred=1 $PROG $CONF $iters $STDOUT $ARGS
+  fi
   res=$?
   if ((res != 0)); then
     echo "[Error] $MPIRUN -n $NNP -machinefile ${NODEFILE_DIR}/${NODEFILE} numactl --preferred=1 $PROG $CONF $iters $STDOUT $ARGS" >&2

@@ -153,7 +153,6 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,addi3d,addi2d)
   var_local(:,6) = VAR_LOCAL_TC(:)
   var_local(:,7) = VAR_LOCAL_RADAR_REF(:)
   var_local(:,8) = VAR_LOCAL_RADAR_VR(:)
-  var_local(:,9) = VAR_LOCAL_H08(:) ! H08
   var_local_n2nc_max = 1
   var_local_n2nc(1) = 1
   var_local_n2n(1) = 1
@@ -1474,8 +1473,10 @@ subroutine obs_local_cal(ri, rj, rlev, rz, nvar, iob, ic, ndist, nrloc, nrdiag)
   integer :: obtyp           ! observation report type
   integer :: obset
   integer :: obidx
-  real(r_size) :: rdx, rdy
+  real(r_size) :: rdx, rdy, rdz
   real(r_size) :: nd_h, nd_v ! normalized horizontal/vertical distances
+
+  integer :: di, dj, dk
 
   nrloc = 0.0d0
   nrdiag = -1.0d0
@@ -1524,10 +1525,6 @@ subroutine obs_local_cal(ri, rj, rlev, rz, nvar, iob, ic, ndist, nrloc, nrdiag)
     nd_v = ABS(LOG(VERT_LOCAL_RAIN_BASE) - LOG(rlev)) / vert_loc_ctype(ic)  ! for rain, use VERT_LOCAL_RAIN_BASE for the base of vertical localization
   else if (obtyp == 22) then ! obtypelist(obtyp) == 'PHARAD'
     nd_v = ABS(obs(obset)%lev(obidx) - rz) / vert_loc_ctype(ic)             ! for PHARAD, use z-coordinate for vertical localization
-#ifdef H08
-  else if (obtyp == 23) then ! obtypelist(obtyp) == 'H08IRB'                ! H08
-    nd_v = ABS(LOG(obsda_sort%lev(iob)) - LOG(rlev)) / vert_loc_ctype(ic)   ! H08 for H08IRB, use obsda2%lev(iob) for the base of vertical localization
-#endif
   else
     nd_v = ABS(LOG(obs(obset)%lev(obidx)) - LOG(rlev)) / vert_loc_ctype(ic)
   end if
@@ -1561,6 +1558,30 @@ subroutine obs_local_cal(ri, rj, rlev, rz, nvar, iob, ic, ndist, nrloc, nrdiag)
     ndist = -1.0d0
     return
   end if
+
+  if ( obtyp == 22 .and. ( RADAR_THIN_LETKF_METHOD > 0 ) ) then ! obtypelist(obtyp) == 'PHARAD'
+    rdz = obs(obset)%lev(obidx) - rz 
+
+    di = int( abs( rdx / RADAR_SO_SIZE_HORI ) )
+    dj = int( abs( rdy / RADAR_SO_SIZE_HORI ) )
+    dk = int( abs( obs(obset)%lev(obidx) - rz ) / RADAR_SO_SIZE_VERT ) 
+
+    select case( RADAR_THIN_LETKF_METHOD )
+    case( 1 )
+      if ( mod( di, RADAR_THIN_LETKF_HGRID ) /= 0 .or. &
+           mod( dj, RADAR_THIN_LETKF_HGRID ) /= 0 .or. &
+           mod( dk, RADAR_THIN_LETKF_VGRID ) /= 0 ) then
+        nrloc = 0.0d0
+        ndist = -1.0d0
+        return
+      endif
+    case default
+      ! No thinning
+    end select
+
+  endif 
+
+
   !
   ! Calculate observational localization
   !
@@ -1569,6 +1590,9 @@ subroutine obs_local_cal(ri, rj, rlev, rz, nvar, iob, ic, ndist, nrloc, nrdiag)
   ! Calculate (observation variance / localization)
   !
   nrdiag = obs(obset)%err(obidx) * obs(obset)%err(obidx) / nrloc
+  if ( RADAR_PQV .and. obelm == id_radar_ref_obs .and. obsda_sort%tm(iob) < 0.0d0 ) then
+    nrdiag = OBSERR_PQ**2 / nrloc
+  endif
 
   return
 end subroutine obs_local_cal

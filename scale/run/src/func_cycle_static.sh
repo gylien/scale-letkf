@@ -510,7 +510,7 @@ echo "Check MPI configuration"
 if ((DACYCLE == 1 )); then
   REQ_MEM=$((MEMBER + 1 + DET_RUN)) # Member + 1 (mean) + 1 (mdet)
   if ((DACYCLE_RUN_FCST == 1)); then
-    REQ_MEM=$((REQ_MEM + MAX_DACYCLE_RUN_FCST))
+    REQ_MEM=$((REQ_MEM + NUM_DACYCLE_FCST_MEM))
   fi
   REQ_PRC=$((REQ_MEM * SCALE_NP))
   NUM_PRC=$((NNODES * PPN))
@@ -926,9 +926,14 @@ while ((time <= ETIME)); do
       elif ((m == $MEMBER_MAX)) && ((DET_RUN == 1 )); then
         mmmm="mdet"
       fi
-      mkdir -p ${OUTDIR[$d]}/${time}/hist/$mmmm
+      mkdir -p ${OUTDIR[$d]}/${time}/hist/d$mmmm
       mkdir -p ${OUTDIR[$d]}/${time}/gues/$mmmm
       mkdir -p ${OUTDIR[$d]}/${time}/anal/$mmmm
+    done
+
+    for m in $(seq 1 $NUM_DACYCLE_FCST_MEM); do
+      mmmm=$(printf %04d $m)
+      mkdir -p ${OUTDIR[$d]}/${time}/hist/f$mmmm
     done
 
     if ((DACYCLE == 1)); then
@@ -937,7 +942,7 @@ while ((time <= ETIME)); do
 #        FILE_HISTORY_DEFAULT_BASENAME="${OUTDIR[$d]}/${time}/hist/<lmember>/history" # DEBUG
         FILE_HISTORY_DEFAULT_BASENAME=""
       else
-        FILE_HISTORY_DEFAULT_BASENAME="${OUTDIR[$d]}/${time}/hist/<member>/history"
+        FILE_HISTORY_DEFAULT_BASENAME="${OUTDIR[$d]}/${time}/hist/<lmember>/history"
       fi
       FILE_HISTORY_OUTPUT_STEP0=".false."
     else
@@ -964,14 +969,14 @@ while ((time <= ETIME)); do
     RESTART_OUT_ADDITIONAL_EFF_MEMBER=
     if ((OUT_OPT <= 3)); then
       RESTART_OUT_ADDITIONAL_COPIES=$((RESTART_OUT_ADDITIONAL_COPIES+1))
-      RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"${OUTDIR[$d]}/${atime}/gues/<member>/init\", "
+      RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"${OUTDIR[$d]}/${time}/gues/<member>/init\", "
       RESTART_OUT_ADDITIONAL_EFF_MEMBER="${RESTART_OUT_ADDITIONAL_EFF_MEMBER}0, "
     elif ((OUT_OPT <= 6)); then
       RESTART_OUT_ADDITIONAL_COPIES=$((RESTART_OUT_ADDITIONAL_COPIES+2))
-      RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"${OUTDIR[$d]}/${atime}/gues/mean/init\", "
+      RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"${OUTDIR[$d]}/${time}/gues/mean/init\", "
       RESTART_OUT_ADDITIONAL_EFF_MEMBER="${RESTART_OUT_ADDITIONAL_EFF_MEMBER}${mmean}, "
       if ((DET_RUN == 1)); then
-        RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"${OUTDIR[$d]}/${atime}/gues/mdet/init\", "
+        RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"${OUTDIR[$d]}/${time}/gues/mdet/init\", "
         RESTART_OUT_ADDITIONAL_EFF_MEMBER="${RESTART_OUT_ADDITIONAL_EFF_MEMBER}${mmdet}, "
       fi
     else
@@ -979,11 +984,22 @@ while ((time <= ETIME)); do
       RESTART_OUT_ADDITIONAL_EFF_MEMBER="0,"
     fi
     if ((SPRD_OUT == 1)); then
+      mkdir -p ${OUTDIR[$d]}/${time}/anal/sprd
+      mkdir -p ${OUTDIR[$d]}/${time}/gues/sprd
+      RESTART_OUT_ADDITIONAL_BASENAME=
+      RESTART_OUT_ADDITIONAL_EFF_MEMBER=
       RESTART_OUT_ADDITIONAL_COPIES=$((RESTART_OUT_ADDITIONAL_COPIES+2))
-      RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"${OUTDIR[$d]}/${atime}/anal/sprd/init\", "
-      RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"${OUTDIR[$d]}/${atime}/gues/sprd/init\", "
+      RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"${OUTDIR[$d]}/${time}/anal/sprd/init\", "
+      RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"${OUTDIR[$d]}/${time}/gues/sprd/init\", "
       RESTART_OUT_ADDITIONAL_EFF_MEMBER="${RESTART_OUT_ADDITIONAL_EFF_MEMBER}${mmean}, ${mmean}, "
+  
+      GUES_SPRD_OUT_BASENAME="${OUTDIR[$d]}/${time}/gues/sprd/init_"
+      ANAL_SPRD_OUT_BASENAME="${OUTDIR[$d]}/${time}/anal/sprd/init_"
+    else
+      GUES_SPRD_OUT_BASENAME=""
+      ANAL_SPRD_OUT_BASENAME=""
     fi
+
 #      if ((RTPS_INFL_OUT == 1)); then
 #        RESTART_OUT_ADDITIONAL_COPIES=$((RESTART_OUT_ADDITIONAL_COPIES+1))
 #        RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"rtpsinfl.d${dfmt}\", "
@@ -1000,7 +1016,7 @@ while ((time <= ETIME)); do
       if ((DACYCLE == 1)); then
         conf_file="dacycle_${time}.conf"
         if ((DACYCLE_RUN_FCST == 1)); then
-          MEMBER_RUN=$((mtot + MAX_DACYCLE_RUN_FCST))
+          MEMBER_RUN=$((mtot + NUM_DACYCLE_FCST_MEM))
         else
           MEMBER_RUN=$mtot
         fi
@@ -1036,11 +1052,12 @@ EOF
             -e "/!--FILE_AGGREGATE--/a FILE_AGGREGATE = ${FILE_AGGREGATE}," \
             -e "/!--TIME_STARTDATE--/a TIME_STARTDATE = ${time:0:4}, ${time:4:2}, ${time:6:2}, ${time:8:2}, ${time:10:2}, ${time:12:2}," \
             -e "/!--TIME_DURATION--/a TIME_DURATION = ${TIME_DURATION}," \
-            -e "/!--TIME_DT_ATMOS_RESTART--/a TIME_DT_ATMOS_RESTART = ${LCYCLE}.D0," \
+            -e "/!--TIME_DT_ATMOS_RESTART--/a TIME_DT_ATMOS_RESTART = ${TIME_DURATION}," \
             -e "/!--TIME_DT_OCEAN_RESTART--/a TIME_DT_OCEAN_RESTART = ${LCYCLE}.D0," \
             -e "/!--TIME_DT_LAND_RESTART--/a TIME_DT_LAND_RESTART = ${LCYCLE}.D0," \
             -e "/!--TIME_DT_URBAN_RESTART--/a TIME_DT_URBAN_RESTART = ${LCYCLE}.D0," \
             -e "/!--TIME_DT_RESUME--/a TIME_DT_RESUME = ${LCYCLE}.D0," \
+            -e "/!--TIME_DT_ATMOS_DA--/a TIME_DT_ATMOS_DA = ${LCYCLE}.D0," \
             -e "/!--ONLINE_DOMAIN_NUM--/a ONLINE_DOMAIN_NUM = ${d}," \
             -e "/!--ONLINE_IAM_PARENT--/a ONLINE_IAM_PARENT = ${ONLINE_IAM_PARENT}," \
             -e "/!--ONLINE_IAM_DAUGHTER--/a ONLINE_IAM_DAUGHTER = ${ONLINE_IAM_DAUGHTER}," \
@@ -1054,7 +1071,7 @@ EOF
             -e "/!--FILE_HISTORY_DEFAULT_BASENAME--/a FILE_HISTORY_DEFAULT_BASENAME = \"${FILE_HISTORY_DEFAULT_BASENAME}\"," \
             -e "/!--FILE_HISTORY_DEFAULT_TINTERVAL--/a FILE_HISTORY_DEFAULT_TINTERVAL = ${CYCLEFOUT}.D0," \
             -e "/!--FILE_HISTORY_OUTPUT_STEP0--/a FILE_HISTORY_OUTPUT_STEP0 = ${FILE_HISTORY_OUTPUT_STEP0}," \
-            -e "/!--MONITOR_OUT_BASENAME--/a MONITOR_OUT_BASENAME = \"${OUTDIR[$d]}/${time}/log/scale/<member>.monitor_${time}\"," \
+            -e "/!--MONITOR_OUT_BASENAME--/a MONITOR_OUT_BASENAME = \"${OUTDIR[$d]}/${time}/log/scale/<lmember>.monitor_${time}\"," \
             -e "/!--LAND_PROPERTY_IN_FILENAME--/a LAND_PROPERTY_IN_FILENAME = \"dat/land/param.bucket.conf\"," \
             -e "/!--DOMAIN_CATALOGUE_FNAME--/a DOMAIN_CATALOGUE_FNAME = \"latlon_domain_catalogue.d${dfmt}.txt\"," \
             -e "/!--DOMAIN_CATALOGUE_OUTPUT--/a DOMAIN_CATALOGUE_OUTPUT = .true.," \
@@ -1182,8 +1199,8 @@ EOF
     GUES_SPRD_OUT_FREQ=0
     ANAL_SPRD_OUT_FREQ=0
   else
-    GUES_SPRD_OUT_FREQ=100000
-    ANAL_SPRD_OUT_FREQ=100000
+    GUES_SPRD_OUT_FREQ=1
+    ANAL_SPRD_OUT_FREQ=1
   fi
   RTPS_INFL_OUT_TF='.false.'
   if ((RTPS_INFL_OUT == 1)); then
@@ -1239,6 +1256,44 @@ EOF
       config_file_scale_launcher letkf "$conf_file" "letkf.d<domain>_${atime}.conf" $mtot
     fi
 
+    if ((DACYCLE == 1)); then
+      OUT_GRADS_DA_ALL_PATH="${OUTDIR[$d]}/${time}/mean_grads"
+      if (( OUT_MEAN_GRADS > 0 )); then
+        OUT_GRADS_DA_ALL_TF=".true."
+        mkdir -p $OUT_GRADS_DA_ALL_PATH
+      else
+        OUT_GRADS_DA_ALL_TF=".false."
+      fi
+
+      if (( OUT_GRADS_DAFCST > 0 )); then
+        OUT_GRADS_DAFCST_TF=".true."
+      else
+        OUT_GRADS_DAFCST_TF=".false."
+      fi
+
+      if (( OUT_NETCDF_DAFCST > 0 )); then
+        OUT_NETCDF_DAFCST_TF=".true."
+        OUT_GRADS_DAFCST_TF=".true."
+      else
+        OUT_NETCDF_DAFCST_TF=".false."
+      fi
+
+      if (( OUT_GRADS_DAFCST_ALL > 0 )); then
+        OUT_GRADS_DAFCST_ALL_TF=".true."
+      else
+        OUT_GRADS_DAFCST_ALL_TF=".false."
+      fi
+
+      if (( OUT_PAWR_GRADS > 0 )); then
+        OUT_PAWR_GRADS_TF=".true."
+        OUT_PAWR_GRADS_PATH="${OUTDIR[$d]}/${time}/pawr_grads"
+        mkdir -p $OUT_PAWR_GRADS_PATH
+      else
+        OUT_PAWR_GRADS_TF=".false."
+      fi
+
+    fi
+
     if ((DACYCLE_RUN_FCST == 1)); then
       ANAL_MEAN_OUT_FREQ=100000 # DEBUG # ${MAX_DACYCLE_RUN_FCST}
       ANAL_MDET_OUT_FREQ=100000 # DEBUG # ${MAX_DACYCLE_RUN_FCST}
@@ -1246,7 +1301,14 @@ EOF
       ANAL_MEAN_OUT_FREQ=100000
       ANAL_MDET_OUT_FREQ=100000
     fi
-    
+ 
+    OBSDEP_OUT_TF=".false." 
+    if ((OBSDEP_OUT == 1)); then
+      OBSDEP_OUT_TF=".true." 
+      OBSDEP_OUT_BASENAME="${OUTDIR[$d]}/$time/obsdep/obsdep"
+      mkdir -p ${OUTDIR[$d]}/$time/obsdep
+    fi
+
     # DEBUG
     ANAL_MEAN_OUT_FREQ=0
     ANAL_MDET_OUT_FREQ=0
@@ -1275,19 +1337,31 @@ EOF
             -e "/!--GUES_OUT_BASENAME--/a GUES_OUT_BASENAME = \"${GUES_OUT_BASENAME}\"," \
             -e "/!--GUES_MEAN_OUT_FREQ--/a GUES_MEAN_OUT_FREQ = ${GUES_MEAN_OUT_FREQ}," \
             -e "/!--GUES_SPRD_OUT_FREQ--/a GUES_SPRD_OUT_FREQ = ${GUES_SPRD_OUT_FREQ}," \
+            -e "/!--GUES_SPRD_OUT_BASENAME--/a GUES_SPRD_OUT_BASENAME = \"${GUES_SPRD_OUT_BASENAME}\"," \
             -e "/!--ANAL_OUT_BASENAME--/a ANAL_OUT_BASENAME = \"${ANAL_OUT_BASENAME}\"," \
             -e "/!--ANAL_OUT_FREQ--/a ANAL_OUT_FREQ = 100000," \
             -e "/!--ANAL_MEAN_OUT_FREQ--/a ANAL_MEAN_OUT_FREQ = ${ANAL_MEAN_OUT_FREQ}," \
             -e "/!--ANAL_MDET_OUT_FREQ--/a ANAL_MDET_OUT_FREQ = ${ANAL_MDET_OUT_FREQ}," \
             -e "/!--ANAL_SPRD_OUT_FREQ--/a ANAL_SPRD_OUT_FREQ = ${ANAL_SPRD_OUT_FREQ}," \
+            -e "/!--ANAL_SPRD_OUT_BASENAME--/a ANAL_SPRD_OUT_BASENAME = \"${ANAL_SPRD_OUT_BASENAME}\"," \
             -e "/!--GUES_ANAL_POSTFIX_TIMELABEL--/a GUES_ANAL_POSTFIX_TIMELABEL = ${GUES_ANAL_POSTFIX_TIMELABEL_TF}," \
             -e "/!--LETKF_TOPO_IN_BASENAME--/a LETKF_TOPO_IN_BASENAME = \"${INDIR[$d]}/const/topo/topo\"," \
             -e "/!--INFL_ADD_IN_BASENAME--/a INFL_ADD_IN_BASENAME = \"${OUTDIR[$d]}/const/addi/init\"," \
             -e "/!--RELAX_SPREAD_OUT--/a RELAX_SPREAD_OUT = ${RTPS_INFL_OUT_TF}," \
             -e "/!--RELAX_SPREAD_OUT_BASENAME--/a RELAX_SPREAD_OUT_BASENAME = \"${RELAX_SPREAD_OUT_BASENAME}\"," \
+            -e "/!--OUT_PAWR_GRADS--/a OUT_PAWR_GRADS = ${OUT_PAWR_GRADS_TF}," \
+            -e "/!--OUT_PAWR_GRADS_PATH--/a OUT_PAWR_GRADS_PATH = \"${OUT_PAWR_GRADS_PATH}\"," \
+            -e "/!--OUT_NETCDF_DAFCST--/a OUT_NETCDF_DAFCST = ${OUT_NETCDF_DAFCST_TF}," \
+            -e "/!--OUT_GRADS_DAFCST--/a OUT_GRADS_DAFCST = ${OUT_GRADS_DAFCST_TF}," \
+            -e "/!--OUT_GRADS_DAFCST_ALL--/a OUT_GRADS_DAFCST_ALL = ${OUT_GRADS_DAFCST_ALL_TF}," \
+            -e "/!--OUT_GRADS_DA_ALL--/a OUT_GRADS_DA_ALL = ${OUT_GRADS_DA_ALL_TF}," \
+            -e "/!--OUT_GRADS_DA_ALL_PATH--/a OUT_GRADS_DA_ALL_PATH = \"${OUT_GRADS_DA_ALL_PATH}\"," \
+            -e "/!--OUT_DAFCST_DSEC--/a OUT_DAFCST_DSEC = ${LCYCLE}.D0," \
             -e "/!--NOBS_OUT--/a NOBS_OUT = ${NOBS_OUT_TF}," \
             -e "/!--NOBS_OUT_BASENAME--/a NOBS_OUT_BASENAME = \"${NOBS_OUT_BASENAME}\"," \
-            -e "/!--OBSDEP_OUT--/a OBSDEP_OUT = .false.," \
+            -e "/!--OBSDEP_OUT_BASENAME--/a OBSDEP_OUT_BASENAME = \"${OBSDEP_OUT_BASENAME}\"," \
+            -e "/!--OBSDEP_OUT--/a OBSDEP_OUT = ${OBSDEP_OUT_TF}," \
+            -e "/!--PAWR_MASK_FILE--/a PAWR_MASK_FILE = \"${PAWR_MASK_FILE}\"," \
         >> $CONFIG_DIR/${conf_file}
 
 #    # Most of these parameters are not important for letkf

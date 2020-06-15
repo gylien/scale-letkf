@@ -60,11 +60,7 @@ MODULE common_scale
   !--- 3D, 2D diagnostic variables (in SCALE history files)
   ! 
   INTEGER,PARAMETER :: nv3dd=13
-#ifdef H08
-  INTEGER,PARAMETER :: nv2dd=9  ! H08
-#else
   INTEGER,PARAMETER :: nv2dd=7
-#endif
   INTEGER,PARAMETER :: iv3dd_u=1
   INTEGER,PARAMETER :: iv3dd_v=2
   INTEGER,PARAMETER :: iv3dd_w=3
@@ -85,29 +81,16 @@ MODULE common_scale
   INTEGER,PARAMETER :: iv2dd_v10m=5
   INTEGER,PARAMETER :: iv2dd_t2m=6
   INTEGER,PARAMETER :: iv2dd_q2m=7
-#ifdef H08
-  INTEGER,PARAMETER :: iv2dd_lsmask=8 ! H08
-  INTEGER,PARAMETER :: iv2dd_skint=9 ! H08
-#endif
   CHARACTER(vname_max),PARAMETER :: v3dd_name(nv3dd) = &
      (/'U', 'V', 'W', 'T', 'PRES', &
        'QV', 'QC', 'QR', 'QI', 'QS', 'QG', 'RH', 'height'/)
   LOGICAL,PARAMETER :: v3dd_hastime(nv3dd) = &
      (/.true., .true., .true., .true., .true., &
        .true., .true., .true., .true., .true., .true., .true., .false./)
-#ifdef H08
-  CHARACTER(vname_max),PARAMETER :: v2dd_name(nv2dd) = &       ! H08
-     (/'topo', 'SFC_PRES', 'PREC', 'U10', 'V10', 'T2', 'Q2', & ! H08
-       'lsmask', 'SFC_TEMP'/)                                  ! H08
-  LOGICAL,PARAMETER :: v2dd_hastime(nv2dd) = &                    ! H08
-     (/.false., .true., .true., .true., .true., .true., .true., & ! H08
-       .false., .true./)  
-#else
   CHARACTER(vname_max),PARAMETER :: v2dd_name(nv2dd) = &
      (/'topo', 'SFC_PRES', 'PREC', 'U10', 'V10', 'T2', 'Q2'/)
   LOGICAL,PARAMETER :: v2dd_hastime(nv2dd) = &
      (/.false., .true., .true., .true., .true., .true., .true./)
-#endif
 
   ! 
   !--- Variables for model coordinates
@@ -686,7 +669,9 @@ SUBROUTINE write_restart(filename,v3dg,v2dg)
 !  write (6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',filename,'.pe',PRC_myrank,'.nc'
 
   write (filesuffix(4:9),'(I6.6)') PRC_myrank
-  write (6,'(A,I6.6,2A)') 'MYRANK ',myrank,' is writing a file ',trim(filename) // filesuffix
+  if (LOG_LEVEL >= 5) then
+    write (6,'(A,I6.6,2A)') 'MYRANK ',myrank,' is writing a file ',trim(filename) // filesuffix
+  endif
   call ncio_open(trim(filename) // filesuffix, NF90_WRITE, ncid)
 
   do iv3d = 1, nv3d
@@ -898,6 +883,147 @@ subroutine write_restart_direct(v3dg,v2dg)
 
   return
 end subroutine write_restart_direct
+
+subroutine write_dafcst_nc( filename, step, nlev_plot, ref3d ) 
+  use netcdf
+  use common_ncio
+  use scale_const, only: &
+    D2R => CONST_D2R
+  use scale_atmos_grid_cartesC, only: &
+    CZ => ATMOS_GRID_CARTESC_CZ, &
+    CXG => ATMOS_GRID_CARTESC_CXG, &
+    CYG => ATMOS_GRID_CARTESC_CYG
+  use scale_atmos_grid_cartesC_index, only: &
+    KHALO, IHALO, JHALO, KMAX
+  use scale_mapprojection, only: &
+      MAPPROJECTION_xy2lonlat
+  implicit none
+
+  character(*), intent(in) :: filename
+  integer, intent(in) :: step
+  integer, intent(in) :: nlev_plot
+  real(r_sngl) :: ref3d(nlev_plot, nlong, nlatg)
+  integer :: ncid, varid
+
+  integer :: tlev
+
+  character(len=*), parameter :: lat_name = "Latitude"
+  character(len=*), parameter :: lon_name = "Longitude"
+  character(len=*), parameter :: z_name   = "Height"
+  character(len=*), parameter :: t_name = "time"
+  character(len=*), parameter :: ref_name = "Reflectivity"
+  character(len=*), parameter :: lon_unit = "degree_east"
+  character(len=*), parameter :: lat_unit = "degree_north"
+  character(len=*), parameter :: z_unit = "m (above ground level)"
+  character(len=*), parameter :: t_unit = "seconds"
+  character(len=*), parameter :: ref_unit = "dBZ"
+  integer :: z_dimid, lon_dimid, lat_dimid, t_dimid
+  integer :: lon_varid, lat_varid, z_varid, t_varid
+  integer :: ref_varid
+
+  integer :: dimids(4)
+  integer :: start(4), count(4)
+
+  real :: lons(nlong), lats(nlatg), zlevs(nlev_plot)
+  real(RP) :: lon_RP, lat_RP
+  real, allocatable :: tlevs(:)
+  integer :: i, j, k
+
+  integer :: nlong_, nlatg_
+
+  nlong_ = nlong / OUT_NETCDF_DAFCST_DHORI
+  nlatg_ = nlatg / OUT_NETCDF_DAFCST_DHORI
+
+  if ( step == 0 ) then
+
+    tlev = int( DACYCLE_RUN_FCST_TIME / OUT_DAFCST_DSEC / OUT_NETCDF_DAFCST_DSTEP ) + 1
+    allocate( tlevs(tlev) )
+
+    ! Create the file. 
+    call ncio_create( trim(filename), nf90_clobber, ncid )
+
+    ! Define the dimensions. 
+    call ncio_check( nf90_def_dim( ncid, trim(lon_name), nlong_, lon_dimid) )
+    call ncio_check( nf90_def_dim( ncid, trim(lat_name), nlatg_, lat_dimid) )
+    call ncio_check( nf90_def_dim( ncid, trim(z_name), nlev_plot, z_dimid) )
+    call ncio_check( nf90_def_dim( ncid, trim(t_name), tlev, t_dimid) )
+
+    ! Define the coordinate variables. 
+    call ncio_check( nf90_def_var(ncid, trim(lon_name), nf90_real, lon_dimid, lon_varid) )
+    call ncio_check( nf90_def_var(ncid, trim(lat_name), nf90_real, lat_dimid, lat_varid) )
+    call ncio_check( nf90_def_var(ncid, trim(z_name), nf90_real, z_dimid, z_varid) )
+    call ncio_check( nf90_def_var(ncid, trim(t_name), nf90_real, t_dimid, t_varid) )
+
+    ! Assume Mercator projection
+    do i = 1, nlong
+      call MAPPROJECTION_xy2lonlat( CXG(IHALO+i), CYG(JHALO+1), lon_RP, lat_RP )
+      lons(i) = real( lon_RP/D2R, kind=r_sngl )
+    enddo
+
+    do j = 1, nlatg
+      call MAPPROJECTION_xy2lonlat( CXG(IHALO+1), CYG(JHALO+j), lon_RP, lat_RP )
+      lats(j) = real( lat_RP/D2R, kind=r_sngl )
+    enddo
+
+    do i = 1, tlev
+      tlevs(i) = real( i - 1 ) * real( OUT_DAFCST_DSEC*OUT_NETCDF_DAFCST_DSTEP, kind=r_sngl )
+    enddo
+
+
+    ! Assign units attributes to coordinate variables.
+    call ncio_check( nf90_put_att(ncid, lon_varid, "units", trim(lon_unit) ) )
+    call ncio_check( nf90_put_att(ncid, lat_varid, "units", trim(lat_unit) ) )
+    call ncio_check( nf90_put_att(ncid, z_varid, "units", trim(z_unit) ) )
+    call ncio_check( nf90_put_att(ncid, t_varid, "units", trim(t_unit) ) )
+    dimids = (/ z_dimid, lon_dimid, lat_dimid, t_dimid /)
+
+    ! Define the netCDF variables
+    call ncio_check( nf90_def_var(ncid, trim(ref_name), nf90_real, dimids, ref_varid) )
+    call ncio_check( nf90_put_att(ncid, ref_varid, "units", trim(ref_unit) ) )
+
+    ! End define mode
+    call ncio_check( nf90_enddef(ncid) )
+
+    ! Write the coordinate variable data. 
+    call ncio_check( nf90_put_var(ncid, lat_varid, lats(1:nlatg:OUT_NETCDF_DAFCST_DHORI)) )
+    call ncio_check( nf90_put_var(ncid, lon_varid, lons(1:nlong:OUT_NETCDF_DAFCST_DHORI)) )
+    call ncio_check( nf90_put_var(ncid, t_varid, tlevs) )
+
+    do k = 1, OUT_NETCDF_DAFCST_NZLEV
+       zlevs(k) = k*OUT_NETCDF_DAFCST_DZ
+    enddo
+
+!    j = 0
+!    do k = max( 1, OUT_NETCDF_ZLEV_MIN), min( nlev, OUT_NETCDF_ZLEV_MAX), OUT_NETCDF_ZLEV_INTV
+!       j = j + 1
+!       zlevs(j) = real( CZ(KHALO+k), kind=r_sngl )
+!
+!    enddo
+
+    call ncio_check( nf90_put_var(ncid, z_varid, zlevs ) )
+
+    deallocate( tlevs )
+
+  else
+
+    call ncio_open( trim(filename), nf90_write, ncid )
+    call ncio_check( nf90_inq_varid( ncid, trim(ref_name), ref_varid) )
+
+  endif
+
+  count = (/ nlev_plot, nlong_, nlatg_, 1 /)
+  start = (/ 1, 1, 1, step/OUT_NETCDF_DAFCST_DSTEP+1 /)
+
+  ! Write the data.
+  call ncio_check( nf90_put_var(ncid, ref_varid, &
+                   ref3d(1:nlev_plot,1:nlong:OUT_NETCDF_DAFCST_DHORI,1:nlatg:OUT_NETCDF_DAFCST_DHORI), &
+                   start = start, &
+                   count = count) )
+
+  call ncio_close( ncid )
+
+  return
+end subroutine write_dafcst_nc
 
 !-------------------------------------------------------------------------------
 ! [File I/O] Read SCALE restart files for model coordinates
@@ -1442,18 +1568,9 @@ subroutine read_history_direct(v3dg, v2dg)
     ATMOS_PHY_SF_U10, &
     ATMOS_PHY_SF_V10, &
     ATMOS_PHY_SF_T2, &
-#ifdef H08
-    ATMOS_PHY_SF_Q2, &
-    ATMOS_PHY_SF_SFC_TEMP
-#else
     ATMOS_PHY_SF_Q2
-#endif
   use scale_topography, only: &
     TOPO_Zsfc
-#ifdef H08
-  use scale_landuse, only: &
-    LANDUSE_frac_land
-#endif
   use scale_atmos_grid_cartesC_real, only: &
     ATMOS_GRID_CARTESC_REAL_CZ
   use scale_atmos_grid_cartesC_index, only: &
@@ -1535,12 +1652,6 @@ subroutine read_history_direct(v3dg, v2dg)
       v2dg_RP(:,:,iv2d) = ATMOS_PHY_SF_T2(:,:)
     case (iv2dd_q2m)
       v2dg_RP(:,:,iv2d) = ATMOS_PHY_SF_Q2(:,:)
-#ifdef H08
-    case (iv2dd_lsmask)
-      v2dg_RP(:,:,iv2d) = LANDUSE_frac_land(:,:)
-    case (iv2dd_skint)
-      v2dg_RP(:,:,iv2d) = ATMOS_PHY_SF_SFC_TEMP(:,:)
-#endif
     case default
       write (6, '(3A)') "[Error] Variable '", trim(v2dd_name(iv2d)), "' is not recognized."
       stop
@@ -1704,7 +1815,7 @@ end subroutine state_trans_inv
 subroutine state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
   use scale_atmos_grid_cartesC_index, only: &
       IHALO, JHALO, KHALO, &
-      IS, IE, JS, JE, KS, KE, KA
+      IS, IE, IA, JS, JE, JA, KS, KE, KA
   use scale_comm_cartesC, only: &
       COMM_vars8, &
       COMM_wait
@@ -1724,30 +1835,30 @@ subroutine state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
   ! Variables that can be directly copied
   !---------------------------------------------------------
 
-  v3dgh_RP(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_u) = v3dg(:,:,:,iv3d_u)
-  v3dgh_RP(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_v) = v3dg(:,:,:,iv3d_v)
-  v3dgh_RP(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_w) = v3dg(:,:,:,iv3d_w)
-  v3dgh_RP(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_t) = v3dg(:,:,:,iv3d_t)
-  v3dgh_RP(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_p) = v3dg(:,:,:,iv3d_p)
-  v3dgh_RP(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_q) = v3dg(:,:,:,iv3d_q)
-  v3dgh_RP(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qc) = v3dg(:,:,:,iv3d_qc)
-  v3dgh_RP(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qr) = v3dg(:,:,:,iv3d_qr)
-  v3dgh_RP(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qi) = v3dg(:,:,:,iv3d_qi)
-  v3dgh_RP(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qs) = v3dg(:,:,:,iv3d_qs)
-  v3dgh_RP(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qg) = v3dg(:,:,:,iv3d_qg)
+  v3dgh_RP(KS:KE,IS:IE,JS:JE,iv3dd_u) = v3dg(:,:,:,iv3d_u)
+  v3dgh_RP(KS:KE,IS:IE,JS:JE,iv3dd_v) = v3dg(:,:,:,iv3d_v)
+  v3dgh_RP(KS:KE,IS:IE,JS:JE,iv3dd_w) = v3dg(:,:,:,iv3d_w)
+  v3dgh_RP(KS:KE,IS:IE,JS:JE,iv3dd_t) = v3dg(:,:,:,iv3d_t)
+  v3dgh_RP(KS:KE,IS:IE,JS:JE,iv3dd_p) = v3dg(:,:,:,iv3d_p)
+  v3dgh_RP(KS:KE,IS:IE,JS:JE,iv3dd_q) = v3dg(:,:,:,iv3d_q)
+  v3dgh_RP(KS:KE,IS:IE,JS:JE,iv3dd_qc) = v3dg(:,:,:,iv3d_qc)
+  v3dgh_RP(KS:KE,IS:IE,JS:JE,iv3dd_qr) = v3dg(:,:,:,iv3d_qr)
+  v3dgh_RP(KS:KE,IS:IE,JS:JE,iv3dd_qi) = v3dg(:,:,:,iv3d_qi)
+  v3dgh_RP(KS:KE,IS:IE,JS:JE,iv3dd_qs) = v3dg(:,:,:,iv3d_qs)
+  v3dgh_RP(KS:KE,IS:IE,JS:JE,iv3dd_qg) = v3dg(:,:,:,iv3d_qg)
 
   ! RH
   !---------------------------------------------------------
 
-!  v3dgh_RP(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_rh) = [[RH calculator]]
+!  v3dgh_RP(KS:KE,IS:IE,JS:JE,iv3dd_rh) = [[RH calculator]]
 
   ! Calculate height based the the topography and vertical coordinate
   !---------------------------------------------------------
 
   call scale_calc_z(topo, height)
-  v3dgh_RP(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_hgt) = height
-  v3dgh_RP(KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_hgt) = topo
-  v3dgh_RP(1,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_hgt) = 0.0_RP
+  v3dgh_RP(KS:KE,IS:IE,JS:JE,iv3dd_hgt) = real(height, kind=RP)
+  v3dgh_RP(KS-1,IS:IE,JS:JE,iv3dd_hgt) = real(topo, kind=RP)
+  v3dgh_RP(1,IS:IE,JS:JE,iv3dd_hgt) = 0.0_RP
 
 
 
@@ -1755,31 +1866,16 @@ subroutine state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
   ! Surface variables: use the 1st level as the surface (although it is not)
   !---------------------------------------------------------
 
-  v2dgh_RP(:,:,iv2dd_topo) = v3dgh_RP(1+KHALO,:,:,iv3dd_hgt)                ! Use the first model level as topography (is this good?)
-!  v2dgh_RP(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_topo) = topo(:,:) ! Use the real topography
+  v2dgh_RP(:,:,iv2dd_topo) = v3dgh_RP(KS,:,:,iv3dd_hgt)                ! Use the first model level as topography (is this good?)
+!  v2dgh_RP(IS:IE,JS:JE,iv2dd_topo) = topo(:,:) ! Use the real topography
 
-  v2dgh_RP(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_ps) = v3dg(1,:,:,iv3d_p)
-  v2dgh_RP(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_u10m) = v3dg(1,:,:,iv3d_u)
-  v2dgh_RP(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_v10m) = v3dg(1,:,:,iv3d_v)
-  v2dgh_RP(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_t2m) = v3dg(1,:,:,iv3d_t)
-  v2dgh_RP(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_q2m) = v3dg(1,:,:,iv3d_q)
+  v2dgh_RP(IS:IE,JS:JE,iv2dd_ps) = v3dg(1,:,:,iv3d_p)
+  v2dgh_RP(IS:IE,JS:JE,iv2dd_u10m) = v3dg(1,:,:,iv3d_u)
+  v2dgh_RP(IS:IE,JS:JE,iv2dd_v10m) = v3dg(1,:,:,iv3d_v)
+  v2dgh_RP(IS:IE,JS:JE,iv2dd_t2m) = v3dg(1,:,:,iv3d_t)
+  v2dgh_RP(IS:IE,JS:JE,iv2dd_q2m) = v3dg(1,:,:,iv3d_q)
 
-!  v2dgh_RP(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_rain) = [[No way]]
-
-!#ifdef H08
-!  v2dgh_RP(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_skint) = v3dg(1,:,:,iv3d_t)
-!
-!  ! Assume the point where terrain height is less than 10 m is the ocean. T.Honda (02/09/2016)
-!  !---------------------------------------------------------
-!
-!!$OMP PARALLEL DO PRIVATE(j,i)
-!  do j = 1, nlat
-!    do i = 1, nlon
-!      v2dgh_RP(i+IHALO,j+JHALO,iv2dd_lsmask) = min(max(topo(i,j) - 10.0d0, 0.0d0), 1.0d0)
-!    enddo
-!  enddo
-!!$OMP END PARALLEL DO
-!#endif
+!  v2dgh_RP(IS:IE,JS:JE,iv2dd_rain) = [[No way]]
 
 
   ! Communicate the lateral halo areas
@@ -1805,11 +1901,11 @@ subroutine state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
 
 !$OMP PARALLEL DO PRIVATE(i,j,iv3d) SCHEDULE(STATIC) COLLAPSE(2)
   do iv3d = 1, nv3dd
-    do j  = JS, JE
-      do i  = IS, IE
-        v3dgh_RP(   1:KS-1,i,j,iv3d) = v3dgh_RP(KS,i,j,iv3d)
-        v3dgh_RP(KE+1:KA,  i,j,iv3d) = v3dgh_RP(KE,i,j,iv3d)
-      end do
+    do j  = 1, JA
+    do i  = 1, IA
+      v3dgh_RP(   1:KS-1,i,j,iv3d) = v3dgh_RP(KS,i,j,iv3d)
+      v3dgh_RP(KE+1:KA,  i,j,iv3d) = v3dgh_RP(KE,i,j,iv3d)
+    end do
     end do
   end do
 !$OMP END PARALLEL DO
@@ -2409,6 +2505,40 @@ subroutine jst2utc(jyear, jmonth, jday, jhour, jminute, jsecond, jtime_ms, utime
 
   return
 end subroutine jst2utc
+
+subroutine advance_nowdate( date, dsec )
+  use scale_calendar, only: &
+      CALENDAR_date2daysec, &
+      CALENDAR_daysec2date, &
+      CALENDAR_adjust_daysec
+  implicit none
+
+  integer, intent(inout) :: date(6)
+  real(DP) :: dsec
+  integer :: absday
+  real(DP) :: abssec
+  real(DP) :: date_ms = 0.0_DP
+
+  call CALENDAR_date2daysec( absday,       & ! [OUT]
+                             abssec,       & ! [OUT]
+                             date,         & ! [IN]
+                             date_ms,       & ! [IN]
+                             0             ) ! [IN]
+
+  abssec = abssec + dsec
+
+  call CALENDAR_adjust_daysec( absday,   & ! [INOUT]
+                               abssec )    ! [INOUT]
+
+  call CALENDAR_daysec2date( date,        & ! [OUT]
+                             date_ms,     & ! [OUT]
+                             absday,      & ! [IN]
+                             abssec,      & ! [IN]
+                             0            ) ! [IN]
+
+
+  return
+end subroutine advance_nowdate
 
 !===============================================================================
 END MODULE common_scale

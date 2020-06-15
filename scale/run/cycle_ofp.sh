@@ -142,9 +142,16 @@ cat > $jobscrp << EOF
 
 #PJM -s
 
-module load hdf5/1.8.17
-module load netcdf/4.4.1
-module load netcdf-fortran/4.4.3
+module unload impi
+module unload intel
+module load intel/2019.5.281
+
+source /work/opt/local/cores/intel/performance_snapshots_2019.6.0.602217/apsvars.sh
+export MPS_STAT_LEVEL=4
+ 
+module load hdf5/1.10.5
+module load netcdf/4.7.0
+module load netcdf-fortran/4.4.5
 
 export FORT_FMT_RECL=400
 

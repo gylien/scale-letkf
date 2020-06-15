@@ -16,7 +16,10 @@ MODULE radar_tools
   !USE common_namelist
   use mpi
   use common_nml, only: &
-    LOG_LEVEL
+    RADAR_THIN_HORI, &
+    RADAR_THIN_VERT, &
+    LOG_LEVEL,       &
+    RADAR_USE_VR_STD
   use common_mpi_scale, only: &
     myrank_o, &
     nprocs_o, &
@@ -55,7 +58,6 @@ MODULE radar_tools
 
   LOGICAL :: use_attenuation=.true. !Consider attenuation in superobbing
   LOGICAL :: use_qcflag=.true.      !Consider or not qc flag.
-  LOGICAL :: use_vr_std=.true.           !If we are going to use the wind std threshold within each box.
   REAL(r_size) :: vr_std_threshold=2.5d0 !If wind variability within each superob is greather than this threshold the box is rejected.
   !IF USE_ATTENUATION == TRUE, then gates with estimated attenuation
   !greather than the threshold will be rejected. (this does not affect
@@ -496,7 +498,7 @@ CONTAINS
           ! -noise in the data.
           ! In any case averaging the data is not a god idea so this data
           ! can be rejected a priori.
-          IF(use_vr_std) THEN
+          IF( RADAR_USE_VR_STD ) THEN
              count_inv = 1.0d0 / dble(grid_count_vr(idx))
              tmpmeanvr = grid_meanvr(idx) * count_inv
              tmpstdvr = grid_stdvr(idx)  * count_inv

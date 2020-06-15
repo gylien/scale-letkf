@@ -50,7 +50,6 @@ module common_mpi_scale
   integer,allocatable,save :: ranke_to_mem(:,:)
   integer,allocatable,save :: myrank_to_mem(:)
   integer,save :: myrank_to_pe
-  logical,save :: myrank_use = .false.
   logical,save :: myrank_use_da = .false.
   logical,save :: myrank_use_obs = .false.
 
@@ -68,7 +67,6 @@ module common_mpi_scale
   integer,save :: mmdet_rank_e = -1
   integer,save :: msprd_rank_e = -1
 
-  integer,save :: MPI_COMM_u, nprocs_u, myrank_u
   integer,save :: MPI_COMM_a, nprocs_a, myrank_a
   integer,save :: MPI_COMM_da, nprocs_da, myrank_da
   integer,save :: MPI_COMM_d, nprocs_d, myrank_d
@@ -189,12 +187,12 @@ subroutine set_common_mpi_scale
 !    return
   endif
 
-#ifdef DEBUG
-  if (nprocs_e /= n_mem*n_mempn) then
-    write (6, '(A)'), '[Error] XXXXXX wrong!!'
-    stop
-  end if
-#endif
+!#ifdef DEBUG
+!  if (nprocs_e /= n_mem*n_mempn) then
+!    write (6, '(A)'), '[Error] XXXXXX wrong!!'
+!    stop
+!  end if
+!#endif
 
   call mpi_timer('set_common_mpi_scale:mpi_comm_split_e:', 2)
 
@@ -500,21 +498,17 @@ mem_loop: DO it = 1, nitmax
   END DO
   myrank_to_pe = rank_to_pe(myrank+1)
 
-  if (myrank_to_mem(1) >= 1) then
-    myrank_use = .true.
-  end if
-
   ! settings related to mean/mdet (only valid when ENS_WITH_MEAN/ENS_WITH_MDET = .true.)
   !----------------------------------------------------------------
   if (ENS_WITH_MEAN) then
     mmean = MEMBER+1
     mmean_rank_e = mod(mmean-1, n_mem*n_mempn)
-#ifdef DEBUG
-    if (mmean_rank_e /= rank_to_mem(1,mempe_to_rank(1,mmean)+1)-1) then
-      write (6, '(A)'), '[Error] XXXXXX wrong!!'
-      stop
-    end if
-#endif
+!#ifdef DEBUG
+!    if (mmean_rank_e /= rank_to_mem(1,mempe_to_rank(1,mmean)+1)-1) then
+!      write (6, '(A)'), '[Error] XXXXXX wrong!!'
+!      stop
+!    end if
+!#endif
     msprd_rank_e = mmean_rank_e
 
     if (ENS_WITH_MDET) then
@@ -523,12 +517,12 @@ mem_loop: DO it = 1, nitmax
 
       mmdet = MEMBER+2
       mmdet_rank_e = mod(mmdet-1, n_mem*n_mempn)
-#ifdef DEBUG
-      if (mmdet_rank_e /= rank_to_mem(1,mempe_to_rank(1,mmdet)+1)-1) then
-        write (6, '(A)'), '[Error] XXXXXX wrong!!'
-        stop
-      end if
-#endif
+!#ifdef DEBUG
+!      if (mmdet_rank_e /= rank_to_mem(1,mempe_to_rank(1,mmdet)+1)-1) then
+!        write (6, '(A)'), '[Error] XXXXXX wrong!!'
+!        stop
+!      end if
+!#endif
 
       mmdetobs = MEMBER+1
       if (MDET_CYCLED) then
@@ -668,26 +662,8 @@ subroutine set_scalelib(execname)
   ! Communicator for all processes used
   !-----------------------------------------------------------------------------
 
-  if (myrank_use) then
-    color = 0
-    key   = (myrank_to_mem(1) - 1) * nprocs_m + myrank_to_pe
-!    key   = myrank
-  else
-    color = MPI_UNDEFINED
-    key   = MPI_UNDEFINED
-  end if
-
-  call MPI_COMM_SPLIT(MPI_COMM_WORLD, color, key, MPI_COMM_u, ierr)
-
-  if (.not. myrank_use) then
-    write (6, '(A,I6.6,A)') 'MYRANK=', myrank, ': This process is not used!'
-    return
-  end if
-
-  call MPI_COMM_SIZE(MPI_COMM_u, nprocs_u, ierr)
-  call MPI_COMM_RANK(MPI_COMM_u, myrank_u, ierr)
-
-  call mpi_timer('set_scalelib:mpi_comm_split_u:', 2)
+  color = 0
+  key   = (myrank_to_mem(1) - 1) * nprocs_m + myrank_to_pe
 
   ! Communicator for all domains of single members
   !-----------------------------------------------------------------------------
@@ -696,7 +672,6 @@ subroutine set_scalelib(execname)
 !  call PRC_MPIstart( universal_comm ) ! [OUT]
 
   PRC_mpi_alive = .true.
-!  universal_comm = MPI_COMM_u
 
 !  call PRC_UNIVERSAL_setup( universal_comm,   & ! [IN]
 !                            universal_nprocs, & ! [OUT]
@@ -710,7 +685,7 @@ subroutine set_scalelib(execname)
 !    key   = MPI_UNDEFINED
 !  endif
 
-  call MPI_COMM_SPLIT(MPI_COMM_u, color, key, global_comm, ierr)
+  call MPI_COMM_SPLIT( MPI_COMM_WORLD, color, key, global_comm, ierr )
 
   call PRC_GLOBAL_setup( .false.,    & ! [IN]
                          global_comm ) ! [IN]
@@ -810,10 +785,10 @@ subroutine set_scalelib(execname)
 !    key   = MPI_UNDEFINED
 !  end if
 
-  call MPI_COMM_SPLIT(MPI_COMM_u, color, key, MPI_COMM_a, ierr)
+  call MPI_COMM_SPLIT( MPI_COMM_WORLD, color, key, MPI_COMM_a, ierr )
 
-  call MPI_COMM_SIZE(MPI_COMM_a, nprocs_a, ierr)
-  call MPI_COMM_RANK(MPI_COMM_a, myrank_a, ierr)
+  call MPI_COMM_SIZE( MPI_COMM_a, nprocs_a, ierr )
+  call MPI_COMM_RANK( MPI_COMM_a, myrank_a, ierr )
 
   call mpi_timer('set_scalelib:mpi_comm_split_a:', 2)
 
@@ -971,20 +946,16 @@ subroutine unset_scalelib
   implicit none
   integer :: ierr
 
-  if (myrank_use) then
-!    call MONIT_finalize
-    call FILE_Close_All
+  call FILE_Close_All
 
-    ! Close logfile, configfile
-    if ( IO_L ) then
-      if( IO_FID_LOG /= IO_FID_STDOUT ) close(IO_FID_LOG)
-    endif
-    close(IO_FID_CONF)
+  ! Close logfile, configfile
+  if ( IO_L ) then
+    if( IO_FID_LOG /= IO_FID_STDOUT ) close(IO_FID_LOG)
+  endif
+  close(IO_FID_CONF)
 
-    call MPI_COMM_FREE(MPI_COMM_d, ierr)
-    call MPI_COMM_FREE(MPI_COMM_a, ierr)
-    call MPI_COMM_FREE(MPI_COMM_u, ierr)
-  end if
+  call MPI_COMM_FREE(MPI_COMM_d, ierr)
+  call MPI_COMM_FREE(MPI_COMM_a, ierr)
 
   return
 end subroutine unset_scalelib
@@ -1783,41 +1754,11 @@ end subroutine mpi_timer
 !-------------------------------------------------------------------------------
 ! [Direct transfer] Send SCALE restart (analysis) data
 !-------------------------------------------------------------------------------
-subroutine send_emean_direct(v3dg,v2dg,fcst_cnt)
-  implicit none
-
-  real(RP), intent(in) :: v3dg(nlev,nlon,nlat,nv3d)
-  real(RP), intent(in) :: v2dg(nlon,nlat,nv2d)
-  integer, intent(in) :: fcst_cnt
-  integer :: iv3d, iv2d
-  integer :: k, i, j
-
-  integer :: rrank_a ! rank_a of receiving rank
-  integer :: srank_a ! rank_a of sending rank ! Ensemble mean
-  integer :: ierr, tag
-
-  rrank_a = nens * nprocs_d + nprocs_d * (fcst_cnt - 1) + myrank_d ! dacycle-forecast member
-  srank_a = MEMBER * nprocs_d + myrank_d
-
-  if ( myrank_a /= srank_a ) return
-
-  tag = myrank_d 
-
-  if (nv3d > 0) then
-    call MPI_Send(v3dg,nlev*nlon*nlat*nv3d,MPI_RP,rrank_a,tag,MPI_COMM_a,ierr) 
-  endif
-
-  if (nv2d > 0) then
-    call MPI_Send(v2dg,nlon*nlat*nv2d,MPI_RP,rrank_a,tag+1,MPI_COMM_a,ierr) 
-  endif
-
-  return
-end subroutine send_emean_direct
-
-!-------------------------------------------------------------------------------
-! [Direct transfer] Receive SCALE restart (analysis) data
-!-------------------------------------------------------------------------------
-subroutine receive_emean_direct()
+subroutine send_recv_analysis_direct( fcst_cnt )
+  use scale_time, only: &
+    TIME_NOWDATE, &
+    TIME_NOWMS, &
+    TIME_NOWSTEP
   use mod_atmos_vars, only: &
     DENS, &
     MOMX, &
@@ -1826,6 +1767,8 @@ subroutine receive_emean_direct()
     RHOT, &
     QTRC, QV, Qe, &
     ATMOS_vars_fillhalo
+  use mod_atmos_bnd_driver, only: &
+     ATMOS_BOUNDARY_driver_set
   use mod_atmos_phy_mp_driver, only: &
     ATMOS_PHY_MP_driver_qhyd2qtrc
   use mod_atmos_phy_mp_vars, only: &
@@ -1836,90 +1779,85 @@ subroutine receive_emean_direct()
     IS, IE, IA, JS, JE, JA, KS, KE, KA
   implicit none
 
-  real(RP) :: v3dg(nlev,nlon,nlat,nv3d)
-  real(RP) :: v2dg(nlon,nlat,nv2d)
-  integer :: iv3d, iv2d
+  integer, intent(in) :: fcst_cnt
+  integer :: k, i, j
 
+  integer :: rrank_a ! rank_a of receiving rank
   integer :: srank_a ! rank_a of sending rank ! Ensemble mean
   integer :: ierr, tag
+
   integer, allocatable :: istat(:)
 
-  srank_a = MEMBER * nprocs_d + myrank_d
+  if ( USE_MDET_FCST ) then
+    srank_a = ( MEMBER + 1 ) * nprocs_d + myrank_d
+  else
+    srank_a = MEMBER * nprocs_d + myrank_d
+  endif
+
+  rrank_a = nens * nprocs_d + nprocs_d * (fcst_cnt - 1) + myrank_d ! dacycle-forecast member
+
+  if ( myrank_a /= rrank_a .and. myrank_a /= srank_a ) return
 
   tag = myrank_d 
+  if ( myrank_a == srank_a ) then
 
-  allocate(istat(MPI_STATUS_SIZE))
+    call MPI_Send( TIME_NOWDATE, 6, MPI_INTEGER,          rrank_a, tag+2, MPI_COMM_a, ierr ) 
+    call MPI_Send( TIME_NOWMS,   1, MPI_DOUBLE_PRECISION, rrank_a, tag+3, MPI_COMM_a, ierr ) 
+    call MPI_Send( TIME_NOWSTEP, 1, MPI_INTEGER,          rrank_a, tag+4, MPI_COMM_a, ierr ) 
 
-  if (nv3d > 0) then
-    call MPI_Recv(v3dg,nlev*nlon*nlat*nv3d,MPI_RP,srank_a,tag,MPI_COMM_a,istat,ierr)
-    ! Ensemble mean data (mean3d & mean 2d) are not transformed into 
-    ! SCALE prognostic variables (e.g., MOMX) in write_ens_mpi
-    call state_trans_inv(v3dg) 
-  endif
+    call MPI_Send( DENS, KA*IA*JA, MPI_RP, rrank_a, tag+101, MPI_COMM_a, ierr ) 
+    call MPI_Send( MOMX, KA*IA*JA, MPI_RP, rrank_a, tag+102, MPI_COMM_a, ierr ) 
+    call MPI_Send( MOMY, KA*IA*JA, MPI_RP, rrank_a, tag+103, MPI_COMM_a, ierr ) 
+    call MPI_Send( MOMZ, KA*IA*JA, MPI_RP, rrank_a, tag+104, MPI_COMM_a, ierr ) 
+    call MPI_Send( RHOT, KA*IA*JA, MPI_RP, rrank_a, tag+105, MPI_COMM_a, ierr ) 
 
-  if (nv2d > 0) then
-    call MPI_Recv(v2dg,nlon*nlat*nv2d,MPI_RP,srank_a,tag+1,MPI_COMM_a,istat,ierr)
-  endif
+    call MPI_Send( QV, KA*IA*JA, MPI_RP, rrank_a, tag+106, MPI_COMM_a, ierr ) 
+    call MPI_Send( Qe(:,:,:,I_HC), KA*IA*JA, MPI_RP, rrank_a, tag+107, MPI_COMM_a, ierr ) 
+    call MPI_Send( Qe(:,:,:,I_HR), KA*IA*JA, MPI_RP, rrank_a, tag+108, MPI_COMM_a, ierr ) 
+    call MPI_Send( Qe(:,:,:,I_HI), KA*IA*JA, MPI_RP, rrank_a, tag+109, MPI_COMM_a, ierr ) 
+    call MPI_Send( Qe(:,:,:,I_HS), KA*IA*JA, MPI_RP, rrank_a, tag+110, MPI_COMM_a, ierr ) 
+    call MPI_Send( Qe(:,:,:,I_HG), KA*IA*JA, MPI_RP, rrank_a, tag+111, MPI_COMM_a, ierr ) 
+
+    return 
+
+  elseif ( myrank_a == rrank_a ) then
+
+    allocate( istat( MPI_STATUS_SIZE ) )
+
+    call MPI_Recv( TIME_NOWDATE, 6, MPI_INTEGER,          srank_a, tag+2, MPI_COMM_a, istat, ierr ) 
+    call MPI_Recv( TIME_NOWMS,   1, MPI_DOUBLE_PRECISION, srank_a, tag+3, MPI_COMM_a, istat, ierr ) 
+    call MPI_Recv( TIME_NOWSTEP, 1, MPI_INTEGER,          srank_a, tag+4, MPI_COMM_a, istat, ierr ) 
+
+    call MPI_Recv( DENS, KA*IA*JA, MPI_RP, srank_a, tag+101, MPI_COMM_a, istat, ierr)
+    call MPI_Recv( MOMX, KA*IA*JA, MPI_RP, srank_a, tag+102, MPI_COMM_a, istat, ierr)
+    call MPI_Recv( MOMY, KA*IA*JA, MPI_RP, srank_a, tag+103, MPI_COMM_a, istat, ierr)
+    call MPI_Recv( MOMZ, KA*IA*JA, MPI_RP, srank_a, tag+104, MPI_COMM_a, istat, ierr)
+    call MPI_Recv( RHOT, KA*IA*JA, MPI_RP, srank_a, tag+105, MPI_COMM_a, istat, ierr)
+
+    call MPI_Recv( QV, KA*IA*JA, MPI_RP, srank_a, tag+106, MPI_COMM_a, istat, ierr)
+    call MPI_Recv( Qe(:,:,:,I_HC), KA*IA*JA, MPI_RP, srank_a, tag+107, MPI_COMM_a, istat, ierr)
+    call MPI_Recv( Qe(:,:,:,I_HR), KA*IA*JA, MPI_RP, srank_a, tag+108, MPI_COMM_a, istat, ierr)
+    call MPI_Recv( Qe(:,:,:,I_HI), KA*IA*JA, MPI_RP, srank_a, tag+109, MPI_COMM_a, istat, ierr)
+    call MPI_Recv( Qe(:,:,:,I_HS), KA*IA*JA, MPI_RP, srank_a, tag+110, MPI_COMM_a, istat, ierr)
+    call MPI_Recv( Qe(:,:,:,I_HG), KA*IA*JA, MPI_RP, srank_a, tag+111, MPI_COMM_a, istat, ierr)
+
+    ! Assume Tomita08
+    call ATMOS_PHY_MP_driver_qhyd2qtrc( KA, KS, KE, IA, IS, IE, JA, JS, JE, & 
+                                        QV, Qe, &                    ! [IN]
+                                        QTRC(:,:,:,QS_MP:QE_MP)    ) ! [OUT] 
+    call ATMOS_vars_fillhalo 
+
+    call ATMOS_BOUNDARY_driver_set
   
-  deallocate(istat)
-
-  do iv3d = 1, nv3d
-    if (LOG_LEVEL >= 3) then
-      write(6,'(1x,A,A15)') '*** Update 3D var [direct transfer]: ', trim(v3d_name(iv3d))
-    end if
-    select case (iv3d)
-    case (iv3d_rho)
-      DENS(KS:KE,IS:IE,JS:JE) = v3dg(:,:,:,iv3d)
-    case (iv3d_rhou)
-      MOMX(KS:KE,IS:IE,JS:JE) = v3dg(:,:,:,iv3d)
-    case (iv3d_rhov)
-      MOMY(KS:KE,IS:IE,JS:JE) = v3dg(:,:,:,iv3d)
-    case (iv3d_rhow)
-      MOMZ(KS:KE,IS:IE,JS:JE) = v3dg(:,:,:,iv3d)
-    case (iv3d_rhot)
-      RHOT(KS:KE,IS:IE,JS:JE) = v3dg(:,:,:,iv3d)
-    case (iv3d_q)
-      QV(KS:KE,IS:IE,JS:JE) = v3dg(:,:,:,iv3d)
-    case (iv3d_qc)
-      Qe(KS:KE,IS:IE,JS:JE,I_HC) = v3dg(:,:,:,iv3d)
-    case (iv3d_qr)
-      Qe(KS:KE,IS:IE,JS:JE,I_HR) = v3dg(:,:,:,iv3d)
-    case (iv3d_qi)
-      Qe(KS:KE,IS:IE,JS:JE,I_HI) = v3dg(:,:,:,iv3d)
-    case (iv3d_qs)
-      Qe(KS:KE,IS:IE,JS:JE,I_HS) = v3dg(:,:,:,iv3d)
-    case (iv3d_qg)
-      Qe(KS:KE,IS:IE,JS:JE,I_HG) = v3dg(:,:,:,iv3d)
-    case default
-      write (6, '(3A)') "[Error] Variable '", trim(v3d_name(iv3d)), "' is not recognized."
-      stop
-    end select
-  end do
-
-  ! Assume Tomita08
-  call ATMOS_PHY_MP_driver_qhyd2qtrc( KA, KS, KE, IA, IS, IE, JA, JS, JE, & 
-                                      QV, Qe, &                    ! [IN]
-                                      QTRC(:,:,:,QS_MP:QE_MP)    ) ! [OUT] 
-  call ATMOS_vars_fillhalo 
-
-  do iv2d = 1, nv2d
-    if (LOG_LEVEL >= 3) then
-      write(6,'(1x,A,A15)') '*** Update 2D var [direct transfer]: ', trim(v2d_name(iv2d))
-    end if
-!    select case (iv2d)
-!    case default
-!      write (6, '(3A)') "[Error] Variable '", trim(v2d_name(iv2d)), "' is not
-!      recognized."
-!      stop
-!    end select
-  end do
+  endif
 
   return
-end subroutine receive_emean_direct
+end subroutine send_recv_analysis_direct
+
 !-------------------------------------------------------------------------------
-! Write the subdomain model data into a single GrADS file from DACYCLE (additional) forecasts
+! Write the subdomain model data (only radar reflectivity) into a single GrADS file from DACYCLE (additional) forecasts
 !-------------------------------------------------------------------------------
-subroutine write_grd_dafcst_mpi(timelabel, ref3d, step)
+subroutine write_grd_dafcst_mpi( timelabel, ref3d, step )
   use mod_atmos_vars, only: &
     TEMP
 !  use scale_atmos_hydrometeor, only: &
@@ -1927,6 +1865,8 @@ subroutine write_grd_dafcst_mpi(timelabel, ref3d, step)
   use scale_atmos_grid_cartesC_index, only: &
     IS, IE, JS, JE, KS, KE, &
     KHALO
+  use scale_atmos_grid_cartesC, only: &
+    CZ => ATMOS_GRID_CARTESC_CZ
   use scale_io, only: &
     H_LONG
 
@@ -1936,32 +1876,90 @@ subroutine write_grd_dafcst_mpi(timelabel, ref3d, step)
   integer, intent(in) :: step
 
   character(len=H_LONG) :: filename
-  real(r_sngl) :: bufs4(nlong,nlatg)
   real(r_sngl) :: bufr4(nlong,nlatg)
   integer :: iunit, iolen
   integer :: k, n, irec, ierr
   integer :: proc_i, proc_j
   integer :: ishift, jshift
 
-!  real(r_sngl) :: v2d_ref(nlong,nlatg,nv3dd)
+  character(len=H_LONG) :: ncfilename
+  real(r_sngl), allocatable :: bufr3d(:,:,:)
+  integer :: nlev_plot
+
+  real(RP) :: lev0, lev1, lev_ref
+  integer :: kk
+  real(RP) :: rat
 
   call rank_1d_2d(myrank_d, proc_i, proc_j)
   ishift = proc_i * nlon
   jshift = proc_j * nlat
 
-  if (myrank_d == 0) then
+  if ( OUT_NETCDF_DAFCST ) then
+    if ( step > 0 .and. mod( step, OUT_NETCDF_DAFCST_DSTEP) /= 0 ) return
+
+    ncfilename = trim(DACYCLE_RUN_FCST_OUTNAME)//"/fcst_ref3d_"//trim(timelabel)//".nc"
+
+    nlev_plot = OUT_NETCDF_DAFCST_NZLEV
+    if ( .not. allocated(bufr3d) ) allocate( bufr3d(nlev_plot,nlong,nlatg))
+    bufr3d(:,:,:) = 0.0
+
+    nlev_plot = 1
+    do k = 1, nlev-1
+      lev0 = CZ(KHALO+k)
+      lev1 = CZ(KHALO+k+1)
+      lev_ref = nlev_plot*OUT_NETCDF_DAFCST_DZ 
+
+      if ( lev0 <= lev_ref .and. lev_ref < lev1 ) then
+        rat = (lev_ref - lev0) / ( lev1 - lev0 )
+
+        ! vertical interpolation
+        bufr3d(nlev_plot, 1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = (1.0 - rat) * real(ref3d(k,1:nlon,1:nlat), r_sngl) &
+                                                                             + rat * real(ref3d(k+1,1:nlon,1:nlat), r_sngl)
+
+        call MPI_ALLREDUCE( MPI_IN_PLACE, bufr3d(nlev_plot,:,:), nlong*nlatg, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr)
+
+        nlev_plot = nlev_plot + 1
+        if ( nlev_plot > OUT_NETCDF_DAFCST_NZLEV ) exit
+      endif
+    enddo
+    nlev_plot = OUT_NETCDF_DAFCST_NZLEV
+
+!    nlev_plot = 0
+!    do k = max( 1, OUT_NETCDF_ZLEV_MIN), min( nlev, OUT_NETCDF_ZLEV_MAX), OUT_NETCDF_ZLEV_INTV
+!       nlev_plot = nlev_plot + 1
+!    enddo
+!    if ( .not. allocated(bufr3d) ) allocate( bufr3d(nlev_plot,nlong,nlatg))
+!
+!    bufr3d(:,:,:) = 0.0
+!
+!    nlev_plot = 0
+!    do k = max( 1, OUT_NETCDF_ZLEV_MIN), min( nlev, OUT_NETCDF_ZLEV_MAX), OUT_NETCDF_ZLEV_INTV
+!       nlev_plot = nlev_plot + 1
+!       bufr3d(nlev_plot, 1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(ref3d(k,1:nlon,1:nlat), r_sngl)
+!       call MPI_ALLREDUCE( MPI_IN_PLACE, bufr3d(nlev_plot,:,:), nlong*nlatg, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr)
+!    enddo
+
+    if ( myrank_d == 0 ) then
+      call write_dafcst_nc( trim(ncfilename), step, nlev_plot, bufr3d )
+    endif
+    return
+
+  endif ! OUT_NETCDF_DAFCST
+
+
+  if ( myrank_d == 0 ) then
     filename = trim(DACYCLE_RUN_FCST_OUTNAME)//"/fcst_ref3d_"//trim(timelabel)//".grd"
     iunit = 55
     inquire (iolength=iolen) iolen
     open (iunit, file=trim(filename), form='unformatted', access='direct', &
-          status='unknown', convert='native', recl=nlong*nlatg*iolen)
-    irec = (step - 1)*nlev*2 ! 2 variable (nlev*2 record) output 
+          status='unknown', convert='big_endian', recl=nlong*nlatg*iolen)
+    irec = step * nlev * 1 ! 1 variable (nlev*1 record) output 
   end if
 
   do k = 1, nlev 
-    bufs4(:,:) = 0.0
-    bufs4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(ref3d(k,1:nlon,1:nlat), r_sngl)
-    call MPI_REDUCE(bufs4, bufr4, nlong*nlatg, MPI_REAL, MPI_SUM, 0, MPI_COMM_d, ierr)
+    bufr4(:,:) = 0.0
+    bufr4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(ref3d(k,1:nlon,1:nlat), r_sngl)
+    call MPI_ALLREDUCE(MPI_IN_PLACE, bufr4, nlong*nlatg, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr)
 
     if (myrank_d == 0) then
       irec = irec + 1
@@ -1970,18 +1968,6 @@ subroutine write_grd_dafcst_mpi(timelabel, ref3d, step)
 
   enddo
 
-  ! debug
-  do k = 1, nlev 
-    bufs4(:,:) = 0.0
-    bufs4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(TEMP(KHALO+k,IS:IE,JS:JE), r_sngl)
-    call MPI_REDUCE(bufs4, bufr4, nlong*nlatg, MPI_REAL, MPI_SUM, 0, MPI_COMM_d, ierr)
-
-    if (myrank_d == 0) then
-      irec = irec + 1
-      write (iunit, rec=irec) bufr4
-    end if
-
-  enddo
 
   if (myrank_d == 0) then
     close (iunit)
@@ -1990,13 +1976,211 @@ subroutine write_grd_dafcst_mpi(timelabel, ref3d, step)
   return
 end subroutine write_grd_dafcst_mpi
 
+!-------------------------------------------------------------------------------
+! Write the subdomain model data into a single GrADS file from DACYCLE (additional) forecasts
+!-------------------------------------------------------------------------------
+subroutine write_grd_dafcst_all_mpi( timelabel, step )
+  use mod_atmos_vars, only: &
+    ATMOS_vars_calc_diagnostics, &
+    ATMOS_vars_get_diagnostic,   &
+    W,    &
+    PRES, TEMP, &
+    QV, QC, QR, &
+    QI, QS, QG
+!  use scale_atmos_hydrometeor, only: &
+!    I_QV, I_HC, I_HR, I_HI, I_HS, I_HG
+  use scale_atmos_grid_cartesC_index, only: &
+    IS, IE, JS, JE, KS, KE, IA, JA, KA, &
+    KHALO
+  use scale_io, only: &
+    H_LONG
+
+  implicit none
+  character(15), intent(in) :: timelabel
+  integer, intent(in) :: step
+
+  character(len=H_LONG) :: filename
+  real(r_sngl) :: bufr4(nlong,nlatg)
+  integer :: iunit, iolen
+  integer :: k, irec, ierr
+  integer :: proc_i, proc_j
+  integer :: ishift, jshift
+
+  integer :: iv3d, iv2d
+  real(r_sngl) :: v3d_tmp(nlev,nlon,nlat)
+  real(RP) :: diag2d_RP(IA,JA)
+  real(RP) :: diag3d_RP(KA,IA,JA)
+
+  integer :: nlev_
+
+  nlev_ = 0
+  do k = 1, nlev, OUT_GRADS_DAFCST_ALL_ZSKIP
+     nlev_ = nlev_ + 1
+  enddo
+
+  call rank_1d_2d(myrank_d, proc_i, proc_j)
+  ishift = proc_i * nlon
+  jshift = proc_j * nlat
+
+  if (myrank_d == 0) then
+    filename = trim(DACYCLE_RUN_FCST_OUTNAME)//"/fcst_all_"//trim(timelabel)//".grd"
+    iunit = 55
+    inquire (iolength=iolen) iolen
+    open (iunit, file=trim(filename), form='unformatted', access='direct', &
+          status='unknown', convert='big_endian', recl=nlong*nlatg*iolen)
+    irec = step * ( nlev_ * nv3d + 2 ) ! nv3d + PW + PREC
+  end if
+
+  call ATMOS_vars_calc_diagnostics
+
+  ! 3D variables
+  do iv3d = 1, nv3d
+
+    select case( iv3d )
+    case( iv3d_u )
+      call ATMOS_vars_get_diagnostic( 'Umet', diag3d_RP )
+      v3d_tmp(:,:,:) = real( diag3d_RP(KS:KE,IS:IE,JS:JE), r_sngl)
+    case( iv3d_v )
+      call ATMOS_vars_get_diagnostic( 'Vmet', diag3d_RP )
+      v3d_tmp(:,:,:) = real( diag3d_RP(KS:KE,IS:IE,JS:JE), r_sngl)
+    case( iv3d_w )
+      v3d_tmp(:,:,:) = real( W(KS:KE,IS:IE,JS:JE), r_sngl)
+    case( iv3d_t )
+      v3d_tmp(:,:,:) = real( TEMP(KS:KE,IS:IE,JS:JE), r_sngl)
+    case( iv3d_p )
+      v3d_tmp(:,:,:) = real( PRES(KS:KE,IS:IE,JS:JE), r_sngl)
+    case( iv3d_q )
+      v3d_tmp(:,:,:) = real( QV(KS:KE,IS:IE,JS:JE), r_sngl)
+    case( iv3d_qc )
+      v3d_tmp(:,:,:) = real( QC(KS:KE,IS:IE,JS:JE), r_sngl)
+    case( iv3d_qr )
+      v3d_tmp(:,:,:) = real( QR(KS:KE,IS:IE,JS:JE), r_sngl)
+    case( iv3d_qi )
+      v3d_tmp(:,:,:) = real( QI(KS:KE,IS:IE,JS:JE), r_sngl)
+    case( iv3d_qs )
+      v3d_tmp(:,:,:) = real( QS(KS:KE,IS:IE,JS:JE), r_sngl)
+    case( iv3d_qg )
+      v3d_tmp(:,:,:) = real( QG(KS:KE,IS:IE,JS:JE), r_sngl)
+    case default
+      write (6, '(1A)') "[Error] write_grd_dafcst_all_mpi 3D"
+      stop  
+    end select
+
+    do k = 1, nlev, OUT_GRADS_DAFCST_ALL_ZSKIP
+      bufr4(:,:) = 0.0
+
+      bufr4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = v3d_tmp(k,:,:)
+      call MPI_ALLREDUCE(MPI_IN_PLACE, bufr4, nlong*nlatg, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr)
+
+      if (myrank_d == 0) then
+        irec = irec + 1
+        write (iunit, rec=irec) bufr4
+      end if
+
+    enddo ! k = 1, nlev
+  
+  enddo ! n = 1, nv3d
+
+  ! 2D variables
+  do iv2d = 1, 2
+ 
+    bufr4(:,:) = 0.0
+    select case( iv2d )
+    case( 1 )
+      call ATMOS_vars_get_diagnostic( 'PW', diag2d_RP )
+    case( 2 )
+      call ATMOS_vars_get_diagnostic( 'PREC', diag2d_RP )
+    case default
+      write (6, '(1A)') "[Error] write_grd_dafcst_all_mpi 2D"
+      stop  
+    end select
+
+    bufr4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real( diag2d_RP(IS:IE,JS:JE), kind=r_sngl )
+    call MPI_ALLREDUCE(MPI_IN_PLACE, bufr4, nlong*nlatg, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr)
+  
+    if ( myrank_d == 0 ) then
+      irec = irec + 1
+      write (iunit, rec=irec) bufr4
+    end if
+
+  enddo ! iv2d = 1, 2
+
+  if (myrank_d == 0) then
+    close (iunit)
+  end if
+
+  return
+end subroutine write_grd_dafcst_all_mpi
+
+!-------------------------------------------------------------------------------
+! Write the analysis/guess ensemble mean into a single GrADS file 
+!-------------------------------------------------------------------------------
+subroutine write_grd_all_mpi(timelabel, v3dg, step)
+  use scale_io, only: &
+    H_LONG
+
+  implicit none
+  character(15), intent(in) :: timelabel
+  real(RP), intent(in) :: v3dg(nlev,nlon,nlat,nv3d)
+  integer, intent(in) :: step ! 1:guess, 2:analysis
+
+  character(4) :: head
+  character(len=H_LONG) :: filename
+  real(r_sngl) :: bufr4(nlong,nlatg)
+  integer :: iunit, iolen
+  integer :: k, n, irec, ierr
+  integer :: proc_i, proc_j
+  integer :: ishift, jshift
+
+  integer :: iv3d
+
+  call rank_1d_2d(myrank_d, proc_i, proc_j)
+  ishift = proc_i * nlon
+  jshift = proc_j * nlat
+
+  if (myrank_d == 0) then
+
+    if ( step == 1 ) head = "gues_"
+    if ( step == 2 ) head = "anal_"
+
+    filename = trim(OUT_GRADS_DA_ALL_PATH) // "/" //head // trim(timelabel) // ".grd"
+    iunit = 55
+    inquire (iolength=iolen) iolen
+    open (iunit, file=trim(filename), form='unformatted', access='direct', &
+          status='unknown', convert='big_endian', recl=nlong*nlatg*iolen)
+    irec = 0
+  end if
+
+
+  do iv3d = 1, nv3d
+    do k = 1, nlev, OUT_GRADS_DA_ALL_ZSKIP
+      bufr4(:,:) = 0.0
+      bufr4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real( v3dg(k,:,:,iv3d), r_sngl)
+      call MPI_ALLREDUCE(MPI_IN_PLACE, bufr4, nlong*nlatg, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr)
+
+      if (myrank_d == 0) then
+        irec = irec + 1
+        write (iunit, rec=irec) bufr4
+      end if
+
+    enddo
+  enddo
+
+
+  if (myrank_d == 0) then
+    close (iunit)
+  end if
+
+  return
+end subroutine write_grd_all_mpi
+
 #ifdef PLOT_DCL
 !-------------------------------------------------------------------------------
 ! Plot forecast/analysis 3D data by DCL
 !-------------------------------------------------------------------------------
 subroutine plot_dafcst_mpi(timelabel, ref3d, step)
   use mod_admin_time, only: &
-    TIME_DTSEC_ATMOS_RESTART
+    TIME_DTSEC_ATMOS_DA
   use scale_atmos_grid_cartesC, only: &
      CZ => ATMOS_GRID_CARTESC_CZ
 !  use scale_atmos_hydrometeor, only: &
@@ -2040,7 +2224,7 @@ subroutine plot_dafcst_mpi(timelabel, ref3d, step)
   if (present(step)) then
     fcst_ = .true.
     header = "fcst"
-    write(ftsec,'(I4.4)')  (step - 1) * int(TIME_DTSEC_ATMOS_RESTART)
+    write(ftsec,'(I4.4)')  step * int(TIME_DTSEC_ATMOS_DA)
     footer_fcst = "_FT" // ftsec // "s"
   end if
 
@@ -2053,13 +2237,13 @@ subroutine plot_dafcst_mpi(timelabel, ref3d, step)
 
   ! Count the number of plot levels
   nlev_plot = 0
-  do k = plot_zlev_min, plot_zlev_max, plot_zlev_intv
+  do k = PLOT_ZLEV_MIN, PLOT_ZLEV_MAX, PLOT_ZLEV_INTV
 
     if (CZ(k+KHALO) > real(RADAR_ZMAX,kind=RP)) cycle ! Do not draw the stratosphere
     nlev_plot = nlev_plot + 1
   enddo
 
-  allocate(bufr3d(nlev_plot,nlong,nlatg))
+  allocate( bufr3d(nlev_plot,nlong,nlatg) )
   bufr3d(:,:,:) = 0.0
 
   call rank_1d_2d(myrank_d, proc_i, proc_j)
@@ -2068,21 +2252,19 @@ subroutine plot_dafcst_mpi(timelabel, ref3d, step)
 
 
   nlev_plot = 0
-  do k = plot_zlev_min, plot_zlev_max, plot_zlev_intv
+  do k = PLOT_ZLEV_MIN, PLOT_ZLEV_MAX, PLOT_ZLEV_INTV
 
     if (CZ(k+KHALO) > real(RADAR_ZMAX,kind=RP)) cycle ! Do not draw the stratosphere
     nlev_plot = nlev_plot + 1
 
     bufr3d(nlev_plot,1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(ref3d(k,1:nlon,1:nlat), r_sngl)
+    call MPI_ALLREDUCE(MPI_IN_PLACE, bufr3d(nlev_plot,:,:), nlong*nlatg, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr)
   enddo
-
-  call MPI_ALLREDUCE(MPI_IN_PLACE, bufr3d, nlong*nlatg*nlev_plot, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr)
-
 
   ! Gather required data for reflectivity computation
 
   nlev_plot = 0
-  do k = plot_zlev_min, plot_zlev_max, plot_zlev_intv
+  do k = PLOT_ZLEV_MIN, PLOT_ZLEV_MAX, PLOT_ZLEV_INTV
 
     if (CZ(k+KHALO) > real(RADAR_ZMAX,kind=RP)) cycle ! Do not draw the stratosphere
     nlev_plot = nlev_plot + 1
@@ -2110,259 +2292,7 @@ subroutine plot_dafcst_mpi(timelabel, ref3d, step)
 end subroutine plot_dafcst_mpi
 #endif
 
-! Broadcast restart data among the dacycle (extended) forecast members
-subroutine bcast_restart_efcst_mpi()
-  use scale_atmos_grid_cartesC_index, only: &
-     IA, JA, KA
-  use scale_tracer, only: &
-     QA
-  use mod_atmos_admin, only: &
-     ATMOS_do, &
-     ATMOS_sw_phy_mp, &
-     ATMOS_sw_phy_rd, &
-     ATMOS_sw_phy_sf
-  use mod_cpl_admin, only: &
-     CPL_sw
-  use mod_ocean_admin, only: &
-     OCEAN_do, &
-     OCEAN_ICE_TYPE
-  use mod_land_admin, only: &
-     LAND_do
-  use mod_urban_admin, only: &
-     URBAN_do
-  use mod_atmos_vars, only: &
-     DENS, MOMX, MOMY, MOMZ, &
-     RHOT, QTRC, &
-     ATMOS_vars_fillhalo
-  use mod_atmos_phy_mp_vars, only: &
-     ATMOS_PHY_MP_SFLX_rain, &
-     ATMOS_PHY_MP_SFLX_snow, &
-     ATMOS_PHY_MP_vars_fillhalo
-  use mod_atmos_phy_rd_vars, only: &
-     ATMOS_PHY_RD_SFLX_LW_up, &
-     ATMOS_PHY_RD_SFLX_LW_dn, &
-     ATMOS_PHY_RD_SFLX_SW_up, &
-     ATMOS_PHY_RD_SFLX_SW_dn, &
-     ATMOS_PHY_RD_TOAFLX_LW_up, &
-     ATMOS_PHY_RD_TOAFLX_LW_dn, &
-     ATMOS_PHY_RD_TOAFLX_SW_up, &
-     ATMOS_PHY_RD_TOAFLX_SW_dn, &
-     ATMOS_PHY_RD_SFLX_down,    &
-     ATMOS_PHY_RD_vars_fillhalo
-  use scale_cpl_sfc_index, only: &
-     I_R_direct, I_R_diffuse, &
-     I_R_IR, I_R_NIR, I_R_VIS
-  use mod_atmos_phy_sf_vars, only: &
-     ATMOS_PHY_SF_SFC_TEMP, &
-     ATMOS_PHY_SF_SFC_albedo, &
-     ATMOS_PHY_SF_SFC_Z0M, &
-     ATMOS_PHY_SF_SFC_Z0H, &
-     ATMOS_PHY_SF_SFC_Z0E, &
-     ATMOS_PHY_SF_vars_fillhalo
-  use scale_ocean_grid_cartesC_index, only: &
-     OKMAX, OIA, OJA, OIS, OIE, OJS, OJE
-  use mod_ocean_vars, only : &
-     OCEAN_TEMP,     &
-     OCEAN_OCN_Z0M,  &
-     OCEAN_ICE_TEMP, &
-     OCEAN_ICE_MASS, &
-     OCEAN_SFC_TEMP, &
-     OCEAN_SFC_albedo, &
-     OCEAN_SFC_Z0M,    &
-     OCEAN_SFC_Z0H,    &
-     OCEAN_SFC_Z0E,    &
-     OCEAN_ICE_FRAC,   &
-     OCEAN_vars_total
-  use scale_ocean_phy_ice_simple, only: &
-     OCEAN_PHY_ICE_freezetemp, &
-     OCEAN_PHY_ICE_fraction
-  use mod_land_vars, only : &
-     LAND_TEMP, &
-     LAND_WATER, &
-     LAND_SFC_TEMP, &
-     LAND_SFC_albedo
-  use scale_land_grid_cartesC_index, only: &
-     LKMAX, LIA, LJA
-  use mod_urban_vars, only : &
-     URBAN_TR, &
-     URBAN_TB, &
-     URBAN_TG, &
-     URBAN_TC, &
-     URBAN_QC, &
-     URBAN_UC, &
-     URBAN_TRL, &
-     URBAN_TBL, &
-     URBAN_TGL, &
-     URBAN_RAINR, &
-     URBAN_RAINB, &
-     URBAN_RAING, &
-     URBAN_ROFF, &
-     URBAN_SFC_TEMP, &
-     URBAN_SFC_albedo, &
-     URBAN_vars_total
-  use scale_urban_grid_cartesC_index, only: &
-     UIA, UJA, UKS, UKE
-  implicit none
-
-  integer :: ierr
-
-  if ( ATMOS_do ) then
-    call MPI_BCAST(DENS(1,1,1), KA*IA*JA, MPI_RP, 0, MPI_COMM_ef, ierr)
-    call MPI_BCAST(MOMX(1,1,1), KA*IA*JA, MPI_RP, 0, MPI_COMM_ef, ierr)
-    call MPI_BCAST(MOMY(1,1,1), KA*IA*JA, MPI_RP, 0, MPI_COMM_ef, ierr)
-    call MPI_BCAST(MOMZ(1,1,1), KA*IA*JA, MPI_RP, 0, MPI_COMM_ef, ierr)
-    call MPI_BCAST(RHOT(1,1,1), KA*IA*JA, MPI_RP, 0, MPI_COMM_ef, ierr)
-
-    call MPI_BCAST(QTRC(1,1,1,1), KA*IA*JA*max(QA,1), MPI_RP, 0, MPI_COMM_ef, ierr)
-
-    call ATMOS_vars_fillhalo
-
-    if ( ATMOS_sw_phy_mp ) then
-      call MPI_BCAST(ATMOS_PHY_MP_SFLX_rain(1,1), IA*JA, MPI_RP, 0, MPI_COMM_ef, ierr)
-      call MPI_BCAST(ATMOS_PHY_MP_SFLX_snow(1,1), IA*JA, MPI_RP, 0, MPI_COMM_ef, ierr)
-  
-      call ATMOS_PHY_MP_vars_fillhalo
-    endif
-  
-    if ( ATMOS_sw_phy_rd ) then
-      call MPI_BCAST(ATMOS_PHY_RD_SFLX_LW_up(1,1), IA*JA, MPI_RP, 0, MPI_COMM_ef, ierr)
-      call MPI_BCAST(ATMOS_PHY_RD_SFLX_LW_dn(1,1), IA*JA, MPI_RP, 0, MPI_COMM_ef, ierr)
-  
-      call MPI_BCAST(ATMOS_PHY_RD_SFLX_SW_up(1,1), IA*JA, MPI_RP, 0, MPI_COMM_ef, ierr)
-      call MPI_BCAST(ATMOS_PHY_RD_SFLX_SW_dn(1,1), IA*JA, MPI_RP, 0, MPI_COMM_ef, ierr)
-  
-      call MPI_BCAST(ATMOS_PHY_RD_TOAFLX_LW_up(1,1), IA*JA, MPI_RP, 0, MPI_COMM_ef, ierr)
-      call MPI_BCAST(ATMOS_PHY_RD_TOAFLX_LW_dn(1,1), IA*JA, MPI_RP, 0, MPI_COMM_ef, ierr)
-  
-      call MPI_BCAST(ATMOS_PHY_RD_TOAFLX_SW_up(1,1), IA*JA, MPI_RP, 0, MPI_COMM_ef, ierr)
-      call MPI_BCAST(ATMOS_PHY_RD_TOAFLX_SW_dn(1,1), IA*JA, MPI_RP, 0, MPI_COMM_ef, ierr)
-  
-      call MPI_BCAST(ATMOS_PHY_RD_SFLX_down(1,1,I_R_direct,I_R_IR), IA*JA, MPI_RP, 0, MPI_COMM_ef, ierr)
-      call MPI_BCAST(ATMOS_PHY_RD_SFLX_down(1,1,I_R_diffuse,I_R_IR), IA*JA, MPI_RP, 0, MPI_COMM_ef, ierr)
-  
-      call MPI_BCAST(ATMOS_PHY_RD_SFLX_down(1,1,I_R_direct,I_R_NIR), IA*JA, MPI_RP, 0, MPI_COMM_ef, ierr)
-      call MPI_BCAST(ATMOS_PHY_RD_SFLX_down(1,1,I_R_diffuse,I_R_NIR), IA*JA, MPI_RP, 0, MPI_COMM_ef, ierr)
-  
-      call MPI_BCAST(ATMOS_PHY_RD_SFLX_down(1,1,I_R_direct,I_R_VIS), IA*JA, MPI_RP, 0, MPI_COMM_ef, ierr)
-      call MPI_BCAST(ATMOS_PHY_RD_SFLX_down(1,1,I_R_diffuse,I_R_VIS), IA*JA, MPI_RP, 0, MPI_COMM_ef, ierr)
-  
-      call ATMOS_PHY_RD_vars_fillhalo
-    endif
-  
-    if ( ATMOS_sw_phy_sf .and. (.not. CPL_sw) ) then
-      call MPI_BCAST(ATMOS_PHY_SF_SFC_TEMP(1,1), IA*JA, MPI_RP, 0, MPI_COMM_ef, ierr)
-  
-      call MPI_BCAST(ATMOS_PHY_SF_SFC_albedo(1,1,I_R_direct,I_R_IR), IA*JA, MPI_RP, 0, MPI_COMM_ef, ierr)
-      call MPI_BCAST(ATMOS_PHY_SF_SFC_albedo(1,1,I_R_diffuse,I_R_IR), IA*JA, MPI_RP, 0, MPI_COMM_ef, ierr)
-  
-      call MPI_BCAST(ATMOS_PHY_SF_SFC_albedo(1,1,I_R_direct,I_R_NIR), IA*JA, MPI_RP, 0, MPI_COMM_ef, ierr)
-      call MPI_BCAST(ATMOS_PHY_SF_SFC_albedo(1,1,I_R_diffuse,I_R_NIR), IA*JA, MPI_RP, 0, MPI_COMM_ef, ierr)
-  
-      call MPI_BCAST(ATMOS_PHY_SF_SFC_albedo(1,1,I_R_direct,I_R_VIS), IA*JA, MPI_RP, 0, MPI_COMM_ef, ierr)
-      call MPI_BCAST(ATMOS_PHY_SF_SFC_albedo(1,1,I_R_diffuse,I_R_VIS), IA*JA, MPI_RP, 0, MPI_COMM_ef, ierr)
-  
-      call MPI_BCAST(ATMOS_PHY_SF_SFC_Z0M(1,1), IA*JA, MPI_RP, 0, MPI_COMM_ef, ierr)
-      call MPI_BCAST(ATMOS_PHY_SF_SFC_Z0H(1,1), IA*JA, MPI_RP, 0, MPI_COMM_ef, ierr)
-      call MPI_BCAST(ATMOS_PHY_SF_SFC_Z0E(1,1), IA*JA, MPI_RP, 0, MPI_COMM_ef, ierr)
-  
-      call ATMOS_PHY_SF_vars_fillhalo
-    endif
-  
-  !    if ( ATMOS_sw_dyn )    call ATMOS_DYN_vars_restart_read
-  !    if ( ATMOS_sw_phy_ae ) call ATMOS_PHY_AE_vars_restart_read
-  !    if ( ATMOS_sw_phy_ch ) call ATMOS_PHY_CH_vars_restart_read
-  !    if ( ATMOS_sw_phy_tb ) call ATMOS_PHY_TB_vars_restart_read
-  !    if ( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_restart_read
-
-  endif ! ATMOS_do
-
-  if ( OCEAN_do ) then
-    call MPI_BCAST(OCEAN_TEMP(1,1,1), OKMAX*OIA*OJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-
-    call MPI_BCAST(OCEAN_OCN_Z0M(1,1), OIA*OJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-    call MPI_BCAST(OCEAN_ICE_TEMP(1,1), OKMAX*OIA*OJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-    call MPI_BCAST(OCEAN_ICE_MASS(1,1), OKMAX*OIA*OJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-
-    call MPI_BCAST(OCEAN_SFC_TEMP(1,1), OIA*OJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-
-    call MPI_BCAST(OCEAN_SFC_albedo(1,1,I_R_direct,I_R_IR), OIA*OJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-    call MPI_BCAST(OCEAN_SFC_albedo(1,1,I_R_diffuse,I_R_IR), OIA*OJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-    call MPI_BCAST(OCEAN_SFC_albedo(1,1,I_R_direct,I_R_NIR), OIA*OJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-    call MPI_BCAST(OCEAN_SFC_albedo(1,1,I_R_diffuse,I_R_NIR), OIA*OJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-    call MPI_BCAST(OCEAN_SFC_albedo(1,1,I_R_direct,I_R_VIS), OIA*OJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-    call MPI_BCAST(OCEAN_SFC_albedo(1,1,I_R_diffuse,I_R_VIS), OIA*OJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-
-    call MPI_BCAST(OCEAN_SFC_Z0M(1,1), OIA*OJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-    call MPI_BCAST(OCEAN_SFC_Z0H(1,1), OIA*OJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-    call MPI_BCAST(OCEAN_SFC_Z0E(1,1), OIA*OJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-
-    if ( OCEAN_ICE_TYPE == 'NONE' ) then
-       OCEAN_ICE_TEMP(:,:) = OCEAN_PHY_ICE_freezetemp
-       OCEAN_ICE_FRAC(:,:) = 0.0_RP
-    else
-       OCEAN_ICE_TEMP(:,:) = min( OCEAN_ICE_TEMP(:,:), OCEAN_PHY_ICE_freezetemp )
-       call OCEAN_PHY_ICE_fraction( OIA, OIS, OIE,       & ! [IN]
-                                    OJA, OJS, OJE,       & ! [IN]
-                                    OCEAN_ICE_MASS(:,:), & ! [IN]
-                                    OCEAN_ICE_FRAC(:,:)  ) ! [OUT]
-    endif
-
-    call OCEAN_vars_total
-
-  endif ! OCEAN_do
-
-  if ( LAND_do ) then
-    call MPI_BCAST(LAND_TEMP(1,1,1), LKMAX*LIA*LJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-    call MPI_BCAST(LAND_WATER(1,1,1), LKMAX*LIA*LJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-    call MPI_BCAST(LAND_SFC_TEMP(1,1), LIA*LJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-
-    call MPI_BCAST(LAND_SFC_albedo(1,1,I_R_direct,I_R_IR), LIA*LJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-    call MPI_BCAST(LAND_SFC_albedo(1,1,I_R_diffuse,I_R_IR), LIA*LJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-
-    call MPI_BCAST(LAND_SFC_albedo(1,1,I_R_direct,I_R_NIR), LIA*LJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-    call MPI_BCAST(LAND_SFC_albedo(1,1,I_R_diffuse,I_R_NIR), LIA*LJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-
-    call MPI_BCAST(LAND_SFC_albedo(1,1,I_R_direct,I_R_VIS), LIA*LJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-    call MPI_BCAST(LAND_SFC_albedo(1,1,I_R_diffuse,I_R_VIS), LIA*LJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-
-  endif ! LAND_do
-
-  if ( URBAN_do ) then
-    call MPI_BCAST(URBAN_TR(1,1), UIA*UJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-    call MPI_BCAST(URBAN_TB(1,1), UIA*UJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-    call MPI_BCAST(URBAN_TG(1,1), UIA*UJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-    call MPI_BCAST(URBAN_TC(1,1), UIA*UJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-    call MPI_BCAST(URBAN_QC(1,1), UIA*UJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-    call MPI_BCAST(URBAN_UC(1,1), UIA*UJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-
-    call MPI_BCAST(URBAN_TRL(1,1,1), UIA*UJA*(UKE-UKS+1), MPI_RP, 0, MPI_COMM_ef, ierr)
-    call MPI_BCAST(URBAN_TBL(1,1,1), UIA*UJA*(UKE-UKS+1), MPI_RP, 0, MPI_COMM_ef, ierr)
-    call MPI_BCAST(URBAN_TGL(1,1,1), UIA*UJA*(UKE-UKS+1), MPI_RP, 0, MPI_COMM_ef, ierr)
-
-    call MPI_BCAST(URBAN_RAINR(1,1), UIA*UJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-    call MPI_BCAST(URBAN_RAINB(1,1), UIA*UJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-    call MPI_BCAST(URBAN_RAING(1,1), UIA*UJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-    call MPI_BCAST(URBAN_ROFF(1,1), UIA*UJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-
-    call MPI_BCAST(URBAN_SFC_TEMP(1,1), UIA*UJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-
-    call MPI_BCAST(URBAN_SFC_albedo(1,1,I_R_direct,I_R_IR), UIA*UJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-    call MPI_BCAST(URBAN_SFC_albedo(1,1,I_R_diffuse,I_R_IR), UIA*UJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-
-    call MPI_BCAST(URBAN_SFC_albedo(1,1,I_R_direct,I_R_NIR), UIA*UJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-    call MPI_BCAST(URBAN_SFC_albedo(1,1,I_R_diffuse,I_R_NIR), UIA*UJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-
-    call MPI_BCAST(URBAN_SFC_albedo(1,1,I_R_direct,I_R_VIS), UIA*UJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-    call MPI_BCAST(URBAN_SFC_albedo(1,1,I_R_diffuse,I_R_VIS), UIA*UJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-
-    call URBAN_vars_total
-
-  endif ! URBAN_do
-
-  return
-end subroutine bcast_restart_efcst_mpi
-
-subroutine send_recv_emean_others(fcst_cnt)
+subroutine send_recv_analysis_others( fcst_cnt )
   use scale_atmos_grid_cartesC_index, only: &
      IA, JA, KA
   use mod_atmos_admin, only: &
@@ -2472,7 +2402,11 @@ subroutine send_recv_emean_others(fcst_cnt)
 
   integer :: iv3d, iv2d
 
-  srank_a = MEMBER * nprocs_d + myrank_d
+  if ( USE_MDET_FCST ) then
+    srank_a = ( MEMBER + 1 ) * nprocs_d + myrank_d
+  else
+    srank_a = MEMBER * nprocs_d + myrank_d
+  endif
   rrank_a = nens * nprocs_d + nprocs_d * (fcst_cnt - 1) + myrank_d ! dacycle-forecast member
 
   if ( myrank_a /= srank_a .and. myrank_a /= rrank_a ) return
@@ -2850,7 +2784,7 @@ subroutine send_recv_emean_others(fcst_cnt)
   deallocate(istat)
 
   return
-end subroutine send_recv_emean_others
+end subroutine send_recv_analysis_others
 
 subroutine pawr_toshiba_hd_mpi(lon0, lat0, z0, missing, range_res, na, nr, ne, &
                             AZDIM, ELDIM, n_type, RDIM, az, el, rtdat, utime_obs)
@@ -2886,109 +2820,4 @@ subroutine pawr_toshiba_hd_mpi(lon0, lat0, z0, missing, range_res, na, nr, ne, &
   return
 end subroutine pawr_toshiba_hd_mpi
 
-!subroutine pawr_toshiba_scattv_mpi(RDIM, AZDIM, ELDIM, n_type, ne_lmax, rtdat, az, el, rtdat_l, az_l, el_l)
-subroutine pawr_toshiba_scattv_mpi(RDIM, AZDIM, ELDIM, n_type, ne_lmax, rtdat, rtdat_l)
-  implicit none
-  integer, intent(in) :: AZDIM, ELDIM, n_type, RDIM, ne_lmax
-  real(r_sngl), intent(in) :: rtdat(RDIM, AZDIM, ELDIM, n_type)
-!  real(r_sngl), intent(in) :: az(AZDIM, ELDIM, n_type)
-!  real(r_sngl), intent(in) :: el(AZDIM, ELDIM, n_type)
-
-  real(r_sngl), intent(out) :: rtdat_l(RDIM, AZDIM, ne_lmax, n_type)
-!  real(r_sngl), intent(out) :: az_l(AZDIM, ne_lmax, n_type)
-!  real(r_sngl), intent(out) :: el_l(AZDIM, ne_lmax, n_type)
-
-  real(r_sngl), allocatable :: sbuf1(:), rbuf1(:)
-!  real(r_sngl), allocatable :: sbuf2(:), rbuf2(:)
-!  real(r_sngl), allocatable :: sbuf3(:), rbuf3(:)
-  integer :: ierr
-
-  integer :: it, ie, ia
-  integer :: cnt
-
-  allocate(sbuf1(ne_lmax*nprocs_o*RDIM*AZDIM))
-  allocate(rbuf1(ne_lmax*RDIM*AZDIM))
-!  allocate(sbuf2(ne_lmax*nprocs_o*RDIM*AZDIM))
-!  allocate(rbuf2(ne_lmax*RDIM*AZDIM))
-!  allocate(sbuf3(ne_lmax*nprocs_o*RDIM*AZDIM))
-!  allocate(rbuf3(ne_lmax*RDIM*AZDIM))
-
-  do it = 1, n_type
-
-    if ( myrank_o == 0 ) then
-      do ie = 1, ELDIM
-        do ia = 1, AZDIM
-          cnt = RDIM * AZDIM * (ie - 1) + RDIM *  (ia - 1)
-          sbuf1(1+cnt:RDIM+cnt) = rtdat(1:RDIM,ia,ie,it)
-!          sbuf2(1+cnt:RDIM+cnt) = az(1:RDIM,ia,ie)
-!          sbuf3(1+cnt:RDIM+cnt) = el(1:RDIM,ia,ie)
-        enddo
-      enddo
-    endif
-
-    call MPI_Scatter(sbuf1, ne_lmax*RDIM*AZDIM, MPI_REAL, rbuf1, ne_lmax*RDIM*AZDIM, &
-                     MPI_REAL, 0, MPI_COMM_o, ierr)
-!    call MPI_Scatter(sbuf2, ne_lmax*RDIM*AZDIM, MPI_REAL, rbuf2, ne_lmax*RDIM*AZDIM, &
-!                     MPI_REAL, 0, MPI_COMM_o, ierr)
-!    call MPI_Scatter(sbuf3, ne_lmax*RDIM*AZDIM, MPI_REAL, rbuf3, ne_lmax*RDIM*AZDIM, &
-!                     MPI_REAL, 0, MPI_COMM_o, ierr)
-
-    do ie = 1, ne_lmax
-      do ia = 1, AZDIM
-        cnt = RDIM * AZDIM * (ie - 1) + RDIM *  (ia - 1)
-        rtdat_l(1:RDIM,ia,ie,it) = rbuf1(1+cnt:RDIM+cnt)
-!        az_l(1:RDIM,ia,ie) = rbuf2(1+cnt:RDIM+cnt)
-!        el_l(1:RDIM,ia,ie) = rbuf3(1+cnt:RDIM+cnt)
-      enddo
-    enddo
-  enddo ! nt
-
-  deallocate(sbuf1,rbuf1)
-!  deallocate(sbuf2,rbuf2)
-!  deallocate(sbuf3,rbuf3)
-
-  return
-end subroutine pawr_toshiba_scattv_mpi
-
-subroutine pawr_i8_allreduce(array,size)
-  implicit none
-
-  integer(8),intent(in) :: size
-  integer(8),intent(inout) :: array(size)
-  real(r_dble) :: rarray(size)
-  
-  integer :: ierr
-
-  if (nprocs_o < 2) return
-  rarray = real(array,kind=r_dble)
-  call MPI_ALLREDUCE(MPI_IN_PLACE, rarray, size, MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_o, ierr)
-
-  array = rarray
-
-  return
-end subroutine pawr_i8_allreduce
-
-!subroutine pawr_3dvar_allreduce(na,nr,ne,radlon)
-!  implicit none
-!
-!  integer,intent(in) :: na, nr, ne
-!  real(r_size),intent(inout) :: radlon(na, nr, ne)
-!
-!  real(r_size) :: rbuf3d(na, nr, ne)
-!
-!  integer :: ierr
-!
-!  if (nprocs_o < 2) return
-!  rbuf3d = radlon
-!  call MPI_ALLREDUCE(MPI_IN_PLACE, rbuf3d, na*nr*ne, MPI_r_size, MPI_SUM, MPI_COMM_o, ierr)
-!  radlon = rbuf3d 
-!
-!  return
-!end subroutine pawr_3dvar_allreduce
-
-!SUBROUTINE get_nobs_mpi(obsfile,nrec,nn)
-!SUBROUTINE read_obs2_mpi(obsfile,nn,nbv,elem,rlon,rlat,rlev,odat,oerr,otyp,tdif,hdxf,iqc)
-!SUBROUTINE allreduce_obs_mpi(n,nbv,hdxf,iqc)
-
-!===============================================================================
 END MODULE common_mpi_scale

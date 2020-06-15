@@ -24,7 +24,7 @@
  TIME_DT_ATMOS_PHY_MP_UNIT  = "SEC",
  TIME_DT_ATMOS_PHY_CP       = 5.0D0,
  TIME_DT_ATMOS_PHY_CP_UNIT  = "SEC",
- TIME_DT_ATMOS_PHY_RD       = 30.D0,
+ TIME_DT_ATMOS_PHY_RD       = 300.D0,
  TIME_DT_ATMOS_PHY_RD_UNIT  = "SEC",
  TIME_DT_ATMOS_PHY_SF       = 5.0D0,
  TIME_DT_ATMOS_PHY_SF_UNIT  = "SEC",
@@ -45,6 +45,8 @@
 !--TIME_DT_URBAN_RESTART--
  TIME_DT_URBAN_RESTART_UNIT = "SEC",
 !--TIME_END_RESTART_OUT--
+!--TIME_DT_ATMOS_DA--
+ TIME_DT_ATMOS_DA_UNIT = "SEC",
 /
 
 #&PARAM_COMM_CARTESC_NEST
@@ -219,7 +221,7 @@
 #################################################
 
 &PARAM_ATMOS_VARS
- ATMOS_VARS_CHECKRANGE = .true.,
+ ATMOS_VARS_CHECKRANGE = .false.,
 /
 
 &PARAM_ATMOS_REFSTATE
@@ -256,14 +258,14 @@
  ATMOS_DYN_FVM_FLUX_TYPE              = "UD3",          ! r0051
  ATMOS_DYN_FVM_FLUX_TRACER_TYPE       = "UD3KOREN1993",
  ATMOS_DYN_FLAG_FCT_TRACER            = .false.,
- ATMOS_DYN_NUMERICAL_DIFF_COEF        = 1.D-4,
+ ATMOS_DYN_NUMERICAL_DIFF_COEF        = 0.0D0,
  ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER = 0.0D0,
  ATMOS_DYN_CORIOLIS_TYPE = "SPHERE",
  ATMOS_DYN_WDAMP_HEIGHT               = 15.D3,
 /
 
 &PARAM_ATMOS_PHY_TB_SMG
- ATMOS_PHY_TB_SMG_horizontal = .true.,
+ ATMOS_PHY_TB_SMG_horizontal = .false.,
 /
 
 &PARAM_ATMOS_PHY_RD_MSTRN
@@ -295,7 +297,7 @@
 #################################################
 
 &PARAM_OCEAN_VARS
- OCEAN_VARS_CHECKRANGE = .true.,
+ OCEAN_VARS_CHECKRANGE = .false.,
 /
 
 &PARAM_OCEAN_DYN_SLAB
@@ -421,7 +423,7 @@
 &HISTORY_ITEM name='Q2'  / ! LETKF (not analyzed)
 &HISTORY_ITEM name="MSLP" / ! Nesting
 
-&HISTORY_ITEM name="CAPE" / ! Additional
+!&HISTORY_ITEM name="CAPE" / ! Additional
 
 &HISTORY_ITEM name='OSR' /
 &HISTORY_ITEM name='OLR' /

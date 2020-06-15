@@ -1,5 +1,6 @@
 !==================================================!
-subroutine plot_dbz_DCL_obs(nobs, ze_radar, lon_radar, lat_radar, z_radar, nlons, nlats, lons, lats, dlons, dlats, psfile) 
+subroutine plot_dbz_DCL_obs(nobs, ze_radar, lon_radar, lat_radar, z_radar,  & 
+                            nlons, nlats, lons, lats, dlons, dlats, na, nr, ne, az_r, radlon, radlat, radz, psfile) 
   use common
   use common_scale
   use scale_const, only: &
@@ -36,6 +37,10 @@ subroutine plot_dbz_DCL_obs(nobs, ze_radar, lon_radar, lat_radar, z_radar, nlons
   real(r_sngl),intent(in) :: lons(nlons), lats(nlats)
   real(r_sngl),intent(in) :: dlons, dlats
 
+  integer,intent(in) :: na, nr, ne !!! original radar grid for masking 
+  real(r_sngl),intent(in) :: radlon(na, nr, ne), radlat(na, nr, ne), radz(na, nr, ne)
+  real(r_sngl),intent(in) :: az_r(na)
+
   real(r_sngl):: val_plot(nlons,nlats)
 
   integer :: iwork(3 * (nlons + 2) * (nlats + 2) / 2 + 1)
@@ -71,9 +76,28 @@ subroutine plot_dbz_DCL_obs(nobs, ze_radar, lon_radar, lat_radar, z_radar, nlons
   integer :: pcnt !!! process count
 
   real(r_sngl)::lon4(4), lat4(4)
-  real(r_sngl) :: zmin, zmax
+  real(r_sngl) :: zmin, zmax, zcen
 
   integer time1, time2, timerate, timemax
+  integer :: access !FILE INQUIRY
+  integer :: ios
+  integer(4),save :: shadow_na, shadow_ne
+  integer(2), allocatable, save :: shadow(:,:)
+  real(8),save :: shadow_del_az
+  real(r_sngl) :: vlons_shadow(na+1,2)
+  real(r_sngl) :: vlats_shadow(na+1,2)
+  real(r_sngl) :: vlons_lim(na+7)
+  real(r_sngl) :: vlats_lim(na+7)
+  integer :: ia, ir, ie, isa, ief, iel, indxif, indxil, is
+
+  integer,parameter :: nshadow_max=100
+  integer,parameter :: nshadow_maxpts=200
+  integer :: nshadow
+  integer :: ipts_shadow_plot(nshadow_max)
+  real(r_sngl) :: vlons_shadow_plot(nshadow_maxpts,nshadow_max)
+  real(r_sngl) :: vlats_shadow_plot(nshadow_maxpts,nshadow_max)
+  
+  logical :: lshadow(0:na)
 
   call system_clock(time1, timerate, timemax)
 
@@ -108,19 +132,130 @@ subroutine plot_dbz_DCL_obs(nobs, ze_radar, lon_radar, lat_radar, z_radar, nlons
     range_latl=real(lat_RP/D2R)
     call MAPPROJECTION_xy2lonlat( GRID_CXG(1),GRID_CYG(JHALO+nlatg), lon_RP, lat_RP )
     range_latr=real(lat_RP/D2R)
+
+    zcen = real( GRID_CZ(iplot_lev+KHALO) )
+    zmin = real( GRID_CZ(iplot_lev+KHALO) - 0.5 * RADAR_SO_SIZE_VERT )
+    zmax = real( GRID_CZ(iplot_lev+KHALO) + 0.5 * RADAR_SO_SIZE_VERT )
+
+#ifdef MPW
+  if (use_pawr_mask.and. .not.(allocated(shadow))) then
+        write(*, '("plot_dbz_DCL_obs: reading ", A)') trim(pawr_mask_file)
+        open(99, file = trim(pawr_mask_file), status = "old", access = "stream", form = "unformatted", convert = "little_endian")
+        read(99,iostat=ios) shadow_na, shadow_ne
+        if (ios.eq.0)then
+          allocate(shadow(shadow_na, shadow_ne))
+          read(99,iostat=ios) shadow
+          close(99)
+          if(ios.ne.0) shadow = 0
+        else
+          write(6,'(3A)') 'file ',trim(pawr_mask_file) ,' not found or unsupported format.'
+          stop 1
+        end if 
+    end if
+#endif
+
+        vlons_shadow = real(base_lon/d2r)
+        vlats_shadow = real(base_lat/d2r)
+
+        do ia = 1, na
+          isa = min(int(az_r(ia)/360.0 *real(shadow_na))+1, shadow_na)
+          ief = 0
+          iel = shadow_ne
+          do ie=1,shadow_ne
+            if (ief == 0 .and. shadow(isa,ie) /= 0 ) ief = ie
+            if (iel == shadow_ne .and. ief /= 0 .and. shadow(isa,ie) == 0) iel = ie-1
+          end do
+         
+          if (ief /= 0)then
+           if (radz(ia,nr,ief) < zcen)then
+                  vlons_shadow(ia,1) = radlon(ia,nr,ief)
+                  vlats_shadow(ia,1) = radlat(ia,nr,ief)
+           else
+            do ir=shadow(isa,ief),nr-1
+              if (radz(ia,ir,ief) < zcen .and. radz(ia,ir+1,ief) > zcen ) then
+                vlons_shadow(ia,1) = radlon(ia,ir,ief)
+                vlats_shadow(ia,1) = radlat(ia,ir,ief)
+              end if
+            end do
+           end if
+
+           if (radz(ia,nr,iel) < zcen.or.radz(ia,shadow(isa,iel),iel) > zcen)then
+                  vlons_shadow(ia,2) = radlon(ia,nr,iel)
+                  vlats_shadow(ia,2) = radlat(ia,nr,iel)
+           else
+               do ir=shadow(isa,iel),nr-1
+                if (radz(ia,ir,iel) < zcen .and. radz(ia,ir+1,iel) > zcen) then
+                  vlons_shadow(ia,2) = radlon(ia,ir,iel)
+                  vlats_shadow(ia,2) = radlat(ia,ir,iel)
+                end if
+              end do
+           end if
+         end if
+          
+        end do
+        vlons_shadow(na+1,:) = vlons_shadow(1,:)
+        vlats_shadow(na+1,:) = vlats_shadow(1,:)
+
+
+lshadow(0) = .false.
+do ia = 1, na
+  lshadow(ia) = .not.(vlons_shadow(ia,1)==vlons_shadow(ia,2) .and. vlats_shadow(ia,1)==vlats_shadow(ia,2) ) 
+end do
+
+nshadow = 0
+do ia = 1, na-1
+  if (.not.lshadow(ia-1).and.lshadow(ia).and.lshadow(ia+1)) then
+    nshadow = nshadow+1
+    do ie = ia+1, na
+      if ( .not. lshadow(ie) .or. ie == na ) then
+        ipts_shadow_plot(nshadow) = 2 * (ie-ia)
+        vlons_shadow_plot(1:(ie-ia),nshadow) = vlons_shadow(ia:ie-1,2)
+        vlats_shadow_plot(1:(ie-ia),nshadow) = vlats_shadow(ia:ie-1,2)
+        vlons_shadow_plot((ie-ia)+1:2*(ie-ia),nshadow) = vlons_shadow(ie-1:ia:-1,1)
+        vlats_shadow_plot((ie-ia)+1:2*(ie-ia),nshadow) = vlats_shadow(ie-1:ia:-1,1)
+        exit
+      end if
+    end do
+  end if
+end do
+
+do ia=1,na
+  do ie=1,ne
+    if (radz(ia,nr,ie).gt.zmin.and.radz(ia,nr,ie).lt.zmax)then
+      vlons_lim(ia)=radlon(ia,nr,ie)
+      vlats_lim(ia)=radlat(ia,nr,ie)
+    end if
+  end do
+end do
+
+    vlons_lim(na+1) = vlons_lim(1)
+    vlats_lim(na+1) = vlats_lim(1)
+ 
+    vlons_lim(na+2) = vlons_lim(na+1)
+    vlons_lim(na+3) = real(base_lon/d2r) + 1.5 * (range_lonl - real(base_lon/d2r))
+    vlons_lim(na+4) = real(base_lon/d2r) + 1.5 * (range_lonl - real(base_lon/d2r))
+    vlons_lim(na+5) = real(base_lon/d2r) + 1.5 * (range_lonr - real(base_lon/d2r)) 
+    vlons_lim(na+6) = real(base_lon/d2r) + 1.5 * (range_lonr - real(base_lon/d2r)) 
+    vlons_lim(na+7) = vlons_lim(na+1)
+
+    vlats_lim(na+2) = real(base_lat/d2r) + 1.5 * (range_latr - real(base_lat/d2r))
+    vlats_lim(na+3) = real(base_lat/d2r) + 1.5 * (range_latr - real(base_lat/d2r))
+    vlats_lim(na+4) = real(base_lat/d2r) + 1.5 * (range_latl - real(base_lat/d2r))
+    vlats_lim(na+5) = real(base_lat/d2r) + 1.5 * (range_latl - real(base_lat/d2r))
+    vlats_lim(na+6) = real(base_lat/d2r) + 1.5 * (range_latr - real(base_lat/d2r))
+    vlats_lim(na+7) = real(base_lat/d2r) + 1.5 * (range_latr - real(base_lat/d2r))
   
     iclrmap = 12
-  
   
     vpl = 0.15
     vpr = 0.85
     vpb = 0.20
     vpt = 0.70
    
-    aratio = (range_lonr - range_lonl) / (range_latr - range_latl)
+    aratio = cos(BASE_LAT) * (range_lonr - range_lonl) / (range_latr - range_latl)
    
     vpb = max(vpt - (vpr - vpl) / aratio, 0.10)
-    if (vpb == 0.10)then
+    if (vpb == 0.10) then
       vpl = 0.55 - 0.5 * (vpt - vpb) * aratio
       vpr = 0.55 + 0.5 * (vpt - vpb) * aratio
     end if
@@ -145,9 +280,9 @@ subroutine plot_dbz_DCL_obs(nobs, ze_radar, lon_radar, lat_radar, z_radar, nlons
     call grswnd(range_lonl,range_lonr,range_latl,range_latr)
    
     call grsvpt(vpl,vpr,vpb,vpt)
-    call grstrn(10) !!! Mercator
+    call grstrn(11) !!! Mercator
     call umlset('LGLOBE',.false.)
-    call umiset('INDEXOUT',31)
+    call umiset('INDEXOUT',12)
     call umpfit
    
     call grstrf
@@ -168,9 +303,6 @@ subroutine plot_dbz_DCL_obs(nobs, ze_radar, lon_radar, lat_radar, z_radar, nlons
  
 
     val_plot=0.0
-
-    zmin = real( GRID_FZ(iplot_lev+KHALO-1) - RADAR_SO_SIZE_VERT )
-    zmax = real( GRID_FZ(iplot_lev+KHALO-1) + RADAR_SO_SIZE_VERT )
 
     call system_clock(time2, timerate, timemax)
 !    if (myrank_o == 1 ) write(*, *) "plot setting", (time2 - time1) / dble(timerate), myrank_o
@@ -204,13 +336,19 @@ subroutine plot_dbz_DCL_obs(nobs, ze_radar, lon_radar, lat_radar, z_radar, nlons
    
     call udlset ('LMSG',.false.)
     call udlset ('LABEL',.false.)
-   
+
+    call sglset('LCLIP',.true.) 
+    call sgtnzu(na+7, vlons_lim, vlats_lim, 603)
+ 
+    do is=1,nshadow
+      if (ipts_shadow_plot(is).ge.4) call sgtnzu(ipts_shadow_plot(is), vlons_shadow_plot(1:ipts_shadow_plot(is),is), vlats_shadow_plot(1:ipts_shadow_plot(is),is), 503)
+    end do    
+
     call system_clock(time2, timerate, timemax)
 !    if (myrank_o == 1 ) write(*, *) "plot chk1", (time2 - time1) / dble(timerate), myrank_o
     time1 = time2
 !!! map  
  
-    call sglset('LCLIP',.true.)
     call umlset ('LGRIDMJ',.false.)
     call umrset ('DGRIDMN',0.5)
     call umiset ('ITYPEMN',3)
@@ -219,6 +357,7 @@ subroutine plot_dbz_DCL_obs(nobs, ze_radar, lon_radar, lat_radar, z_radar, nlons
     call umpglb
     call umplim
     call umpmap('coast_japan')
+    call umpmap('pref_japan')
   
     call uumrkz(1,real(BASE_LON/D2R),real(BASE_LAT/D2R),9,21,0.010) !!! RADAR location
   

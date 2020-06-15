@@ -58,6 +58,17 @@ subroutine ncio_open(filename, mode, ncid)
   call ncio_check(nf90_open(filename, mode, ncid))
 end subroutine ncio_open
 !-----------------------------------------------------------------------
+! Create a netcdf file
+!-----------------------------------------------------------------------
+subroutine ncio_create( filename, mode, ncid )
+  implicit none
+  character(len=*), intent(in) :: filename
+  integer, intent(in) :: mode
+  integer, intent(out) :: ncid
+
+  call ncio_check( nf90_create( filename, mode, ncid ) )
+end subroutine ncio_create
+!-----------------------------------------------------------------------
 ! Close a netcdf file
 !-----------------------------------------------------------------------
 subroutine ncio_close(ncid)

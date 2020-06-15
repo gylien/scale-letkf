@@ -59,11 +59,16 @@ MODULE common_nml
   logical :: DET_RUN_CYCLED = .true.       ! Deprecated (= MDET_CYCLED)
 
   logical :: DACYCLE_RUN_FCST = .false.    ! Run a forecast from analysis ensemble mean by dacycle-forecast member
+  integer :: NUM_DACYCLE_FCST_MEM = 0      ! Number of dacycle-forecasts members
   integer :: MAX_DACYCLE_RUN_FCST = 0      ! Maximum number of dacycle-forecasts 
-  integer :: ICYC_DACYCLE_RUN_FCST = 1      ! Initial-cycle number of dacycle-forecasts 
-  integer :: ICYC_DACYCLE_ANALYSIS = 1      ! Initial-cycle number of DA (after spin-up forecast)
-  integer :: DACYCLE_RUN_FCST_TIME = 0      ! Forecast time for dacycle-forecast members
+  integer :: ICYC_DACYCLE_RUN_FCST = 1     ! Initial-cycle number of dacycle-forecasts 
+  integer :: ICYC_DACYCLE_RUN_ANALYSIS = 1     ! Initial-cycle number of DA (after spin-up forecast)
+  logical :: USE_MDET_FCST = .false.       ! True:  Use analysis "mdet" for extended forecasts
+                                           ! False: Use analysis "mean" for extended forecasts
+  real(r_size) :: DACYCLE_RUN_FCST_TIME = 0      ! Forecast time for dacycle-forecast members
   character(filelenmax) :: DACYCLE_RUN_FCST_OUTNAME = '' ! Output file name
+  logical :: USE_DIF_BDY_DAFCST = .false. ! Use different bdy files for each dafcst member
+  logical :: USE_DIF_INIT_DAFCST = .false. ! Use different restart files for each dafcst member
 
   !--- PARAM_MODEL
   character(len=10) :: MODEL = 'scale-rm'
@@ -192,7 +197,27 @@ MODULE common_nml
   real(r_size) :: MIN_INFL_MUL = 0.0d0         ! Deprecated (use INFL_MUL_MIN)
   logical :: ADAPTIVE_INFL_INIT = .false.      ! Deprecated (use INFL_MUL_ADAPTIVE)
   real(r_size) :: BOUNDARY_TAPER_WIDTH = 0.0d0 ! Deprecated (use BOUNDARY_BUFFER_WIDTH)
-  logical :: OUT_GRADS_DAFCST = .false. ! Outut dacycle forecast in GrADS format
+  logical :: OUT_GRADS_DAFCST = .false. ! Outut dacycle forecast in GrADS format (radar reflectivity)
+  real(r_size) :: OUT_DAFCST_DSEC = 30.0d0 ! Outut dacycle forecast interval (sec)
+  logical :: OUT_GRADS_DAFCST_ALL = .false. ! Outut dacycle forecast in GrADS format (all variables)
+  integer :: OUT_GRADS_DAFCST_ALL_ZSKIP = 1 ! Outut Z interval
+  logical :: OUT_GRADS_DA_ALL = .false. ! Outut dacycle analysis/guess in GrADS format
+  integer :: OUT_GRADS_DA_ALL_ZSKIP = 1  ! Output Z interval
+       
+                                          ! NetCDF output (radar reflectivity)
+  logical :: OUT_NETCDF_DAFCST = .false.  ! Outut dacycle forecast 
+  integer :: OUT_NETCDF_DAFCST_DSTEP = 10 ! Outut interval for forecast
+                                          ! every OUT_NETCDF_DAFCST_DSTEP*LCYCLE (sec) 
+  integer :: OUT_NETCDF_DAFCST_DHORI = 4  ! Outut interval of horizontal thinning for forecast
+  integer :: OUT_NETCDF_DAFCST_NZLEV = 10 ! Outut vertical levels for forecast 
+  real(r_size) :: OUT_NETCDF_DAFCST_DZ = 1.0d3 ! Outut vertical level interval (m)
+  integer :: OUT_NETCDF_ZLEV_MIN = 1
+  integer :: OUT_NETCDF_ZLEV_MAX = 42
+  integer :: OUT_NETCDF_ZLEV_INTV = 1
+
+  character(filelenmax) :: OUT_GRADS_DA_ALL_PATH = "" ! Output path
+  logical :: OUT_PAWR_GRADS = .false. ! Outut PAWR obs in GrADS format
+  character(filelenmax) :: OUT_PAWR_GRADS_PATH = "" ! Output path
 
   !--- PARAM_LETKF_OBS
   logical :: USE_OBS(nobtype) = .true.
@@ -276,6 +301,7 @@ MODULE common_nml
                                                    ! if set to .false., the statistics are only printed by the ensemble mean group, which may save time
 
   LOGICAL               :: OBSDEP_OUT = .true.
+  LOGICAL               :: OBSDEP_OUT_RADAR_COOD = .true.
   character(filelenmax) :: OBSDEP_OUT_BASENAME = 'obsdep'
   LOGICAL               :: OBSGUES_OUT = .false.                      !XXX not implemented yet...
   character(filelenmax) :: OBSGUES_OUT_BASENAME = 'obsgues.<member>'  !XXX not implemented yet...
@@ -301,12 +327,14 @@ MODULE common_nml
   REAL(r_size) :: LOW_REF_SHIFT = 0.0d0
 
   real(r_size) :: RADAR_ZMAX = 99.0d3          !Height limit of radar data to be used
+  real(r_size) :: RADAR_ZMIN = -99.0d3         !Height limit of radar data to be used
 
   REAL(r_size) :: RADAR_PRH_ERROR = 0.1d0      !Obserational error for pseudo RH observations.
 
   !These 2 flags affects the computation of model reflectivity and radial velocity. 
   INTEGER :: INTERPOLATION_TECHNIQUE = 1
   INTEGER :: METHOD_REF_CALC = 3
+  logical :: USE_METHOD3_REF_MELT = .false. ! Use radar operator considering melting (Xue et al. 2009QJRMS)
 
   LOGICAL :: USE_TERMINAL_VELOCITY = .false.
 
@@ -316,6 +344,26 @@ MODULE common_nml
   real(r_size) :: RADAR_SO_SIZE_HORI = 1000.0d0
   real(r_size) :: RADAR_SO_SIZE_VERT = 1000.0d0
   real(r_size) :: RADAR_MAX_ABS_VR = 100.0d0
+  integer :: RADAR_THIN_LETKF_METHOD = 0 ! Thinning method
+                                         ! 0: No thinning
+                                         ! 1: Nearest 8 grids & their columns and
+                                         ! rows + staggered grids
+  integer :: RADAR_THIN_LETKF_HGRID = 1 ! Horizontal thinning level in obs_local
+  integer :: RADAR_THIN_LETKF_VGRID = 1 ! Vertical thinning level in obs_local
+
+  integer :: RADAR_THIN_HORI = 1 ! Thinning horizontal interval (# of grids)
+  integer :: RADAR_THIN_VERT = 1 ! Thinning vertical interval (# of grids)
+  logical :: RADAR_USE_VR_STD = .true.  !If we are going to use the wind std threshold within each box.
+
+  logical :: RADAR_BIAS_COR_RAIN = .false. ! Simple bias correction for radar obs (rain)
+  logical :: RADAR_BIAS_COR_CLR = .false. ! Simple bias correction for radar obs (clear sky)
+  real(r_size) :: RADAR_BIAS_RAIN_CONST_DBZ = 0.0_r_size ! Simply bias correction for radar obs (rain)
+  real(r_size) :: RADAR_BIAS_CLR_CONST_DBZ = 0.0_r_size ! Simply bias correction for radar obs (clear sky)
+
+  logical :: USE_PAWR_MASK = .false. ! Saitama MP-PAWR shadow mask
+  character(filelenmax) :: PAWR_MASK_FILE = '' ! data file for masking
+  logical :: RADAR_PQV = .false. ! Pseudo qv DA for radar
+  real(r_size) :: RADAR_PQV_OMB = 25.0d0 ! Threshold Obs-B for pseudo qv DA for radar
 
   !---PARAM_LETKF_H08
   logical :: H08_REJECT_LAND = .false. ! true: reject Himawari-8 radiance over the land
@@ -351,6 +399,7 @@ MODULE common_nml
   real(r_size) :: OBSERR_TCP = 5.0d2 ! (Pa)
   real(r_size) :: OBSERR_H08(nch) = (/5.0d0,5.0d0,5.0d0,5.0d0,5.0d0,&
                                       5.0d0,5.0d0,5.0d0,5.0d0,5.0d0/) ! H08
+  real(r_size) :: OBSERR_PQ = 0.001d0 ! (kg/m3)
 
   !--- PARAM_OBSSIM
   character(filelenmax) :: OBSSIM_IN_TYPE = 'history'
@@ -373,6 +422,7 @@ MODULE common_nml
   logical :: PLOT_OBS = .true.
   logical :: PLOT_ANAL = .true.
   logical :: PLOT_FCST = .true.
+  logical :: PLOT_FCST_T0 = .false.
   integer :: PLOT_ZLEV_MIN = 10
   integer :: PLOT_ZLEV_MAX = 40
   integer :: PLOT_ZLEV_INTV = 5
@@ -408,11 +458,15 @@ subroutine read_nml_ensemble
     DET_RUN, &           !*** for backward compatibility ***
     DET_RUN_CYCLED, &    !*** for backward compatibility ***
     DACYCLE_RUN_FCST, &
+    NUM_DACYCLE_FCST_MEM, &
     MAX_DACYCLE_RUN_FCST, &
     ICYC_DACYCLE_RUN_FCST, &
-    ICYC_DACYCLE_ANALYSIS, &
+    ICYC_DACYCLE_RUN_ANALYSIS, &
     DACYCLE_RUN_FCST_TIME, &
-    DACYCLE_RUN_FCST_OUTNAME
+    DACYCLE_RUN_FCST_OUTNAME, &
+    USE_MDET_FCST, &
+    USE_DIF_BDY_DAFCST, &
+    USE_DIF_INIT_DAFCST
 
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_ENSEMBLE,iostat=ierr)
@@ -445,12 +499,16 @@ subroutine read_nml_ensemble
       MEMBER_RUN = MEMBER_RUN + 1
     end if
     if (DACYCLE_RUN_FCST) then
-      MEMBER_RUN = MEMBER_RUN + MAX_DACYCLE_RUN_FCST
+      MEMBER_RUN = MEMBER_RUN + NUM_DACYCLE_FCST_MEM
     endif
   end if
 
-  ICYC_DACYCLE_ANALYSIS = max( ICYC_DACYCLE_ANALYSIS, 1 )
-  ICYC_DACYCLE_RUN_FCST = max( ICYC_DACYCLE_RUN_FCST, ICYC_DACYCLE_ANALYSIS )
+  if ( .not. ENS_WITH_MDET ) then
+    USE_MDET_FCST = .false.
+  endif
+
+  ICYC_DACYCLE_RUN_ANALYSIS = max( ICYC_DACYCLE_RUN_ANALYSIS, 1 )
+  ICYC_DACYCLE_RUN_FCST = max( ICYC_DACYCLE_RUN_FCST, ICYC_DACYCLE_RUN_ANALYSIS )
 
   if (LOG_LEVEL >= 4) then
     write(6, nml=PARAM_ENSEMBLE)
@@ -706,7 +764,23 @@ subroutine read_nml_letkf
     PS_ADJUST_THRES, &
     NOBS_OUT, &
     NOBS_OUT_BASENAME, &
+    OUT_NETCDF_DAFCST, &
+    OUT_NETCDF_DAFCST_DSTEP, &
+    OUT_NETCDF_DAFCST_NZLEV, &
+    OUT_NETCDF_DAFCST_DZ, &
+    OUT_NETCDF_DAFCST_DHORI, &
+    OUT_NETCDF_ZLEV_MIN, &
+    OUT_NETCDF_ZLEV_MAX, &
+    OUT_NETCDF_ZLEV_INTV, &
     OUT_GRADS_DAFCST, &
+    OUT_GRADS_DAFCST_ALL, &
+    OUT_GRADS_DAFCST_ALL_ZSKIP, &
+    OUT_DAFCST_DSEC, &
+    OUT_GRADS_DA_ALL, &
+    OUT_GRADS_DA_ALL_ZSKIP, &
+    OUT_GRADS_DA_ALL_PATH, &
+    OUT_PAWR_GRADS, &
+    OUT_PAWR_GRADS_PATH, &
     COV_INFL_MUL, &       !*** for backward compatibility ***
     MIN_INFL_MUL, &       !*** for backward compatibility ***
     ADAPTIVE_INFL_INIT, & !*** for backward compatibility ***
@@ -816,6 +890,11 @@ subroutine read_nml_letkf
   if (trim(NOBS_OUT_BASENAME) == '') then
     NOBS_OUT = .false.
   end if
+
+
+  if ( OUT_NETCDF_DAFCST ) then
+      OUT_GRADS_DAFCST = .true.
+  endif
 
   !*** for backward compatibility ***
   if (COV_INFL_MUL /= 1.0d0 .and. INFL_MUL == 1.0d0) then
@@ -964,6 +1043,7 @@ subroutine read_nml_letkf_monitor
     DEPARTURE_STAT_T_RANGE, &
     DEPARTURE_STAT_ALL_PROCESSES, &
     OBSDEP_OUT, &
+    OBSDEP_OUT_RADAR_COOD, &
     OBSDEP_OUT_BASENAME, &
     OBSGUES_OUT, &
     OBSGUES_OUT_BASENAME, &
@@ -1008,6 +1088,7 @@ subroutine read_nml_letkf_radar
     MIN_RADAR_REF_DBZ, &
     LOW_REF_SHIFT, &
     RADAR_ZMAX, &
+    RADAR_ZMIN, &
     RADAR_PRH_ERROR, &
     INTERPOLATION_TECHNIQUE, &
     METHOD_REF_CALC, &
@@ -1015,7 +1096,22 @@ subroutine read_nml_letkf_radar
     NRADARTYPE, &
     RADAR_SO_SIZE_HORI, &
     RADAR_SO_SIZE_VERT, &
-    RADAR_MAX_ABS_VR
+    RADAR_THIN_HORI, &
+    RADAR_THIN_VERT, &
+    RADAR_USE_VR_STD, &
+    RADAR_BIAS_COR_RAIN, &
+    RADAR_BIAS_COR_CLR, &
+    RADAR_BIAS_RAIN_CONST_DBZ, &
+    RADAR_BIAS_CLR_CONST_DBZ, &
+    RADAR_MAX_ABS_VR, &
+    USE_METHOD3_REF_MELT, &
+    USE_PAWR_MASK, &
+    PAWR_MASK_FILE, &
+    RADAR_THIN_LETKF_METHOD, &
+    RADAR_THIN_LETKF_HGRID, &
+    RADAR_THIN_LETKF_VGRID, &
+    RADAR_PQV, &
+    RADAR_PQV_OMB
 
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_LETKF_RADAR,iostat=ierr)
@@ -1096,6 +1192,7 @@ subroutine read_nml_obs_error
     OBSERR_TCX, &
     OBSERR_TCY, &
     OBSERR_TCP, &
+    OBSERR_PQ, &
     OBSERR_H08    ! H08
 
   rewind(IO_FID_CONF)
@@ -1167,16 +1264,17 @@ end subroutine read_nml_obssim
 !-------------------------------------------------------------------------------
 #ifdef PLOT_DCL
 subroutine read_nml_plot_dcl
-implicit none 
-integer :: ierr
-
-namelist /PARAM_PLOT_DCL/ &
- PLOT_OBS, &
- PLOT_ANAL, &
- PLOT_FCST, &
- PLOT_ZLEV_MIN, & 
- PLOT_ZLEV_MAX, & 
- PLOT_ZLEV_INTV
+  implicit none 
+  integer :: ierr
+  
+  namelist /PARAM_PLOT_DCL/ &
+    PLOT_OBS, &
+    PLOT_ANAL, &
+    PLOT_FCST, &
+    PLOT_FCST_T0, &
+    PLOT_ZLEV_MIN, & 
+    PLOT_ZLEV_MAX, & 
+    PLOT_ZLEV_INTV
  
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_PLOT_DCL,iostat=ierr)

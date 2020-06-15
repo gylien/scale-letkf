@@ -16,25 +16,25 @@
  TIME_STARTMS               = 0.D0,
 !--TIME_DURATION--
  TIME_DURATION_UNIT         = "SEC",
- TIME_DT                    = 3.0D0,
+ TIME_DT                    = 5.0D0,
  TIME_DT_UNIT               = "SEC",
  TIME_NSTEP_ATMOS_DYN       = 3,
  TIME_DT_ATMOS_DYN_UNIT     = "SEC",
- TIME_DT_ATMOS_PHY_MP       = 3.0D0,
+ TIME_DT_ATMOS_PHY_MP       = 5.0D0,
  TIME_DT_ATMOS_PHY_MP_UNIT  = "SEC",
- TIME_DT_ATMOS_PHY_CP       = 3.0D0,
+ TIME_DT_ATMOS_PHY_CP       = 5.0D0,
  TIME_DT_ATMOS_PHY_CP_UNIT  = "SEC",
- TIME_DT_ATMOS_PHY_RD       = 30.D0,
+ TIME_DT_ATMOS_PHY_RD       = 300.D0,
  TIME_DT_ATMOS_PHY_RD_UNIT  = "SEC",
- TIME_DT_ATMOS_PHY_SF       = 3.0D0,
+ TIME_DT_ATMOS_PHY_SF       = 5.0D0,
  TIME_DT_ATMOS_PHY_SF_UNIT  = "SEC",
- TIME_DT_ATMOS_PHY_BL       = 3.0D0,
+ TIME_DT_ATMOS_PHY_BL       = 5.0D0,
  TIME_DT_ATMOS_PHY_BL_UNIT  = "SEC",
- TIME_DT_OCEAN              = 30.D0,
+ TIME_DT_OCEAN              = 5.D0,
  TIME_DT_OCEAN_UNIT         = "SEC",
- TIME_DT_LAND               = 30.D0,
+ TIME_DT_LAND               = 5.D0,
  TIME_DT_LAND_UNIT          = "SEC",
- TIME_DT_URBAN              = 30.D0,
+ TIME_DT_URBAN              = 5.D0,
  TIME_DT_URBAN_UNIT         = "SEC",
 !--TIME_DT_ATMOS_RESTART--
  TIME_DT_ATMOS_RESTART_UNIT = "SEC",
@@ -45,6 +45,8 @@
 !--TIME_DT_URBAN_RESTART--
  TIME_DT_URBAN_RESTART_UNIT = "SEC",
 !--TIME_END_RESTART_OUT--
+!--TIME_DT_ATMOS_DA--
+ TIME_DT_ATMOS_DA_UNIT = "SEC",
 /
 
 #&PARAM_COMM_CARTESC_NEST
@@ -183,6 +185,7 @@
  ATMOS_PHY_RD_TYPE = "MSTRNX",
  ATMOS_PHY_SF_TYPE = "COUPLE",
  ATMOS_PHY_TB_TYPE = "SMAGORINSKY",
+! ATMOS_PHY_BL_TYPE = "MYNN",
 /
 
 &PARAM_OCEAN
@@ -420,7 +423,7 @@
 &HISTORY_ITEM name='Q2'  / ! LETKF (not analyzed)
 &HISTORY_ITEM name="MSLP" / ! Nesting
 
-&HISTORY_ITEM name="CAPE" / ! Additional
+!&HISTORY_ITEM name="CAPE" / ! Additional
 
 &HISTORY_ITEM name='OSR' /
 &HISTORY_ITEM name='OLR' /
