@@ -884,7 +884,7 @@ subroutine write_restart_direct(v3dg,v2dg)
   return
 end subroutine write_restart_direct
 
-subroutine write_dafcst_nc( filename, step, nlev_plot, ref3d ) 
+subroutine write_dafcst_nc( filename, filenamel, step, nlev_plot, ref3d ) 
   use netcdf
   use common_ncio
   use scale_const, only: &
@@ -899,11 +899,14 @@ subroutine write_dafcst_nc( filename, step, nlev_plot, ref3d )
       MAPPROJECTION_xy2lonlat
   implicit none
 
-  character(*), intent(in) :: filename
+  character(*), intent(in) :: filename  ! NetCDF file name 
+  character(*), intent(in) :: filenamel ! List (text) file name
   integer, intent(in) :: step
   integer, intent(in) :: nlev_plot
   real(r_sngl) :: ref3d(nlev_plot, nlong, nlatg)
-  integer :: ncid, varid
+  integer, save :: ncid
+  integer, save :: step_max
+  integer :: varid
 
   integer :: tlev
 
@@ -919,7 +922,7 @@ subroutine write_dafcst_nc( filename, step, nlev_plot, ref3d )
   character(len=*), parameter :: ref_unit = "dBZ"
   integer :: z_dimid, lon_dimid, lat_dimid, t_dimid
   integer :: lon_varid, lat_varid, z_varid, t_varid
-  integer :: ref_varid
+  integer, save :: ref_varid
 
   integer :: dimids(4)
   integer :: start(4), count(4)
@@ -934,12 +937,15 @@ subroutine write_dafcst_nc( filename, step, nlev_plot, ref3d )
   nlong_ = nlong / OUT_NETCDF_DAFCST_DHORI
   nlatg_ = nlatg / OUT_NETCDF_DAFCST_DHORI
 
+  ! Generate a NetCDF file
   if ( step == 0 ) then
 
     tlev = int( DACYCLE_RUN_FCST_TIME / OUT_DAFCST_DSEC / OUT_NETCDF_DAFCST_DSTEP ) + 1
+    step_max = int( DACYCLE_RUN_FCST_TIME / OUT_DAFCST_DSEC ) 
     allocate( tlevs(tlev) )
 
     ! Create the file. 
+    !write(6,'(2a)')"DEBUG ", trim(filename)
     call ncio_create( trim(filename), nf90_clobber, ncid )
 
     ! Define the dimensions. 
@@ -993,21 +999,9 @@ subroutine write_dafcst_nc( filename, step, nlev_plot, ref3d )
        zlevs(k) = k*OUT_NETCDF_DAFCST_DZ
     enddo
 
-!    j = 0
-!    do k = max( 1, OUT_NETCDF_ZLEV_MIN), min( nlev, OUT_NETCDF_ZLEV_MAX), OUT_NETCDF_ZLEV_INTV
-!       j = j + 1
-!       zlevs(j) = real( CZ(KHALO+k), kind=r_sngl )
-!
-!    enddo
-
     call ncio_check( nf90_put_var(ncid, z_varid, zlevs ) )
 
     deallocate( tlevs )
-
-  else
-
-    call ncio_open( trim(filename), nf90_write, ncid )
-    call ncio_check( nf90_inq_varid( ncid, trim(ref_name), ref_varid) )
 
   endif
 
@@ -1020,7 +1014,13 @@ subroutine write_dafcst_nc( filename, step, nlev_plot, ref3d )
                    start = start, &
                    count = count) )
 
-  call ncio_close( ncid )
+  ! Close NetCDF file and make a list file if step is final
+  if ( step == step_max ) then
+    call ncio_close( ncid )
+   
+    open( unit=90, file=trim(filenamel), form='formatted', status='new' )
+    close( 90 )
+  endif
 
   return
 end subroutine write_dafcst_nc
