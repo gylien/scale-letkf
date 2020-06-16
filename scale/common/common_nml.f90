@@ -215,7 +215,10 @@ MODULE common_nml
   real(r_size) :: LT_ZMAX = 12.0d3 ! !Height limit of lightning data to be used
   integer :: XY_THINNING_LT = 1 ! Horizontal thinning interval (1: no thinning)
   integer :: Z_THINNING_LT = 1 ! Vertical thinning interval (1: no thinning)
-
+  logical :: LT_LOG = .false. ! Log transformation
+  real(r_size) :: LT_LOG_CONST = 1.0d0 ! constant for log transformation
+  real(r_size) :: LT_LOG_OERR = 1.0d0 ! obs error for log transformation
+  real :: LT_ON_THRS = 0.0 ! threashold for flash on/off
 
   !--- PARAM_LETKF_RADAR
   logical :: USE_RADAR_REF       = .true.
@@ -969,7 +972,10 @@ subroutine read_nml_letkf_lt
     MIN_LT_MEMBER_OBSOFF, &
     XY_THINNING_LT, &
     Z_THINNING_LT, &
-    LT_ZMAX
+    LT_ZMAX, &
+    LT_LOG, &
+    LT_LOG_CONST, &
+    LT_LOG_OERR
 
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_LETKF_LT,iostat=ierr)
@@ -979,6 +985,10 @@ subroutine read_nml_letkf_lt
   elseif (ierr > 0) then !--- fatal error
     write(6,*) 'xxx Not appropriate names in namelist PARAM_LETKF_LT. Check!'
     stop
+  endif
+
+  if ( LT_LOG ) then
+    LT_ON_THRS = log( real(LT_LOG_CONST) + 0.0 )
   endif
 
   write(6, nml=PARAM_LETKF_LT)

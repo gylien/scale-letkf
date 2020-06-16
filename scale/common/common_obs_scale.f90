@@ -3180,6 +3180,10 @@ subroutine Trans_XtoY_LT(elm,ri,rj,rk,v3d,v2d,yobs,qc,lev,myrank)
 
     yobs = max( sum( v3d(ks:ke,is:ie,js:je,iv3dd_fp) ), 0.0_r_size )
 
+    if ( LT_LOG ) then
+      yobs = log( LT_LOG_CONST + yobs )
+    endif 
+
     tmp_fp = sum( v3d(ks,is:ie,js:je,iv3dd_fp) )
     lev = 0.0d0
     do kk = ks, ke
@@ -3431,7 +3435,7 @@ subroutine read_obs_lt_grd(cfile,obs)
   real(r_size) :: tmp_fp, tmp_fp3d
   integer :: imin, imax
   integer :: jmin, jmax
-  integer :: kk
+  integer :: kk, ii, jj
 
 !  call obs_info_allocate(obs)
 
@@ -3513,6 +3517,19 @@ subroutine read_obs_lt_grd(cfile,obs)
     ! Lightning observation
     n = n + 1
     obs%elm(n) = obs_id
+
+!    obs%lon(n) = 0.0d0
+!    do ii = imin, imax
+!      obs%lon(n) = obs%lon(n) + GRID_CXG(ii+IHALO)
+!    enddo
+!    obs%lon(n) = obs%lon(n) *0.25d0 ! 4 grids
+!
+!    obs%lat(n) = 0.0d0
+!    do jj = jmin, jmax
+!      obs%lat(n) = obs%lat(n) + GRID_CYG(jj+IHALO)
+!    enddo
+!    obs%lat(n) = obs%lat(n) *0.25d0 ! 4 grids
+
     obs%lon(n) = GRID_CXG(i+IHALO)
     obs%lat(n) = GRID_CYG(j+JHALO)
     obs%lev(n) = GRID_CZ(k+KHALO)
@@ -3564,7 +3581,10 @@ subroutine read_obs_lt_grd(cfile,obs)
        ! obs%dat(n) < 0 will be discarded in letkf_obs.f90 
     endif
 
-
+    if ( LT_LOG .and.  obs%dat(n) > LT_LOG_CONST ) then
+      obs%dat(n) = log( obs%dat(n) )
+      obs%err(n) = LT_LOG_OERR
+    endif
 !    if ( LT_TEST_SINGLE ) then
 !      if ( obs%dat(n) < vmax ) then
 !        obs%dat(n) = -1.0_r_size

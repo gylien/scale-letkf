@@ -425,25 +425,25 @@ SUBROUTINE set_letkf_obs
 
 
       ! Thinning 
-      if ( obs(iof)%dat(iidx) < 0.0d0 ) then
+      if ( obs(iof)%dat(iidx) < LT_ON_THRS ) then
         obsda%qc(n) = iqc_out_h
         cycle
       endif
 
       mem_ref = 0
       do i = 1, MEMBER
-        if (obsda%ensval(i,n) > 1.0d-6) then
+        if (obsda%ensval(i,n) > LT_ON_THRS) then
           mem_ref = mem_ref + 1
         end if
       end do
 
-      if (obs(iof)%dat(iidx) > 1.0d-6) then 
+      if (obs(iof)%dat(iidx) >  LT_ON_THRS ) then 
       ! obs: flash
         if (mem_ref < MIN_LT_MEMBER_OBSON) then
           obsda%qc(n) = iqc_ref_mem
 !          cycle
         endif
-      else if (obs(iof)%dat(iidx) == 0.0d0 ) then
+      else if (obs(iof)%dat(iidx) == LT_ON_THRS ) then
       ! obs: no flash
         if (mem_ref < MIN_LT_MEMBER_OBSOFF) then
           obsda%qc(n) = iqc_ref_mem
@@ -705,7 +705,8 @@ SUBROUTINE set_letkf_obs
       !write (6, '(2I6,2F7.1,5F10.3,2I4)') obs(iof)%elm(iidx), &
 
 if (myrank_a < nprocs_d ) then
-      write (6, '(2I6,2I6,6F9.2,2I4)') obs(iof)%elm(iidx), &
+      !write (6, '(2I6,2I6,6F9.2,2I4)') obs(iof)%elm(iidx), &
+      write (6, '(2I6,2f6.1,6F9.2,2I4)') obs(iof)%elm(iidx), &
                                          obs(iof)%typ(iidx), &
                                          obs(iof)%lon(iidx)*0.001, &
                                          obs(iof)%lat(iidx)*0.001, &
