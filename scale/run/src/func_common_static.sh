@@ -255,8 +255,11 @@ fi
 
 if ((DACYCLE_RUN_FCST == 1)); then
   DACYCLE_RUN_FCST_TF='.true.'
-  DACYCLE_RUN_FCST_OUTNAME="${OUTDIR[$d]}/${STIME}/dafcst"
+  DACYCLE_RUN_FCST_OUTNAME="${OUTDIR[$d]}/dafcst"
   mkdir -p $DACYCLE_RUN_FCST_OUTNAME
+  mkdir -p ${DACYCLE_RUN_FCST_OUTNAME}_nc
+  rm -rf ${DACYCLE_RUN_FCST_OUTNAME}_ncl
+  mkdir -p ${DACYCLE_RUN_FCST_OUTNAME}_ncl
 else
   DACYCLE_RUN_FCST_TF='.false.'
   DACYCLE_RUN_FCST_OUTNAME=""

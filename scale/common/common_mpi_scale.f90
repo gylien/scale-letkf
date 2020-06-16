@@ -1883,6 +1883,7 @@ subroutine write_grd_dafcst_mpi( timelabel, ref3d, step )
   integer :: ishift, jshift
 
   character(len=H_LONG) :: ncfilename
+  character(len=H_LONG) :: ncfilenamel
   real(r_sngl), allocatable :: bufr3d(:,:,:)
   integer :: nlev_plot
 
@@ -1897,7 +1898,8 @@ subroutine write_grd_dafcst_mpi( timelabel, ref3d, step )
   if ( OUT_NETCDF_DAFCST ) then
     if ( step > 0 .and. mod( step, OUT_NETCDF_DAFCST_DSTEP) /= 0 ) return
 
-    ncfilename = trim(DACYCLE_RUN_FCST_OUTNAME)//"/fcst_ref3d_"//trim(timelabel)//".nc"
+    ncfilename = trim(DACYCLE_RUN_FCST_OUTNAME)//"_nc/fcst_ref3d_"//trim(timelabel)//".nc"
+    ncfilenamel = trim(DACYCLE_RUN_FCST_OUTNAME)//"_ncl/fcst_ref3d_"//trim(timelabel)
 
     nlev_plot = OUT_NETCDF_DAFCST_NZLEV
     if ( .not. allocated(bufr3d) ) allocate( bufr3d(nlev_plot,nlong,nlatg))
@@ -1940,7 +1942,7 @@ subroutine write_grd_dafcst_mpi( timelabel, ref3d, step )
 !    enddo
 
     if ( myrank_d == 0 ) then
-      call write_dafcst_nc( trim(ncfilename), step, nlev_plot, bufr3d )
+      call write_dafcst_nc( trim(ncfilename), trim(ncfilenamel), step, nlev_plot, bufr3d )
     endif
     return
 
