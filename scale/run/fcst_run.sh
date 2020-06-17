@@ -76,27 +76,16 @@ echo "RUN_LEVEL=4" >> $TMP/config.main
 echo "PARENT_REF_TIME=$PARENT_REF_TIME" >> $TMP/config.main
 
 safe_init_tmpdir $STAGING_DIR || exit $?
-if [ "$CONF_MODE" = 'static' ]; then
-  staging_list_static || exit $?
-  config_file_list $TMPS/config || exit $?
-else
-  staging_list || exit $?
-fi
+staging_list_static || exit $?
+config_file_list $TMPS/config || exit $?
 
 #-------------------------------------------------------------------------------
 # Add shell scripts and node distribution files into the staging list
 
-cat >> ${STAGING_DIR}/${STGINLIST} << EOF
-${SCRP_DIR}/config.rc|config.rc
-${SCRP_DIR}/config.${job}|config.${job}
-${SCRP_DIR}/${job}.sh|${job}.sh
-${SCRP_DIR}/src/|src/
-${NODEFILE_DIR}/|node/
-EOF
-
-if [ "$CONF_MODE" != 'static' ]; then
-  echo "${SCRP_DIR}/${job}_step.sh|${job}_step.sh" >> ${STAGING_DIR}/${STGINLIST}
-fi
+cp ${SCRP_DIR}/config.rc $TMP/config.rc
+cp ${SCRP_DIR}/config.${job} $TMP/config.${job}
+cp ${SCRP_DIR}/${job}.sh $TMP/${job}.sh
+cp -r ${SCRP_DIR}/src $TMP/src
 
 #===============================================================================
 # Stage in
@@ -113,6 +102,76 @@ jobscrp="$TMP/${job}_job.sh"
 
 echo "[$(datetime_now)] Create a job script '$jobscrp'"
 
+
+# OFP
+if [ "$PRESET" = 'OFP' ]; then
+
+  if [ "$RSCGRP" == "" ] ; then
+    RSCGRP="regular-cache"
+  fi
+
+cat > $jobscrp << EOF
+#!/bin/sh
+#PJM -L rscgrp=${RSCGRP}
+#PJM -L node=${NNODES}
+#PJM -L elapse=${TIME_LIMIT}
+#PJM --mpi proc=$((NNODES*PPN))
+##PJM --mpi proc=${totalnp}
+#PJM --omp thread=${THREADS}
+
+#PJM -g $(echo $(id -ng))
+# HPC
+##PJM -g gx14  
+
+#PJM -s
+
+module unload impi
+module unload intel
+module load intel/2019.5.281
+
+source /work/opt/local/cores/intel/performance_snapshots_2019.6.0.602217/apsvars.sh
+export MPS_STAT_LEVEL=4
+ 
+module load hdf5/1.10.5
+module load netcdf/4.7.0
+module load netcdf-fortran/4.4.5
+
+export FORT_FMT_RECL=400
+
+export HFI_NO_CPUAFFINITY=1
+export I_MPI_PIN_PROCESSOR_EXCLUDE_LIST=0,1,68,69,136,137,204,205
+export I_MPI_HBW_POLICY=hbw_preferred,,
+export I_MPI_FABRICS_LIST=tmi
+unset KMP_AFFINITY
+#export KMP_AFFINITY=verbose
+#export I_MPI_DEBUG=5
+
+export OMP_NUM_THREADS=1
+export I_MPI_PIN_DOMAIN=${NPIN}
+export I_MPI_PERHOST=${PPN}
+export KMP_HW_SUBSET=1t
+
+export PSM2_CONNECT_WARN_INTERVAL=2400
+export TMI_PSM2_CONNECT_TIMEOUT=2000
+
+
+#export OMP_STACKSIZE=128m
+ulimit -s unlimited
+
+./${job}.sh "$STIME" "$ETIME" "$MEMBERS" "$CYCLE" "$CYCLE_SKIP" "$IF_VERF" "$IF_EFSO" "$ISTEP" "$FSTEP" "$CONF_MODE" || exit \$?
+EOF
+
+  echo "[$(datetime_now)] Run ${job} job on PJM"
+  echo
+  
+  job_submit_PJM $jobscrp
+  echo
+  
+  job_end_check_PJM $jobid
+  res=$?
+
+else
+
 cat > $jobscrp << EOF
 #!/bin/sh
 #PBS -N $job
@@ -122,10 +181,7 @@ cat > $jobscrp << EOF
 #
 #
 
-
 cd \${PBS_O_WORKDIR}
-
-
 
 export FORT_FMT_RECL=400
 export GFORTRAN_UNBUFFERED_ALL=Y
@@ -144,17 +200,16 @@ ulimit -s unlimited
 ./${job}.sh "$STIME" "$ETIME" "$MEMBERS" "$CYCLE" "$CYCLE_SKIP" "$IF_VERF" "$IF_EFSO" "$ISTEP" "$FSTEP" "$CONF_MODE" || exit \$?
 EOF
 
-#===============================================================================
-# Run the job
+  echo "[$(datetime_now)] Run ${job} job on PJM"
+  echo
+  
+  job_submit_torque $jobscrp
+  echo
+  
+  job_end_check_torque $jobid
+  res=$?
 
-echo "[$(datetime_now)] Run ${job} job on PJM"
-echo
-
-job_submit_torque $jobscrp
-echo
-
-job_end_check_torque $jobid
-res=$?
+fi
 
 #===============================================================================
 # Stage out
@@ -171,15 +226,8 @@ echo
 
 backup_exp_setting $job $TMP $jobid ${job}_job.sh 'o e'
 
-###if [ "$CONF_MODE" = 'static' ]; then
-###  config_file_save $TMPS/config || exit $?
-###fi
-
 archive_log
 
-#if ((CLEAR_TMP == 1)); then
-#  safe_rm_tmpdir $TMP
-#fi
 
 #===============================================================================
 

@@ -182,24 +182,12 @@ elif [ "$MPI_TYPE" = 'openmpi' ]; then
     exit $res
   fi
 
-elif [ "$MPI_TYPE" = 'impi' ]  &&  [ "$PRESET" = 'Linux64' ]; then
+elif [ "$MPI_TYPE" = 'impi' ]  ||  [ "$PRESET" = 'OFP' ]; then
 
   $MPIRUN $PROG $CONF $STDOUT $ARGS
   res=$?
   if ((res != 0)); then
     echo "[Error] $MPIRUN $PROG $CONF $STDOUT $ARGS" >&2
-    echo "        Exit code: $res" >&2
-    exit $res
-  fi
-
-elif [ "$MPI_TYPE" = 'impi' ]; then
-
-  NNP=$(cat ${NODEFILE_DIR}/${NODEFILE} | wc -l)
-
-  $MPIRUN -n $NNP -machinefile ${NODEFILE_DIR}/${NODEFILE} $PROG $CONF $STDOUT $ARGS
-  res=$?
-  if ((res != 0)); then
-    echo "[Error] $MPIRUN -n $NNP -machinefile ${NODEFILE_DIR}/${NODEFILE} $PROG $CONF $STDOUT $ARGS" >&2
     echo "        Exit code: $res" >&2
     exit $res
   fi

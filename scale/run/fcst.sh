@@ -42,10 +42,8 @@ echo "[$(datetime_now)] Start $myname $@" >&2
 
 setting "$@" || exit $?
 
-if [ "$CONF_MODE" = 'static' ]; then
-  . src/func_common_static.sh || exit $?
-  . src/func_${job}_static.sh || exit $?
-fi
+. src/func_common_static.sh || exit $?
+. src/func_${job}_static.sh || exit $?
 
 echo
 print_setting || exit $?
@@ -85,15 +83,11 @@ if ((RUN_LEVEL <= 1)) && ((ISTEP == 1)); then
   echo "[$(datetime_now)] Initialization (stage in)" >&2
 
   safe_init_tmpdir $STAGING_DIR || exit $?
-  if [ "$CONF_MODE" = 'static' ]; then
-    staging_list_static || exit $?
-    if ((DISK_MODE == 3)); then
-      config_file_list $TMP/config || exit $?
-    else
-      config_file_list || exit $?
-    fi
+  staging_list_static || exit $?
+  if ((DISK_MODE == 3)); then
+    config_file_list $TMP/config || exit $?
   else
-    staging_list || exit $?
+    config_file_list || exit $?
   fi
 
   stage_in node || exit $?
@@ -125,7 +119,7 @@ cd $TMPROOT
 
 declare -a stimes
 declare -a stimesfmt
-lcycles=$((LCYCLE * CYCLE_SKIP))
+lcycles=$((LCYCLE*CYCLE_SKIP))
 s_flag=1
 e_flag=0
 time=$STIME
@@ -316,12 +310,10 @@ if ((RUN_LEVEL <= 3)); then
 fi
 
 if ((RUN_LEVEL <= 1)); then
-  if [ "$CONF_MODE" = 'static' ]; then
-    if ((DISK_MODE == 3)); then
-      config_file_save $TMP/config || exit $?
-    else
-      config_file_save || exit $?
-    fi
+  if ((DISK_MODE == 3)); then
+    config_file_save $TMP/config || exit $?
+  else
+    config_file_save || exit $?
   fi
 fi
 

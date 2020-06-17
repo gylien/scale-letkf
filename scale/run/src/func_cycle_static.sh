@@ -29,6 +29,7 @@ if (( DET_RUN == 1 )); then
   mtot=$((MEMBER+2))
   mmdet=$((MEMBER+2))
   name_m[$mmdet]='mdet'
+  mkdir -p $TMP/mdet
 fi
 
 for m in $(seq $MEMBER); do
