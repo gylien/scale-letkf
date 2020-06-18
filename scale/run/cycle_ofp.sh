@@ -209,7 +209,7 @@ if ((DACYCLE_RUN_FCST == 1)); then
     ZLEV="z"$(printf %02d $z)
     find ${TMP}/[a,f,o]*_${ZLEV}[0-9][0-9][0-9]m_*.png -type f | xargs mv -t ${OUTDIR}/${STIME}/dafcst/ > /dev/null
 
-    cd ${OUTDIR}/${STIME}/dafcst
+    cd ${OUTDIR}/dafcst
     tar -zcf anal_${ZLEV}000m.tar.gz anal_*.png > /dev/null 
     tar -zcf fcst_${ZLEV}000m.tar.gz fcst_*.png > /dev/null 
     tar -zcf obs_${ZLEV}000m.tar.gz obs_*.png > /dev/null 
