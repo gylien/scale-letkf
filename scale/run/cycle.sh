@@ -206,6 +206,8 @@ while ((time <= ETIME)); do
 
       ######
       if ((s == 1)); then
+        logd=$OUTDIR/$time/log/scale_pp
+
         if [ "$TOPO_FORMAT" == 'prep' ] && [ "$LANDUSE_FORMAT" == 'prep' ]; then
           echo "[$(datetime_now)] ${time}: ${stepname[$s]} ...skipped (use prepared topo and landuse files)" >&2
           continue
@@ -218,12 +220,14 @@ while ((time <= ETIME)); do
         fi
       fi
       if ((s == 2)); then
+        logd=$OUTDIR/$time/log/scale_init
         if ((BDY_FORMAT == 0)); then
           echo "[$(datetime_now)] ${time}: ${stepname[$s]} ...skipped (use prepared boundary files)" >&2
           continue
         fi
       fi
       if ((s == 4)); then
+        logd=$OUTDIR/$atime/log/letkf
         if ((OBSOPE_RUN == 0)); then
           echo "[$(datetime_now)] ${time}: ${stepname[$s]} ...skipped (only use integrated observation operators)" >&2
           continue
@@ -253,37 +257,21 @@ while ((time <= ETIME)); do
         conf_time=$atime
       fi
 
-      if [ "$CONF_MODE" = 'static' ]; then
 
-        if ((enable_iter == 1 && nitmax > 1)); then
-          for it in $(seq $nit); do
-            echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: start" >&2
+      if ((enable_iter == 1 && nitmax > 1)); then
+        for it in $(seq $nit); do
+          echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: start" >&2
 
-            mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}_${it}.conf log/${stepexecname[$s]}.NOUT_${conf_time}_${it} || exit $?
-
-            echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: end" >&2
-          done
-        else
-          mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}.conf log/${stepexecname[$s]}.NOUT_${conf_time} || exit $?
-        fi
-
+          mkdir -p $logd
+          mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}_${it}.conf ${logd}/NOUT_${conf_time}_${it} || exit $?
+         
+          echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: end" >&2
+        done
       else
-
-        execpath="${stepexecdir[$s]}/${stepexecname[$s]}"
-        stdout_dir="$TMPOUT/${conf_time}/log/$(basename ${stepexecdir[$s]})"
-        if ((enable_iter == 1)); then
-          for it in $(seq $nit); do
-            echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: start" >&2
-
-            mpirunf $nodestr $execpath ${execpath}.conf "${stdout_dir}/NOUT-${it}" "$SCRP_DIR/${job}_step.sh" "$time" $loop $it || exit $?
-
-            echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: end" >&2
-          done
-        else
-          mpirunf $nodestr $execpath ${execpath}.conf "${stdout_dir}/NOUT" "$SCRP_DIR/${job}_step.sh" "$time" "$loop" || exit $?
-        fi
-
+        mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}.conf ${logd}/NOUT_${conf_time} || exit $?
       fi
+
+      rm -f  $logd/NOUT_*????[1-9]
 
     fi
   done

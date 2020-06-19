@@ -57,12 +57,14 @@ fi
 # observations
 
 if [ "$JOBTYPE" = 'cycle' ]; then
+  mkdir -p $TMP/obs
+
   time=$(datetime $STIME $LCYCLE s)
   while ((time <= $(datetime $ETIME $LCYCLE s))); do
     for iobs in $(seq $OBSNUM); do
       if [ "${OBSNAME[$iobs]}" != '' ] && [ -e ${OBS}/${OBSNAME[$iobs]}_${time}.dat ]; then
         #echo "${OBS}/${OBSNAME[$iobs]}_${time}.dat|obs.${OBSNAME[$iobs]}_${time}.dat" >> ${STAGING_DIR}/${STGINLIST_OBS}
-        ln -sf "${OBS}/${OBSNAME[$iobs]}_${time}.dat $TMP/obs.${OBSNAME[$iobs]}_${time}.dat"
+        ln -sf ${OBS}/${OBSNAME[$iobs]}_${time}.dat $TMP/obs/${OBSNAME[$iobs]}_${time}.dat
       fi
     done
     time=$(datetime $time $LCYCLE s)

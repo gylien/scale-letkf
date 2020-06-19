@@ -102,32 +102,32 @@ while ((time_s <= ETIME)); do
         done
       fi
 
-      # topo
-      #-------------------
-      if ((loop == 1)) && [ "$TOPO_FORMAT" = 'prep' ]; then
-        if ((DISK_MODE == 3)); then
-          for mm in $(seq $fmember); do
-            m=$(((c-1) * fmember + mm))
-            for d in $(seq $DOMNUM); do
-              for q in $(seq ${SCALE_NP[$d]}); do
-                pathin="${DATA_TOPO[$d]}/const/${CONNECTOR_TOPO}topo$(scale_filename_sfx $((q-1)))"
-                path="${TMPROOT}/topo/topo.d$(printf $DOMAIN_FMT $d)$(scale_filename_sfx $((q-1)))"
-                ln -sf $pathin $path
-#                echo "${pathin}|${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+${SCALE_NP[$d]}+q))]}
-              done
-            done
-          done
-        elif ((c == 1)); then
-          for d in $(seq $DOMNUM); do
-            for q in $(seq ${SCALE_NP[$d]}); do
-              pathin="${DATA_TOPO[$d]}/const/${CONNECTOR_TOPO}topo$(scale_filename_sfx $((q-1)))"
-              path="${TMPROOT}/topo/topo.d$(printf $DOMAIN_FMT $d)$(scale_filename_sfx $((q-1)))"
-              ln -sf $pathin $path
-#              echo "${pathin}|${path}" >> ${STAGING_DIR}/${STGINLIST}
-            done
-          done
-        fi
-      fi
+#      # topo
+#      #-------------------
+#      if ((loop == 1)) && [ "$TOPO_FORMAT" = 'prep' ]; then
+#        if ((DISK_MODE == 3)); then
+#          for mm in $(seq $fmember); do
+#            m=$(((c-1) * fmember + mm))
+#            for d in $(seq $DOMNUM); do
+#              for q in $(seq ${SCALE_NP[$d]}); do
+#                pathin="${DATA_TOPO[$d]}/const/${CONNECTOR_TOPO}topo$(scale_filename_sfx $((q-1)))"
+#                path="${TMPROOT}/topo/topo.d$(printf $DOMAIN_FMT $d)$(scale_filename_sfx $((q-1)))"
+#                ln -sf $pathin $path
+##                echo "${pathin}|${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+${SCALE_NP[$d]}+q))]}
+#              done
+#            done
+#          done
+#        elif ((c == 1)); then
+#          for d in $(seq $DOMNUM); do
+#            for q in $(seq ${SCALE_NP[$d]}); do
+#              pathin="${DATA_TOPO[$d]}/const/${CONNECTOR_TOPO}topo$(scale_filename_sfx $((q-1)))"
+#              path="${TMPROOT}/topo/topo.d$(printf $DOMAIN_FMT $d)$(scale_filename_sfx $((q-1)))"
+#              ln -sf $pathin $path
+##              echo "${pathin}|${path}" >> ${STAGING_DIR}/${STGINLIST}
+#            done
+#          done
+#        fi
+#      fi
 
 #      # topo (bdy_scale)
 #      #-------------------
@@ -137,32 +137,32 @@ while ((time_s <= ETIME)); do
 #        echo "${pathin}|${path}" >> ${STAGING_DIR}/${STGINLIST_BDYDATA}
 #      fi
 
-      # landuse
-      #-------------------
-      if ((loop == 1)) && [ "$LANDUSE_FORMAT" = 'prep' ]; then
-        if ((DISK_MODE == 3)); then
-          for mm in $(seq $fmember); do
-            m=$(((c-1) * fmember + mm))
-            for d in $(seq $DOMNUM); do
-              for q in $(seq ${SCALE_NP[$d]}); do
-                pathin="${DATA_LANDUSE[$d]}/const/${CONNECTOR_LANDUSE}landuse$(scale_filename_sfx $((q-1)))"
-                path="${TMPROOT}/landuse/landuse.d$(printf $DOMAIN_FMT $d)$(scale_filename_sfx $((q-1)))"
-                ln -sf $pathin $path
-#                echo "${pathin}|${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+${SCALE_NP[$d]}+q))]}
-              done
-            done
-          done
-        elif ((c == 1)); then
-          for d in $(seq $DOMNUM); do
-            for q in $(seq ${SCALE_NP[$d]}); do
-              pathin="${DATA_LANDUSE[$d]}/const/${CONNECTOR_LANDUSE}landuse$(scale_filename_sfx $((q-1)))"
-              path="${TMPROOT}/landuse/landuse.d$(printf $DOMAIN_FMT $d)$(scale_filename_sfx $((q-1)))"
-              ln -sf $pathin $path
-#              echo "${pathin}|${path}" >> ${STAGING_DIR}/${STGINLIST}
-            done
-          done
-        fi
-      fi
+#      # landuse
+#      #-------------------
+#      if ((loop == 1)) && [ "$LANDUSE_FORMAT" = 'prep' ]; then
+#        if ((DISK_MODE == 3)); then
+#          for mm in $(seq $fmember); do
+#            m=$(((c-1) * fmember + mm))
+#            for d in $(seq $DOMNUM); do
+#              for q in $(seq ${SCALE_NP[$d]}); do
+#                pathin="${DATA_LANDUSE[$d]}/const/${CONNECTOR_LANDUSE}landuse$(scale_filename_sfx $((q-1)))"
+#                path="${TMPROOT}/landuse/landuse.d$(printf $DOMAIN_FMT $d)$(scale_filename_sfx $((q-1)))"
+#                ln -sf $pathin $path
+##                echo "${pathin}|${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+${SCALE_NP[$d]}+q))]}
+#              done
+#            done
+#          done
+#        elif ((c == 1)); then
+#          for d in $(seq $DOMNUM); do
+#            for q in $(seq ${SCALE_NP[$d]}); do
+#              pathin="${DATA_LANDUSE[$d]}/const/${CONNECTOR_LANDUSE}landuse$(scale_filename_sfx $((q-1)))"
+#              path="${TMPROOT}/landuse/landuse.d$(printf $DOMAIN_FMT $d)$(scale_filename_sfx $((q-1)))"
+#              ln -sf $pathin $path
+##              echo "${pathin}|${path}" >> ${STAGING_DIR}/${STGINLIST}
+#            done
+#          done
+#        fi
+#      fi
 
       # bdy (prepared)
       #-------------------
@@ -508,9 +508,12 @@ if [ "$TOPO_FORMAT" != "prep" ] || [ "$LAND_FORMAT" != "prep" ] ; then
   fi
 
   # assume Domain 1
+
+  mkdir -p $OUTDIR/$time/log/fcst_scale_pp
+
   conf_file_src=$SCRP_DIR/config.nml.scale_pp
   conf="$(cat $conf_file_src | \
-           sed -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME = \"log/scale_pp_LOG\"," \
+           sed -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME = \"$OUTDIR/$time/log/fcst_scale_pp/LOG\"," \
                -e "/!--FILE_AGGREGATE--/a FILE_AGGREGATE = ${FILE_AGGREGATE}," \
                -e "/!--TOPO_OUT_BASENAME--/a TOPO_OUT_BASENAME = \"${OUTDIR}/const/topo/topo\"," \
                -e "/!--LANDUSE_OUT_BASENAME--/a LANDUSE_OUT_BASENAME = \"${OUTDIR}/const/landuse/landuse\"," \
@@ -532,15 +535,15 @@ if [ "$TOPO_FORMAT" != "prep" ] || [ "$LAND_FORMAT" != "prep" ] ; then
    conf_file="$TMP/f$(printf $MEMBER_FMT $m)/pp.d01_${STIME}.conf"
    echo "$conf" > ${conf_file}
 
-   for q in $(seq ${SCALE_NP[1]}); do
-      pathin="${DATA_TOPO[$d]}/const/${CONNECTOR_TOPO}topo$(scale_filename_sfx $((q-1)))"
-      path="${TMPROOT}/topo/topo.d$(printf $DOMAIN_FMT $d)$(scale_filename_sfx $((q-1)))"
-      ln -sf $pathin $path
-
-      pathin2="${DATA_LANDUSE[$d]}/const/${CONNECTOR_LANDUSE}landuse$(scale_filename_sfx $((q-1)))"
-      path2="${TMPROOT}/landuse/landuse.d$(printf $DOMAIN_FMT $d)$(scale_filename_sfx $((q-1)))"
-      ln -sf $pathin2 $path2
-   done
+#   for q in $(seq ${SCALE_NP[1]}); do
+#      pathin="${DATA_TOPO[$d]}/const/${CONNECTOR_TOPO}topo$(scale_filename_sfx $((q-1)))"
+#      path="${TMPROOT}/topo/topo.d$(printf $DOMAIN_FMT $d)$(scale_filename_sfx $((q-1)))"
+#      ln -sf $pathin $path
+#
+#      pathin2="${DATA_LANDUSE[$d]}/const/${CONNECTOR_LANDUSE}landuse$(scale_filename_sfx $((q-1)))"
+#      path2="${TMPROOT}/landuse/landuse.d$(printf $DOMAIN_FMT $d)$(scale_filename_sfx $((q-1)))"
+#      ln -sf $pathin2 $path2
+#   done
 fi
 
 
@@ -734,23 +737,25 @@ while ((time_s <= ETIME)); do
               conf_file_src=$SCRP_DIR/config.nml.scale_init.d$d
             fi
 
-           mkdir -p $OUTDIR/$time/anal/${mem_bdy}
-           mkdir -p $OUTDIR/$time/bdy/${mem_bdy}
-           if (( MAKEINIT == 1 )); then
-             RESTART_OUT_BASENAME=${OUTDIR[$d]}/$time/anal/${mem_bdy}/init
-           else
-             RESTART_OUT_BASENAME=${OUTDIR[$d]}/$time/bdy/${mem_bdy}/init_bdy
-           fi
+            mkdir -p $OUTDIR/$time/anal/${mem_bdy}
+            mkdir -p $OUTDIR/$time/bdy/${mem_bdy}
+            if (( MAKEINIT == 1 )); then
+              RESTART_OUT_BASENAME=${OUTDIR[$d]}/$time/anal/${mem_bdy}/init
+            else
+              RESTART_OUT_BASENAME=${OUTDIR[$d]}/$time/bdy/${mem_bdy}/init_bdy
+            fi
+
+            mkdir -p ${OUTDIR[$d]}/$time/log/fcst_scale_init
 
             conf="$(cat $conf_file_src | \
-                sed -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME = \"log/scale_init.${name_m[$m]}.d${dfmt}.LOG_${time}\"," \
+                sed -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME = \"${OUTDIR[$d]}/$time/log/fcst_scale_init/${name_m[$m]}_LOG_${time}\"," \
                     -e "/!--FILE_AGGREGATE--/a FILE_AGGREGATE = ${FILE_AGGREGATE}," \
                     -e "/!--TIME_STARTDATE--/a TIME_STARTDATE = ${time:0:4}, ${time:4:2}, ${time:6:2}, ${time:8:2}, ${time:10:2}, ${time:12:2}," \
                     -e "/!--RESTART_OUTPUT--/a RESTART_OUTPUT = ${RESTART_OUTPUT}," \
                     -e "/!--RESTART_OUT_BASENAME--/a RESTART_OUT_BASENAME = \"${RESTART_OUT_BASENAME}\"," \
                     -e "/!--RESTART_OUT_POSTFIX_TIMELABEL--/a RESTART_OUT_POSTFIX_TIMELABEL = .true.," \
-                    -e "/!--TOPO_IN_BASENAME--/a TOPO_IN_BASENAME = \"topo/topo.d${dfmt}\"," \
-                    -e "/!--LANDUSE_IN_BASENAME--/a LANDUSE_IN_BASENAME = \"landuse/landuse.d${dfmt}\"," \
+                    -e "/!--TOPO_IN_BASENAME--/a TOPO_IN_BASENAME = \"${INDIR[$d]}/const/topo/topo\"," \
+                    -e "/!--LANDUSE_IN_BASENAME--/a LANDUSE_IN_BASENAME = \"${INDIR[$d]}/const/landuse/landuse\"," \
                     -e "/!--LAND_PROPERTY_IN_FILENAME--/a LAND_PROPERTY_IN_FILENAME = \"${TMPROOT_CONSTDB}/dat/land/param.bucket.conf\",")"
             if ((BDY_FORMAT == 1)); then
               conf="$(echo "$conf" | \
@@ -884,8 +889,11 @@ while ((time_s <= ETIME)); do
           else
             conf_file_src=$SCRP_DIR/config.nml.scale.d$d
           fi
+
+          mkdir -p ${OUTDIR[$d]}/$time/log/fcst_scale
+
           conf="$(cat $conf_file_src | \
-              sed -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME = \"log/scale.${name_m[$m]}.d${dfmt}.LOG_${time}\"," \
+              sed -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME = \"${OUTDIR[$d]}/$time/log/fcst_scale/${name_m[$m]}_LOG_${time}\"," \
                   -e "/!--FILE_AGGREGATE--/a FILE_AGGREGATE = ${FILE_AGGREGATE}," \
                   -e "/!--TIME_STARTDATE--/a TIME_STARTDATE = ${time:0:4}, ${time:4:2}, ${time:6:2}, ${time:8:2}, ${time:10:2}, ${time:12:2}," \
                   -e "/!--TIME_DURATION--/a TIME_DURATION = ${FCSTLEN}.D0," \
@@ -899,12 +907,12 @@ while ((time_s <= ETIME)); do
                   -e "/!--RESTART_IN_BASENAME--/a RESTART_IN_BASENAME = \"${RESTART_IN_BASENAME}\"," \
                   -e "/!--RESTART_IN_POSTFIX_TIMELABEL--/a RESTART_IN_POSTFIX_TIMELABEL = ${RESTART_IN_POSTFIX_TIMELABEL}," \
                   -e "/!--RESTART_OUTPUT--/a RESTART_OUTPUT = ${RESTART_OUTPUT}," \
-                  -e "/!--RESTART_OUT_BASENAME--/a RESTART_OUT_BASENAME = \"$OUTDIR/$time/fcst/${name_m[$m]}/fcst.d${dfmt}_$(datetime_scale $time)\"," \
-                  -e "/!--TOPO_IN_BASENAME--/a TOPO_IN_BASENAME = \"topo/topo.d${dfmt}\"," \
-                  -e "/!--LANDUSE_IN_BASENAME--/a LANDUSE_IN_BASENAME = \"landuse/landuse.d${dfmt}\"," \
-                  -e "/!--FILE_HISTORY_DEFAULT_BASENAME--/a FILE_HISTORY_DEFAULT_BASENAME = \"$OUTDIR/$time/fcst/${name_m[$m]}/hist.d${dfmt}_$(datetime_scale $time)\"," \
+                  -e "/!--RESTART_OUT_BASENAME--/a RESTART_OUT_BASENAME = \"${OUTDIR[$d]}/$time/fcst/${name_m[$m]}/fcst.d${dfmt}_$(datetime_scale $time)\"," \
+                  -e "/!--TOPO_IN_BASENAME--/a TOPO_IN_BASENAME = \"${INDIR[$d]}/const/topo/topo\"," \
+                  -e "/!--LANDUSE_IN_BASENAME--/a LANDUSE_IN_BASENAME = \"${INDIR[$d]}/const/landuse/landuse\"," \
+                  -e "/!--FILE_HISTORY_DEFAULT_BASENAME--/a FILE_HISTORY_DEFAULT_BASENAME = \"${OUTDIR[$d]}/$time/fcst/${name_m[$m]}/history\"," \
                   -e "/!--FILE_HISTORY_DEFAULT_TINTERVAL--/a FILE_HISTORY_DEFAULT_TINTERVAL = ${FCSTOUT}.D0," \
-                  -e "/!--MONITOR_OUT_BASENAME--/a MONITOR_OUT_BASENAME = \"log/scale.${name_m[$m]}.d${dfmt}.monitor_${time}\"," \
+                  -e "/!--MONITOR_OUT_BASENAME--/a MONITOR_OUT_BASENAME = \"${OUTDIR[$d]}/$time/log/fcst_scale/${name_m[$m]}_monitor_${time}\"," \
                   -e "/!--LAND_PROPERTY_IN_FILENAME--/a LAND_PROPERTY_IN_FILENAME = \"${TMPROOT_CONSTDB}/dat/land/param.bucket.conf\"," \
                   -e "/!--DOMAIN_CATALOGUE_FNAME--/a DOMAIN_CATALOGUE_FNAME = \"latlon_domain_catalogue.d${dfmt}.txt\"," \
                   -e "/!--DOMAIN_CATALOGUE_OUTPUT--/a DOMAIN_CATALOGUE_OUTPUT = ${DOMAIN_CATALOGUE_OUTPUT}," \

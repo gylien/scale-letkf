@@ -91,12 +91,82 @@ echo "[$(datetime_now)] Initialization (stage in)"
 stage_in server || exit $?
 
 #===============================================================================
-# Creat a job script
+# Creat a job script and submit a job
 
 NPIN=`expr 255 / \( $PPN \) + 1`
 jobscrp="$TMP/${job}_job.sh"
 
 echo "[$(datetime_now)] Create a job script '$jobscrp'"
+
+# OFP
+if [ "$PRESET" = 'OFP' ]; then
+
+  if [ "$RSCGRP" == "" ] ; then
+    RSCGRP="regular-cache"
+  fi
+
+cat > $jobscrp << EOF
+#!/bin/sh
+#PJM -L rscgrp=${RSCGRP}
+#PJM -L node=${NNODES}
+#PJM -L elapse=${TIME_LIMIT}
+#PJM --mpi proc=$((NNODES*PPN))
+##PJM --mpi proc=${totalnp}
+#PJM --omp thread=${THREADS}
+
+#PJM -g $(echo $(id -ng))
+# HPC
+##PJM -g gx14  
+
+#PJM -s
+
+module unload impi
+module unload intel
+module load intel/2019.5.281
+
+source /work/opt/local/cores/intel/performance_snapshots_2019.6.0.602217/apsvars.sh
+export MPS_STAT_LEVEL=4
+
+module load hdf5/1.10.5
+module load netcdf/4.7.0
+module load netcdf-fortran/4.4.5
+
+export FORT_FMT_RECL=400
+
+export HFI_NO_CPUAFFINITY=1
+export I_MPI_PIN_PROCESSOR_EXCLUDE_LIST=0,1,68,69,136,137,204,205
+export I_MPI_HBW_POLICY=hbw_preferred,,
+export I_MPI_FABRICS_LIST=tmi
+unset KMP_AFFINITY
+#export KMP_AFFINITY=verbose
+#export I_MPI_DEBUG=5
+
+export OMP_NUM_THREADS=1
+export I_MPI_PIN_DOMAIN=${NPIN}
+export I_MPI_PERHOST=${PPN}
+export KMP_HW_SUBSET=1t
+
+export PSM2_CONNECT_WARN_INTERVAL=2400
+export TMI_PSM2_CONNECT_TIMEOUT=2000
+
+
+#export OMP_STACKSIZE=128m
+ulimit -s unlimited
+
+./${job}.sh "$STIME" "$ETIME" "$MEMBERS" "$CYCLE" "$CYCLE_SKIP" "$IF_VERF" "$IF_EFSO" "$ISTEP" "$FSTEP" "$CONF_MODE" || exit \$?
+EOF
+
+  echo "[$(datetime_now)] Run ${job} job on PJM"
+  echo
+
+  job_submit_PJM $jobscrp
+  echo
+
+  job_end_check_PJM $jobid
+  res=$?
+
+# qsub
+else
 
 cat > $jobscrp << EOF
 #!/bin/sh
@@ -128,17 +198,16 @@ ulimit -s unlimited
 ./${job}.sh "$STIME" "$ETIME" "$ISTEP" "$FSTEP" "$CONF_MODE" || exit \$?
 EOF
 
-#===============================================================================
-# Run the job
+  echo "[$(datetime_now)] Run ${job} job on PJM"
+  echo
+  
+  job_submit_torque $jobscrp
+  echo
+  
+  job_end_check_torque $jobid
+  res=$?
 
-echo "[$(datetime_now)] Run ${job} job on PJM"
-echo
-
-job_submit_torque $jobscrp
-echo
-
-job_end_check_torque $jobid
-res=$?
+fi
 
 #===============================================================================
 # Stage out

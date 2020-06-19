@@ -172,6 +172,7 @@ EOF
 
 else
 
+# qsub
 cat > $jobscrp << EOF
 #!/bin/sh
 #PBS -N $job
