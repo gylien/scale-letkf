@@ -557,8 +557,9 @@ if ((DACYCLE == 1)) &&  ((OBS_USE_JITDT == 1)) ; then
 
     if [ "${LWATCH_UID}" != "$(id -nu)" ] ; then
       echo "lwatcher is run by another user:${LWATCH_UID}"
-      echo "Stop"
-      exit
+      echo "Continue"
+#      echo "Stop"
+#      exit
     fi
 
   else

@@ -177,7 +177,7 @@ ulimit -s unlimited
 
 export JITCLIENT_LOGFILE="jitclient-log.txt"
 
-
+umask 0007
 
 ./${job}.sh "$STIME" "$ETIME" "$ISTEP" "$FSTEP" "$CONF_MODE" || exit \$?
 EOF
