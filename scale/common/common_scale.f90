@@ -890,6 +890,8 @@ subroutine write_dafcst_nc( filename, filenamel, step, nlev_plot, ref3d )
   use scale_const, only: &
     D2R => CONST_D2R
   use scale_atmos_grid_cartesC, only: &
+    XCENT => ATMOS_GRID_CARTESC_DOMAIN_CENTER_X, &
+    YCENT => ATMOS_GRID_CARTESC_DOMAIN_CENTER_Y, &
     CZ => ATMOS_GRID_CARTESC_CZ, &
     CXG => ATMOS_GRID_CARTESC_CXG, &
     CYG => ATMOS_GRID_CARTESC_CYG
@@ -928,14 +930,42 @@ subroutine write_dafcst_nc( filename, filenamel, step, nlev_plot, ref3d )
   integer :: start(4), count(4)
 
   real :: lons(nlong), lats(nlatg), zlevs(nlev_plot)
+  real :: xs(nlong), ys(nlatg)
   real(RP) :: lon_RP, lat_RP
   real, allocatable :: tlevs(:)
   integer :: i, j, k
 
   integer :: nlong_, nlatg_
 
-  nlong_ = nlong / OUT_NETCDF_DAFCST_DHORI
-  nlatg_ = nlatg / OUT_NETCDF_DAFCST_DHORI
+  integer :: x_varid, y_varid
+  character(len=*), parameter :: x_name = "X"
+  character(len=*), parameter :: y_name = "Y"
+  character(len=*), parameter :: x_unit = "m (from domain center)"
+  character(len=*), parameter :: y_unit = "m (from domain center)"
+
+  integer :: hcut_, dh_
+  integer :: imin_, imax_
+  integer :: jmin_, jmax_
+
+  hcut_ = OUT_NETCDF_DAFCST_HCUT
+  dh_ = OUT_NETCDF_DAFCST_DHORI
+
+  imin_ = hcut_ + dh_
+  imax_ = nlong - hcut_ 
+
+  jmin_ = hcut_ + dh_
+  jmax_ = nlatg - hcut_ 
+
+  nlong_ = 0
+  do i = imin_, imax_, dh_
+    nlong_ = nlong_ + 1
+  enddo
+
+  nlatg_ = 0
+  do j = jmin_, jmax_, dh_
+    nlatg_ = nlatg_ + 1
+  enddo
+
 
   ! Generate a NetCDF file
   if ( step == 0 ) then
@@ -964,11 +994,13 @@ subroutine write_dafcst_nc( filename, filenamel, step, nlev_plot, ref3d )
     do i = 1, nlong
       call MAPPROJECTION_xy2lonlat( CXG(IHALO+i), CYG(JHALO+1), lon_RP, lat_RP )
       lons(i) = real( lon_RP/D2R, kind=r_sngl )
+      xs(i) = real( CXG(IHALO+i) - XCENT, kind=r_sngl ) ! m
     enddo
 
     do j = 1, nlatg
       call MAPPROJECTION_xy2lonlat( CXG(IHALO+1), CYG(JHALO+j), lon_RP, lat_RP )
       lats(j) = real( lat_RP/D2R, kind=r_sngl )
+      ys(j) = real( CYG(JHALO+j) - YCENT, kind=r_sngl ) ! m
     enddo
 
     do i = 1, tlev
@@ -981,19 +1013,31 @@ subroutine write_dafcst_nc( filename, filenamel, step, nlev_plot, ref3d )
     call ncio_check( nf90_put_att(ncid, lat_varid, "units", trim(lat_unit) ) )
     call ncio_check( nf90_put_att(ncid, z_varid, "units", trim(z_unit) ) )
     call ncio_check( nf90_put_att(ncid, t_varid, "units", trim(t_unit) ) )
+
+
     dimids = (/ z_dimid, lon_dimid, lat_dimid, t_dimid /)
 
     ! Define the netCDF variables
     call ncio_check( nf90_def_var(ncid, trim(ref_name), nf90_real, dimids, ref_varid) )
     call ncio_check( nf90_put_att(ncid, ref_varid, "units", trim(ref_unit) ) )
 
+    ! Additional axis variables
+!    call ncio_check( nf90_def_var(ncid, trim(x_name), nf90_real, lon_dimid, x_varid) )
+!    call ncio_check( nf90_def_var(ncid, trim(y_name), nf90_real, lat_dimid, y_varid) )
+!    call ncio_check( nf90_put_att(ncid, x_varid, "units", trim(x_unit) ) )
+!    call ncio_check( nf90_put_att(ncid, y_varid, "units", trim(y_unit) ) )
+
     ! End define mode
     call ncio_check( nf90_enddef(ncid) )
 
     ! Write the coordinate variable data. 
-    call ncio_check( nf90_put_var(ncid, lat_varid, lats(1:nlatg:OUT_NETCDF_DAFCST_DHORI)) )
-    call ncio_check( nf90_put_var(ncid, lon_varid, lons(1:nlong:OUT_NETCDF_DAFCST_DHORI)) )
+    call ncio_check( nf90_put_var(ncid, lon_varid, lons(imin_:imax_:dh_) ) )
+    call ncio_check( nf90_put_var(ncid, lat_varid, lats(jmin_:jmax_:dh_) ) )
     call ncio_check( nf90_put_var(ncid, t_varid, tlevs) )
+
+    ! Write additional axis variables
+!    call ncio_check( nf90_put_var(ncid, x_varid, xs(imin_:imax_:dh_) ) )
+!    call ncio_check( nf90_put_var(ncid, y_varid, ys(jmin_:jmax_:dh_) ) )
 
     do k = 1, OUT_NETCDF_DAFCST_NZLEV
        zlevs(k) = k*OUT_NETCDF_DAFCST_DZ
@@ -1010,7 +1054,7 @@ subroutine write_dafcst_nc( filename, filenamel, step, nlev_plot, ref3d )
 
   ! Write the data.
   call ncio_check( nf90_put_var(ncid, ref_varid, &
-                   ref3d(1:nlev_plot,1:nlong:OUT_NETCDF_DAFCST_DHORI,1:nlatg:OUT_NETCDF_DAFCST_DHORI), &
+                   ref3d(1:nlev_plot,imin_:imax_:dh_,jmin_:jmax_:dh_), &
                    start = start, &
                    count = count) )
 
