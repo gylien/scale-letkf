@@ -209,6 +209,8 @@ MODULE common_nml
   integer :: OUT_NETCDF_DAFCST_DSTEP = 10 ! Outut interval for forecast
                                           ! every OUT_NETCDF_DAFCST_DSTEP*LCYCLE (sec) 
   integer :: OUT_NETCDF_DAFCST_DHORI = 4  ! Outut interval of horizontal thinning for forecast
+  integer :: OUT_NETCDF_DAFCST_HCUT = 10  ! # of horizontal grids excluded from NetCDF
+                                          ! (correspond to BUFFER (5 km) in 500-m mesh)
   integer :: OUT_NETCDF_DAFCST_NZLEV = 10 ! Outut vertical levels for forecast 
   real(r_size) :: OUT_NETCDF_DAFCST_DZ = 1.0d3 ! Outut vertical level interval (m)
   integer :: OUT_NETCDF_ZLEV_MIN = 1
@@ -769,6 +771,7 @@ subroutine read_nml_letkf
     OUT_NETCDF_DAFCST_NZLEV, &
     OUT_NETCDF_DAFCST_DZ, &
     OUT_NETCDF_DAFCST_DHORI, &
+    OUT_NETCDF_DAFCST_HCUT,  &
     OUT_NETCDF_ZLEV_MIN, &
     OUT_NETCDF_ZLEV_MAX, &
     OUT_NETCDF_ZLEV_INTV, &
