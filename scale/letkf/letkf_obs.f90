@@ -398,6 +398,7 @@ SUBROUTINE set_letkf_obs
           mem_ref = mem_ref + 1
         end if
       end do
+
       ! Obs: Rain
       if (obs(iof)%dat(iidx) > RADAR_REF_THRES_DBZ+1.0d-6) then
         if (mem_ref < MIN_RADAR_REF_MEMBER_OBSRAIN) then
@@ -408,8 +409,12 @@ SUBROUTINE set_letkf_obs
                   '*  (lon,lat)=(',obs(iof)%lon(iidx),',',obs(iof)%lat(iidx),'), mem_ref=', &
                   mem_ref,', ref_obs=', obs(iof)%dat(iidx)
           end if
-          cycle
+
+          if ( .not. RADAR_PQV ) cycle
+          ! When RADAR_PQV=True, pseudo qv obs is assimilated even if mem_ref is
+          ! too small
         end if
+
       else
       ! Obs: No rain
         if (mem_ref < MIN_RADAR_REF_MEMBER_OBSNORAIN) then
@@ -423,6 +428,7 @@ SUBROUTINE set_letkf_obs
           cycle
         end if
       end if
+
     end if
 
     if (obs(iof)%elm(iidx) == id_radar_vr_obs) then
@@ -488,8 +494,6 @@ SUBROUTINE set_letkf_obs
           obsda%ensval(mmdetobs,n) = qvs - obsda%eqv(mmdetobs,n) ! y-Hx for deterministic run
         end if
 
-!write(6,'(a,4f12.5)')"DEBUG1", qvs, obsda%val(n), obsda%tm(n), obsda%pm(n)
-write(6,'(a,4f12.6)')"DEBUG1", qvs, obsda%val(n), maxval(obsda%ensval(:,n)), OBSERR_PQ
         obsda%tm(n) = -1.0d0
 
       else
