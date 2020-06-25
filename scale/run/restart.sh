@@ -59,12 +59,17 @@ cat config/${CONFIG}/config.cycle | \
 ### prepare latest init and boundary files
 ##./prep.sh next 
  ./prep.sh $STIME 
- ./prep.sh $ETIME 
-
 
 #-------------------------------------------------------------------------------
 
 ./cycle_ofp.sh > cycle_ofp.log 2>&1 || exit $?
+
+res=$?
+
+intv_sec_h=`expr \( $NCYCLE \) \* 30`
+ETIMEh=`date -d "${intv_sec_h} second ${STIME_in}" +'%Y%m%d%H%M%S'`
+
+[ "$res" == "0" ] && ./move_restart.sh $STIME $ETIMEh
 
 ./store_images.sh dacycle_${DX}_${STIME} &> log_store_images&
 
