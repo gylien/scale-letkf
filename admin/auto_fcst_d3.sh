@@ -55,6 +55,9 @@ PARENT_TIMEf="$(date -ud "${PARENT_TIME}" +'%Y%m%d%H%M%S')"
 
 
 cmem=`printf %04d $nmem_d3`
+
+if [ ! -z "`ls $ofp_parentdir/*/fcst/mean/history.pe000000.nc`"] ;then
+
 while [ ! -f $ofp_parentdir/$PARENT_TIMEf/fcst/$cmem/history.pe000000.nc ] || [ -f ./admin_fcst_d1-2.lock.${PARENT_TIMEf} ] ;do
  PARENT_TIME="$(date -ud "-1 hour ${PARENT_TIME}" +'%Y-%m-%d %H:00:00')"
  PARENT_TIMEf="$(date -ud "${PARENT_TIME}" +'%Y%m%d%H%M%S')"
@@ -62,7 +65,7 @@ done
 
  if [ `date -d "$PARENT_TIME" +%s` -gt `date -d "$PARENT_TIME_B" +%s` ] ;then
 
-# echo "PARENT_TIME" $PARENT_TIME $PARENT_TIME_B
+ echo "PARENT_TIME" $PARENT_TIME $PARENT_TIME_B
  PARENT_TIME_B=$PARENT_TIME
 
  INIT_LIMITf="$(date -ud "$PARENT_FCSTLEN second -10800 second  ${PARENT_TIME}"  +'%Y%m%d%H%M%S')"
@@ -76,7 +79,7 @@ done
  INIT_STARTf="$(date -ud "${INIT_START}" +'%Y%m%d%H%M%S')"
 
  while [ $INIT_STARTf -le $INIT_LIMITf ]; do
-# echo "INIT_STARTf" $INIT_STARTf $INIT_LIMITf
+ echo "INIT_STARTf" $INIT_STARTf $INIT_LIMITf
     now="$(date -u +'%Y-%m-%d %H:%M:%S')"
     echo "$now ${PARENT_TIMEf}.${INIT_STARTf} start "
     FCSTHOUR=$FCSTHOUR_DEF
@@ -87,12 +90,14 @@ done
     done
     FCSTLEN=`expr $FCSTHOUR \* 3600`
     nohup ./admin_fcst_d3.sh "$PARENT_TIME" "$INIT_START" "$FCSTLEN" &> admin_fcst_d3.log.${PARENT_TIMEf}.${INIT_STARTf} &
-###    echo "$PARENT_TIME" "$INIT_START" "$FCSTLEN" 
+    echo "$PARENT_TIME" "$INIT_START" "$FCSTLEN" 
     INIT_START="$(date -ud " $FCSTHOUR hour -1 hour  ${INIT_START}" +'%Y-%m-%d %H:00:00')"
     INIT_STARTf="$(date -ud "${INIT_START}" +'%Y%m%d%H%M%S')"
  sleep 31
  isec=0
  done
+
+ fi
 
  fi
 
