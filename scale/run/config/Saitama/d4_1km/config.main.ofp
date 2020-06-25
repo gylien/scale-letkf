@@ -162,7 +162,7 @@ CLEAR_TMP=0                 # Clear temporary directories after the completion o
 #===============================================================================
 # Environmental settings
 
-MPIRUN="mpiexec"
+MPIRUN="mpiexec.hydra"
 if (which $MPIRUN > /dev/null 2>&1); then
   MPIRUN=$(which $MPIRUN)
 fi

@@ -4,7 +4,7 @@
 /
 
 &PARAM_LOG
- LOG_LEVEL = 2,
+ LOG_LEVEL = 1,
  USE_MPI_BARRIER = .true.,
 /
 
@@ -74,7 +74,7 @@
 /
 
 &PARAM_LETKF_OBS
- HORI_LOCAL = 4.0D3,
+ HORI_LOCAL = 2.0D3,
  VERT_LOCAL = 0.3D0,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,
                 -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,
                 -1., 2.0D3,
@@ -100,7 +100,7 @@
 &PARAM_LETKF_RADAR
  RADAR_NPROC = 12,
  USE_RADAR_REF = .true.,
- USE_RADAR_VR = .true.,
+ USE_RADAR_VR = .false.,
  METHOD_REF_CALC = 3,
  USE_TERMINAL_VELOCITY = .true.,
  USE_OBSERR_RADAR_REF = .true.
@@ -114,6 +114,8 @@
  RADAR_ZMIN = 500.0D0,
  RADAR_SO_SIZE_HORI = 500.0D0,
  RADAR_SO_SIZE_VERT = 500.0D0,
+ RADAR_THIN_HORI = 1,
+ RADAR_THIN_VERT = 1,
  RADAR_MAX_ABS_VR = 50.0D0,
  USE_METHOD3_REF_MELT = .false.,
  RADAR_BIAS_COR_RAIN = .false.,
@@ -122,6 +124,13 @@
  RADAR_BIAS_CLR_CONST_DBZ = 0.0d0,
  USE_PAWR_MASK = .true.,
 !--PAWR_MASK_FILE--
+ RADAR_BIAS_COR_RAIN = .false.,
+ RADAR_BIAS_COR_CLR = .false.,
+ RADAR_BIAS_RAIN_CONST_DBZ = 20.0d0,
+ RADAR_BIAS_CLR_CONST_DBZ = 0.0d0,
+ RADAR_THIN_LETKF_METHOD = 1,
+ RADAR_THIN_LETKF_HGRID = 4,
+ RADAR_THIN_LETKF_VGRID = 4,
 /
 
 &PARAM_OBS_ERROR
@@ -137,6 +146,7 @@
  plot_obs  = .true. ,
  plot_anal = .true. ,
  plot_fcst = .true. ,
+ plot_fcst_t0 = .true. ,
  plot_zlev_min = 10 , 
  plot_zlev_max = 40 , 
  plot_zlev_intv = 5 , 

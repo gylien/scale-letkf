@@ -74,7 +74,7 @@
 /
 
 &PARAM_LETKF_OBS
- HORI_LOCAL = 4.0D3,
+ HORI_LOCAL = 2.0D3,
  VERT_LOCAL = 0.3D0,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,
                 -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,
                 -1., 2.0D3,
@@ -100,7 +100,7 @@
 &PARAM_LETKF_RADAR
  RADAR_NPROC = 12,
  USE_RADAR_REF = .true.,
- USE_RADAR_VR = .true.,
+ USE_RADAR_VR = .false.,
  METHOD_REF_CALC = 3,
  USE_TERMINAL_VELOCITY = .true.,
  USE_OBSERR_RADAR_REF = .true.
