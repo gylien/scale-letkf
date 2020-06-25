@@ -22,8 +22,8 @@ ETIME=`date -d "${intv_sec} second ${STIME_in}" +'%Y%m%d%H%M%S'`
 
 [ "$DX" == "1km" ]            && NNODES=`expr \( $NMEM + 2 + $NUM_DACYCLE_FCST_MEM \) ` ### 1km / 64domain
 [ "$DX" == "500m_verysmall" ] && NNODES=`expr \( $NMEM + 2 + $NUM_DACYCLE_FCST_MEM \) ` ### 500m / 64domain
-[ "$DX" == "500m_small" ]     && NNODES=`expr \( $NMEM + 2 + $NUM_DACYCLE_FCST_MEM \* 4 \) ` ### 500m / 256domain
-[ "$DX" == "500m" ]           && NNODES=`expr \( $NMEM + 2 + $NUM_DACYCLE_FCST_MEM \* 16 \) ` ### 500m / 1024domain
+[ "$DX" == "500m_small" ]     && NNODES=`expr \( \( $NMEM + 2 + $NUM_DACYCLE_FCST_MEM \) \* 4 \) ` ### 500m / 256domain
+[ "$DX" == "500m" ]           && NNODES=`expr \( \( $NMEM + 2 + $NUM_DACYCLE_FCST_MEM \) \* 16 \) ` ### 500m / 1024domain
 
 #-------------------------------------------------------------------------------
 
