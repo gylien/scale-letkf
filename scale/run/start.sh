@@ -6,7 +6,7 @@ cd "$(dirname "$0")"
 #-------------------------------------------------------------------------------
 
 PLACE=Saitama
-DX=1km
+DX=500m
 STIME=$1
 
 NCYCLE=120
@@ -20,10 +20,10 @@ intv_sec=`expr \( $NCYCLE - 1 \) \* 30`
 STIME_in="${STIME:0:4}-${STIME:4:2}-${STIME:6:2} ${STIME:8:2}:${STIME:10:2}:${STIME:12:2}"
 ETIME=`date -d "${intv_sec} second ${STIME_in}" +'%Y%m%d%H%M%S'`
 
-##NNODES=`expr \( $NMEM + 2 + $MAX_DACYCLE_RUN_FCST \) \* 16` ### 500m / 1024domain
-##NNODES=`expr \( $NMEM + 2 + $NMEM \) \* 4` ### 500m / 256domain
-NNODES=`expr \( $NMEM + 2 + $NUM_DACYCLE_FCST_MEM \) ` ### 500m / 64domain
-
+[ "$DX" == "1km" ]            && NNODES=`expr \( $NMEM + 2 + $NUM_DACYCLE_FCST_MEM \) ` ### 1km / 64domain
+[ "$DX" == "500m_verysmall" ] && NNODES=`expr \( $NMEM + 2 + $NUM_DACYCLE_FCST_MEM \) ` ### 500m / 64domain
+[ "$DX" == "500m_small" ]     && NNODES=`expr \( $NMEM + 2 + $NUM_DACYCLE_FCST_MEM \* 4 \) ` ### 500m / 256domain
+[ "$DX" == "500m" ]           && NNODES=`expr \( $NMEM + 2 + $NUM_DACYCLE_FCST_MEM \* 16 \) ` ### 500m / 1024domain
 
 #-------------------------------------------------------------------------------
 
@@ -64,6 +64,7 @@ cat config/$CONFIG/config.cycle | \
 
 ./cycle_ofp.sh > cycle_ofp.log 2>&1 || exit $?
 
+./store_images.sh dacycle_${DX}_${STIME} &> log_store_images&
 #-------------------------------------------------------------------------------
 
   jobname="cycle_${SYSNAME}"

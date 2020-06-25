@@ -201,28 +201,28 @@ echo "[$(datetime_now)] Finalization (stage out)"
 
 stage_out server || exit $?
 
-if ((DACYCLE_RUN_FCST == 1)); then
-  echo
-  echo "[$(datetime_now)] Start: store images"
-
-  for z in `seq 0 10`; do
-    ZLEV="z"$(printf %02d $z)
-    find ${TMP}/[a,f,o]*_${ZLEV}[0-9][0-9][0-9]m_*.png -type f | xargs mv -t ${OUTDIR}/${STIME}/dafcst/ > /dev/null
-
-    cd ${OUTDIR}/dafcst
-    tar -zcf anal_${ZLEV}000m.tar.gz anal_*.png > /dev/null 
-    tar -zcf fcst_${ZLEV}000m.tar.gz fcst_*.png > /dev/null 
-    tar -zcf obs_${ZLEV}000m.tar.gz obs_*.png > /dev/null 
-
-    find [a,o,f]*_${ZLEV}[0-9][0-9][0-9]m_*.png -type f | xargs rm -f  > /dev/null
-
-    cd - > /dev/null
-  done
-
-  #mkdir -p ${TMP}/png
-  #mv ${TMP}/*.png ${TMP}/png/
-  echo "[$(datetime_now)] End: store images"
-fi
+#if ((DACYCLE_RUN_FCST == 1)); then
+#  echo
+#  echo "[$(datetime_now)] Start: store images"
+#
+#  for z in `seq 0 10`; do
+#    ZLEV="z"$(printf %02d $z)
+#    find ${TMP}/[a,f,o]*_${ZLEV}[0-9][0-9][0-9]m_*.png -type f | xargs mv -t ${OUTDIR}/${STIME}/dafcst/ > /dev/null
+#
+#    cd ${OUTDIR}/dafcst
+#    tar -zcf anal_${ZLEV}000m.tar.gz anal_*.png > /dev/null 
+#    tar -zcf fcst_${ZLEV}000m.tar.gz fcst_*.png > /dev/null 
+#    tar -zcf obs_${ZLEV}000m.tar.gz obs_*.png > /dev/null 
+#
+#    find [a,o,f]*_${ZLEV}[0-9][0-9][0-9]m_*.png -type f | xargs rm -f  > /dev/null
+#
+#    cd - > /dev/null
+#  done
+#
+#  #mkdir -p ${TMP}/png
+#  #mv ${TMP}/*.png ${TMP}/png/
+#  echo "[$(datetime_now)] End: store images"
+#fi
 
 #===============================================================================
 # Finalization
@@ -254,6 +254,8 @@ archive_log
 #fi
 
 #===============================================================================
+
+mv $TMP ${TMP}_$STIME
 
 echo "[$(datetime_now)] Finish $myname $@"
 
