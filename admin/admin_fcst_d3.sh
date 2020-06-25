@@ -71,7 +71,7 @@ success=0
   now="$(date -u +'%Y-%m-%d %H:%M:%S')"
   echo "$now [RUN ] $TIMEf" >> $logfile
   cd ${rundir} 
-  ./admin.sh ${REFTIMEf} ${TIMEf} ${FCSTLEN} "01:00:00" ${nmem_d3} &> admin.log.${REFTIMEf}.${TIMEf}
+  ./admin.sh ${REFTIMEf} ${TIMEf} ${FCSTLEN} "02:00:00" ${nmem_d3} &> admin.log.${REFTIMEf}.${TIMEf}
   res=$?
 
   now="$(date -u +'%Y-%m-%d %H:%M:%S')"

@@ -158,7 +158,7 @@ done
   now="$(date -u +'%Y-%m-%d %H:%M:%S')"
   echo "$now [RUN ] $TIMEPRINT " >> $logfile
   cd ${rundir} 
-  ./admin.sh ${TIMEf} ${FCSTLEN_d2} '01:00:00' $nmem_d2 
+  ./admin.sh ${TIMEf} ${FCSTLEN_d2} '02:00:00' $nmem_d2 
   res=$?
 
 if ((res == 0)); then

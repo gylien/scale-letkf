@@ -25,7 +25,7 @@ limitsec=21600
 PARENT_TIME_B=`date -d "-1 year" +"%F %T"`
 
 
-FCSTHOUR_DEF=7 ### 6+1
+FCSTHOUR_DEF=8 ### 6+1
 
 
 ####PARENT_FCSTLEN=${FCSTLEN_d2}
@@ -65,7 +65,7 @@ done
 # echo "PARENT_TIME" $PARENT_TIME $PARENT_TIME_B
  PARENT_TIME_B=$PARENT_TIME
 
- INIT_LIMITf="$(date -ud "$PARENT_FCSTLEN second -7200 second  ${PARENT_TIME}"  +'%Y%m%d%H%M%S')"
+ INIT_LIMITf="$(date -ud "$PARENT_FCSTLEN second -10800 second  ${PARENT_TIME}"  +'%Y%m%d%H%M%S')"
  PARENT_LIMITf="$(date -ud "$PARENT_FCSTLEN second ${PARENT_TIME}"  +'%Y%m%d%H%M%S')"
 
 
