@@ -5,10 +5,23 @@
 #
 #===============================================================================
 
-STIME=<STIME>
-ETIME=<ETIME>
 
-TIME_LIMIT=<WTIME_L>
+#STIME='20190819130000'
+#ETIME='20190819135930'
+
+#STIME='20190903070000'
+#ETIME='20190903075930'
+
+STIME='20190824150000'
+ETIME='20190824155930'
+
+#STIME='20190910090000'
+#ETIME='20190910095930'
+
+
+#ETIME=$STIME
+
+TIME_LIMIT='2:30:00'
 CYCLE=
 CYCLE_SKIP=1
 
@@ -23,13 +36,13 @@ DIRECT_TRANSFER=1
 DACYCLE_RUN_FCST=1
 
 # Maximum number of dacycle forecasts 
-MAX_DACYCLE_RUN_FCST=<MAX_DACYCLE_RUN_FCST>
+MAX_DACYCLE_RUN_FCST=120
 
 # Number of dafcst members
-NUM_DACYCLE_FCST_MEM=<NUM_DACYCLE_FCST_MEM>
+NUM_DACYCLE_FCST_MEM=10
 
 # Forecast time for dacycle-forecast members that will be initiated from the analysis ensemble mean
-DACYCLE_RUN_FCST_TIME=<DACYCLE_RUN_FCST_TIME> # sec
+DACYCLE_RUN_FCST_TIME=1800 # sec
 
 # Cycle # of 1st dacycle-forecast start
 ICYC_DACYCLE_RUN_FCST=1
@@ -38,16 +51,16 @@ ICYC_DACYCLE_RUN_FCST=1
 ICYC_DACYCLE_RUN_ANALYSIS=1
 
 # GrADS output from dafcst
-OUT_GRADS_DAFCST=0
+OUT_GRADS_DAFCST=1
 
 # GrADS output from dafcst (all variables: u, v, w, t, p, qv, qc, qr, qi, qs, qg, PW, PRCP)
 OUT_GRADS_DAFCST_ALL=0
 
 # NetCDF output from dafcst
-OUT_NETCDF_DAFCST=1
+OUT_NETCDF_DAFCST=0
 
 # GrADS output of ensemble mean 
-OUT_MEAN_GRADS=0
+OUT_MEAN_GRADS=1
 
 # Output PAWR obs (GrADS)
 OUT_PAWR_GRADS=0
@@ -56,8 +69,7 @@ OUT_PAWR_GRADS=0
 USE_MDET_FCST=0
 
 # Observation departure output
-OBSDEP_OUT=0
-
+OBSDEP_OUT=1
 
 #===============================================================================
 # Forecast settings
@@ -117,7 +129,7 @@ LOG_OPT=2        # 1:   o    o       o   o              o
                  # 3:                                   o
                  # 4:   (none)
 
-LOG_TYPE=1       # 1:   Only save the log file from the head process
+LOG_TYPE=2       # 1:   Only save the log file from the head process
                  # 2:   Save all log files
                  # 3:   Save all log files in an archive file
                  # 4:   Save all log files in a compressed archive file

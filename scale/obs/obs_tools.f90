@@ -649,7 +649,8 @@ end subroutine get_nobs_da_mpi
 !-------------------------------------------------------------------------------
 ! Partially reduce observations processed in the same processes in the iteration
 !-------------------------------------------------------------------------------
-subroutine obs_da_value_partial_reduce_iter(obsda, iter, nstart, nobs, ensval, qc)
+subroutine obs_da_value_partial_reduce_iter(obsda, iter, nstart, nobs, ensval, qc, &
+                                            eqv, tm, pm )
   implicit none
   type(obs_da_value), intent(inout) :: obsda
   integer, intent(in)      :: iter
@@ -657,6 +658,9 @@ subroutine obs_da_value_partial_reduce_iter(obsda, iter, nstart, nobs, ensval, q
   integer, intent(in)      :: nobs
   real(r_size), intent(in) :: ensval(nobs)
   integer, intent(in)      :: qc(nobs)
+  real(r_size), intent(in) :: eqv(nobs)
+  real(r_size), intent(in) :: tm(nobs)
+  real(r_size), intent(in) :: pm(nobs)
   integer :: nend
   integer :: im
 
@@ -671,9 +675,14 @@ subroutine obs_da_value_partial_reduce_iter(obsda, iter, nstart, nobs, ensval, q
 
   ! variables with an ensemble dimension
   obsda%ensval(iter,nstart:nend) = ensval
+  obsda%eqv(iter,nstart:nend) = eqv
 
   ! variables without an ensemble dimension
   obsda%qc(nstart:nend) = max(obsda%qc(nstart:nend), qc)
+  if (im <= MEMBER) then ! only consider tm & pm from members, not from the mean
+    obsda%tm(nstart:nend) = obsda%tm(nstart:nend) + tm
+    obsda%pm(nstart:nend) = obsda%pm(nstart:nend) + pm
+  endif
 
   return
 end subroutine obs_da_value_partial_reduce_iter
@@ -686,6 +695,8 @@ subroutine obs_da_value_allreduce(obsda)
   type(obs_da_value), intent(inout) :: obsda
   real(r_size), allocatable :: ensval_bufs(:,:)
   real(r_size), allocatable :: ensval_bufr(:,:)
+  real(r_size), allocatable :: ensval_bufs2(:,:)
+  real(r_size), allocatable :: ensval_bufr2(:,:)
   integer :: cnts
   integer :: cntr(nprocs_e)
   integer :: dspr(nprocs_e)
@@ -712,9 +723,12 @@ subroutine obs_da_value_allreduce(obsda)
   end do
   allocate (ensval_bufs(obsda%nobs, cntr(myrank_e+1)))
   allocate (ensval_bufr(obsda%nobs, nensobs))
+  allocate (ensval_bufs2(obsda%nobs, cntr(myrank_e+1)))
+  allocate (ensval_bufr2(obsda%nobs, nensobs))
 
   do im = 1, cntr(myrank_e+1)
     ensval_bufs(:,im) = obsda%ensval(im,:)
+    ensval_bufs2(:,im) = obsda%eqv(im,:)
   end do
 
   cntr(:) = cntr(:) * obsda%nobs
@@ -727,6 +741,7 @@ subroutine obs_da_value_allreduce(obsda)
   call mpi_timer('obs_da_value_allreduce:copy_bufs:', 3, barrier=MPI_COMM_e)
 
   call MPI_ALLGATHERV(ensval_bufs, cnts, MPI_r_size, ensval_bufr, cntr, dspr, MPI_r_size, MPI_COMM_e, ierr)
+  call MPI_ALLGATHERV(ensval_bufs2, cnts, MPI_r_size, ensval_bufr2, cntr, dspr, MPI_r_size, MPI_COMM_e, ierr)
 
   call mpi_timer('obs_da_value_allreduce:mpi_allgatherv:', 3)
 
@@ -734,6 +749,8 @@ subroutine obs_da_value_allreduce(obsda)
   if (current_shape(1) < nensobs) then
     deallocate (obsda%ensval)
     allocate (obsda%ensval(nensobs, obsda%nobs))
+    deallocate (obsda%eqv)
+    allocate (obsda%eqv(nensobs, obsda%nobs))
   end if
 
   imb = 0
@@ -744,20 +761,28 @@ subroutine obs_da_value_allreduce(obsda)
         imb = imb + 1
         if (im == mmdetin) then
           obsda%ensval(mmdetobs,:) = ensval_bufr(:,imb)
+          obsda%eqv(mmdetobs,:) = ensval_bufr2(:,imb)
         else
           obsda%ensval(im,:) = ensval_bufr(:,imb)
+          obsda%eqv(im,:) = ensval_bufr2(:,imb)
         end if
       end if
     end do
   end do
   deallocate(ensval_bufs, ensval_bufr)
+  deallocate(ensval_bufs2, ensval_bufr2)
 
   call mpi_timer('obs_da_value_allreduce:copy_bufr:', 3, barrier=MPI_COMM_e)
 
   ! variables without an ensemble dimension
   if (nprocs_e > 1) then
     call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%qc(:), obsda%nobs, MPI_INTEGER, MPI_MAX, MPI_COMM_e, ierr)
+    call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%tm(:), obsda%nobs, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)
+    call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%pm(:), obsda%nobs, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)
+
   end if
+  obsda%tm = obsda%tm / real(MEMBER, r_size)
+  obsda%pm = obsda%pm / real(MEMBER, r_size)
 
   call mpi_timer('obs_da_value_allreduce:mpi_allreduce:', 3)
 

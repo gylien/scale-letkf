@@ -1087,8 +1087,14 @@ EOF
             -e "/!--RESTART_OUT_ADDITIONAL_BASENAME--/a RESTART_OUT_ADDITIONAL_BASENAME = ${RESTART_OUT_ADDITIONAL_BASENAME}" \
             -e "/!--RESTART_OUT_ADDITIONAL_EFF_MEMBER--/a RESTART_OUT_ADDITIONAL_EFF_MEMBER = ${RESTART_OUT_ADDITIONAL_EFF_MEMBER}")"
     if ((d == 1)); then
+      if [ -z "$BGDIR" ] ; then
+        ATMOS_BOUNDARY_IN_BASENAME=${INDIR[$d]}/${bdy_start_time}/bdy/${mem_bdy}/boundary
+      else
+        ATMOS_BOUNDARY_IN_BASENAME=${BGDIR}/${parent_start_time}/bdy/${mem_bdy}/boundary_$(datetime_scale $parent_start_time)
+      fi
+
       conf="$(echo "$conf" | \
-          sed -e "/!--ATMOS_BOUNDARY_IN_BASENAME--/a ATMOS_BOUNDARY_IN_BASENAME = \"${BGDIR}/${parent_start_time}/bdy/${mem_bdy}/boundary_$(datetime_scale $parent_start_time)\"," \
+          sed -e "/!--ATMOS_BOUNDARY_IN_BASENAME--/a ATMOS_BOUNDARY_IN_BASENAME = \"${ATMOS_BOUNDARY_IN_BASENAME}\"," \
               -e "/!--ATMOS_BOUNDARY_START_DATE--/a ATMOS_BOUNDARY_START_DATE = ${bdy_start_time:0:4}, ${bdy_start_time:4:2}, ${bdy_start_time:6:2}, ${bdy_start_time:8:2}, ${bdy_start_time:10:2}, ${bdy_start_time:12:2}," \
               -e "/!--ATMOS_BOUNDARY_UPDATE_DT--/a ATMOS_BOUNDARY_UPDATE_DT = $BDYINT.D0,")"
     fi

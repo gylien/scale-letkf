@@ -1,6 +1,5 @@
-!==================================================!
 subroutine plot_dbz_DCL_obs(nobs, ze_radar, lon_radar, lat_radar, z_radar,  & 
-                            nlons, nlats, lons, lats, dlons, dlats, na, nr, ne, az_r,radlon, radlat, radz, psfile) 
+                            nlons, nlats, lons, lats, dlons, dlats, na, nr, ne, az_r, radlon, radlat, radz, psfile) 
   use common
   use common_scale
   use scale_const, only: &
@@ -40,7 +39,6 @@ subroutine plot_dbz_DCL_obs(nobs, ze_radar, lon_radar, lat_radar, z_radar,  &
   integer,intent(in) :: na, nr, ne !!! original radar grid for masking 
   real(r_sngl),intent(in) :: radlon(na, nr, ne), radlat(na, nr, ne), radz(na, nr, ne)
   real(r_sngl),intent(in) :: az_r(na)
-
 
   real(r_sngl):: val_plot(nlons,nlats)
 

@@ -1590,6 +1590,9 @@ subroutine obs_local_cal(ri, rj, rlev, rz, nvar, iob, ic, ndist, nrloc, nrdiag)
   ! Calculate (observation variance / localization)
   !
   nrdiag = obs(obset)%err(obidx) * obs(obset)%err(obidx) / nrloc
+  if ( RADAR_PQV .and. obelm == id_radar_ref_obs .and. obsda_sort%tm(iob) < 0.0d0 ) then
+    nrdiag = OBSERR_PQ**2 / nrloc
+  endif
 
   return
 end subroutine obs_local_cal

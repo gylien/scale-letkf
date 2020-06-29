@@ -116,12 +116,11 @@ MODULE common_obs_scale
     INTEGER,ALLOCATABLE :: idx(:)
     INTEGER,ALLOCATABLE :: key(:)
     REAL(r_size),ALLOCATABLE :: val(:)
-    !
-    ! obsda%lev array is used only for Himawari-8 assimilation.
-    ! This array preserves the most sensitive height derived from transmittance outputs from RTTOV.
-    ! For Himawari-8 assimilation, LETKF uses obsda%lev instead of obs%lev.
-    ! 
     REAL(r_size),ALLOCATABLE :: ensval(:,:)
+    real(r_size), allocatable :: eqv(:,:) ! qv (ensemble)
+    real(r_size), allocatable :: qv(:)    ! qv (mean)
+    real(r_size), allocatable :: tm(:)    ! temp (mean)
+    real(r_size), allocatable :: pm(:)    ! pressure (mean)
     INTEGER,ALLOCATABLE :: qc(:)
   END TYPE obs_da_value
 
@@ -942,15 +941,26 @@ SUBROUTINE obs_da_value_allocate(obsda,member)
   ALLOCATE( obsda%val (obsda%nobs) )
   ALLOCATE( obsda%qc  (obsda%nobs) )
 
+  allocate( obsda%tm (obsda%nobs) )
+  allocate( obsda%pm (obsda%nobs) )
+  allocate( obsda%qv (obsda%nobs) )
+
   obsda%nobs_in_key = 0
   obsda%idx = 0
   obsda%key = 0
   obsda%val = 0.0d0
   obsda%qc = 0
 
+  obsda%tm = 0.0d0
+  obsda%pm = 0.0d0
+  obsda%qv = 0.0d0
+
   if (member > 0) then
     ALLOCATE( obsda%ensval (member,obsda%nobs) )
     obsda%ensval = 0.0d0
+
+    allocate( obsda%eqv (member,obsda%nobs) )
+    obsda%eqv = 0.0d0
   end if
 
   RETURN
@@ -970,6 +980,11 @@ SUBROUTINE obs_da_value_deallocate(obsda)
   IF(ALLOCATED(obsda%val   )) DEALLOCATE(obsda%val   )
   IF(ALLOCATED(obsda%ensval)) DEALLOCATE(obsda%ensval)
   IF(ALLOCATED(obsda%qc    )) DEALLOCATE(obsda%qc    )
+
+  if( allocated(obsda%tm) ) deallocate(obsda%tm)
+  if( allocated(obsda%pm) ) deallocate(obsda%pm)
+  if( allocated(obsda%eqv) ) deallocate(obsda%eqv)
+  if( allocated(obsda%qv) ) deallocate(obsda%qv)
 
   RETURN
 END SUBROUTINE obs_da_value_deallocate

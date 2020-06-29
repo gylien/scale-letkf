@@ -101,13 +101,13 @@ SUBROUTINE set_letkf_obs
     PRC_NUM_X, &
     PRC_NUM_Y
 
-
   IMPLICIT NONE
   INTEGER :: n,i,j,ierr,im,iof,iidx
 
   integer :: n1, n2
 
   integer :: mem_ref
+  real(RP) :: qvs, qdry
 
   integer :: it,ip
   integer :: ityp,ielm,ielm_u,ictype
@@ -240,7 +240,8 @@ SUBROUTINE set_letkf_obs
 #endif
         end if
 
-        call obs_da_value_partial_reduce_iter(obsda, it, n1, n2, obsda_ext%val, obsda_ext%qc)
+        call obs_da_value_partial_reduce_iter(obsda, it, n1, n2, obsda_ext%val, obsda_ext%qc, &
+                                              obsda_ext%qv, obsda_ext%tm, obsda_ext%pm )
 
       end if ! [ (im >= 1 .and. im <= MEMBER) .or. im == mmdetin ]
     end do ! [ it = 1, nitmax ]
@@ -365,7 +366,7 @@ SUBROUTINE set_letkf_obs
 
   allocate(tmpelm(obsda%nobs))
 
-!##!$OMP PARALLEL PRIVATE(n,i,iof,iidx,mem_ref)
+!##!$OMP PARALLEL PRIVATE(n,i,iof,iidx,mem_ref,qvs, qdry)
 !  omp_chunk = min(10, max(1, (obsda%nobs-1) / OMP_GET_NUM_THREADS() + 1))
 !##!$OMP DO SCHEDULE(DYNAMIC,omp_chunk)
   do n = 1, obsda%nobs
@@ -397,6 +398,7 @@ SUBROUTINE set_letkf_obs
           mem_ref = mem_ref + 1
         end if
       end do
+
       ! Obs: Rain
       if (obs(iof)%dat(iidx) > RADAR_REF_THRES_DBZ+1.0d-6) then
         if (mem_ref < MIN_RADAR_REF_MEMBER_OBSRAIN) then
@@ -407,8 +409,12 @@ SUBROUTINE set_letkf_obs
                   '*  (lon,lat)=(',obs(iof)%lon(iidx),',',obs(iof)%lat(iidx),'), mem_ref=', &
                   mem_ref,', ref_obs=', obs(iof)%dat(iidx)
           end if
-          cycle
+
+          if ( .not. RADAR_PQV ) cycle
+          ! When RADAR_PQV=True, pseudo qv obs is assimilated even if mem_ref is
+          ! too small
         end if
+
       else
       ! Obs: No rain
         if (mem_ref < MIN_RADAR_REF_MEMBER_OBSNORAIN) then
@@ -422,6 +428,7 @@ SUBROUTINE set_letkf_obs
           cycle
         end if
       end if
+
     end if
 
     if (obs(iof)%elm(iidx) == id_radar_vr_obs) then
@@ -461,9 +468,39 @@ SUBROUTINE set_letkf_obs
         obsda%qc(n) = iqc_gross_err
       END IF
     case (id_radar_ref_obs,id_radar_ref_zero_obs)
-      IF(ABS(obsda%val(n)) > GROSS_ERROR_RADAR_REF * obs(iof)%err(iidx)) THEN
-        obsda%qc(n) = iqc_gross_err
-      END IF
+
+      if( RADAR_PQV .and. obsda%val(n) > RADAR_PQV_OMB ) then
+
+        ! pseudo qv
+        obsda%val(n) = obsda%eqv(1,n)
+        do i = 2 ,MEMBER
+          obsda%val(n) = obsda%val(n) + obsda%eqv(i,n)
+        enddo
+        obsda%val(n) = obsda%val(n) / real(MEMBER, r_size)
+
+        do i = 1, MEMBER
+          obsda%ensval(i,n) = obsda%eqv(i,n) - obsda%val(n) ! Hdx
+        enddO
+ 
+        ! Tetens equation es(Pa)
+        qvs = 611.2d0*exp(17.67d0*(obsda%tm(n)-t0c)/(obsda%tm(n) - t0c + 243.5d0))
+
+        ! Saturtion mixing ratio
+        qvs = 0.622d0*qvs / ( obsda%pm(n) - qvs )
+
+        obsda%val(n) = qvs - obsda%val(n) ! y-Hx
+
+        if (ENS_WITH_MDET) then
+          obsda%ensval(mmdetobs,n) = qvs - obsda%eqv(mmdetobs,n) ! y-Hx for deterministic run
+        end if
+
+        obsda%tm(n) = -1.0d0
+
+      else
+        IF(ABS(obsda%val(n)) > GROSS_ERROR_RADAR_REF * obs(iof)%err(iidx)) THEN
+          obsda%qc(n) = iqc_gross_err
+        END IF
+      endif
     case (id_radar_vr_obs)
       IF(ABS(obsda%val(n)) > GROSS_ERROR_RADAR_VR * obs(iof)%err(iidx)) THEN
         obsda%qc(n) = iqc_gross_err
@@ -490,7 +527,7 @@ SUBROUTINE set_letkf_obs
       END IF
     end select
 
-    if (LOG_LEVEL >= 4) then
+    if (LOG_LEVEL >= 3) then
       write (6, '(2I6,2F8.2,4F12.4,I3)') obs(iof)%elm(iidx), &
                                          obs(iof)%typ(iidx), &
                                          obs(iof)%lon(iidx), &
@@ -886,6 +923,7 @@ SUBROUTINE set_letkf_obs
       obsbufs%set(n) = obsda%set(obsda%key(n))
       obsbufs%idx(n) = obsda%idx(obsda%key(n))
       obsbufs%val(n) = obsda%val(obsda%key(n))
+      obsbufs%tm(n) = obsda%tm(obsda%key(n))
       if (nensobs_part > 0) then
         obsbufs%ensval(1:nensobs_part,n) = obsda%ensval(im_obs_1:im_obs_2,obsda%key(n))
       end if
@@ -908,6 +946,7 @@ SUBROUTINE set_letkf_obs
     call MPI_ALLGATHERV(obsbufs%set, cnts, MPI_INTEGER, obsbufr%set, cntr, dspr, MPI_INTEGER, MPI_COMM_d, ierr)
     call MPI_ALLGATHERV(obsbufs%idx, cnts, MPI_INTEGER, obsbufr%idx, cntr, dspr, MPI_INTEGER, MPI_COMM_d, ierr)
     call MPI_ALLGATHERV(obsbufs%val, cnts, MPI_r_size, obsbufr%val, cntr, dspr, MPI_r_size, MPI_COMM_d, ierr)
+    call MPI_ALLGATHERV(obsbufs%tm, cnts, MPI_r_size, obsbufr%tm, cntr, dspr, MPI_r_size, MPI_COMM_d, ierr)
     if (nensobs_part > 0) then
       call MPI_ALLGATHERV(obsbufs%ensval, cnts*nensobs_part, MPI_r_size, obsbufr%ensval, cntr*nensobs_part, dspr*nensobs_part, MPI_r_size, MPI_COMM_d, ierr)
     end if
@@ -963,6 +1002,7 @@ SUBROUTINE set_letkf_obs
         obsda_sort%set(ns_ext:ne_ext) = obsbufr%set(ns_bufr:ne_bufr)
         obsda_sort%idx(ns_ext:ne_ext) = obsbufr%idx(ns_bufr:ne_bufr)
         obsda_sort%val(ns_ext:ne_ext) = obsbufr%val(ns_bufr:ne_bufr)
+        obsda_sort%tm(ns_ext:ne_ext) = obsbufr%tm(ns_bufr:ne_bufr)
         if (nensobs_part > 0) then
           obsda_sort%ensval(im_obs_1:im_obs_2,ns_ext:ne_ext) = obsbufr%ensval(1:nensobs_part,ns_bufr:ne_bufr)
         end if

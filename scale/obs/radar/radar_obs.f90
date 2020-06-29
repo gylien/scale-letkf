@@ -856,8 +856,8 @@ subroutine read_obs_radar_toshiba(cfile, obs)
   character(len=8)  :: date
   character(len=10) :: time
   character(len=90) :: plotname
-  character(len=19) :: timelabel
 #endif
+  character(len=19) :: timelabel
 
   integer :: ii, jj, kk
 
@@ -1307,9 +1307,9 @@ subroutine read_obs_radar_toshiba(cfile, obs)
   if(allocated(radz)) deallocate(radz)
   deallocate(az, el)
 
-
   if ( OUT_PAWR_GRADS ) then
     if ( myrank_o == 0 ) then
+      call TIME_gettimelabel(timelabel)
       filename = trim(OUT_PAWR_GRADS_PATH)//"/pawr_ref3d_"//trim(timelabel(1:15))//".grd"
       iunit = 55
       inquire (iolength=iolen) iolen

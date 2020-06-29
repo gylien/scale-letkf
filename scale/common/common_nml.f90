@@ -364,6 +364,8 @@ MODULE common_nml
 
   logical :: USE_PAWR_MASK = .false. ! Saitama MP-PAWR shadow mask
   character(filelenmax) :: PAWR_MASK_FILE = '' ! data file for masking
+  logical :: RADAR_PQV = .false. ! Pseudo qv DA for radar
+  real(r_size) :: RADAR_PQV_OMB = 25.0d0 ! Threshold Obs-B for pseudo qv DA for radar
 
   !---PARAM_LETKF_H08
   logical :: H08_REJECT_LAND = .false. ! true: reject Himawari-8 radiance over the land
@@ -399,6 +401,7 @@ MODULE common_nml
   real(r_size) :: OBSERR_TCP = 5.0d2 ! (Pa)
   real(r_size) :: OBSERR_H08(nch) = (/5.0d0,5.0d0,5.0d0,5.0d0,5.0d0,&
                                       5.0d0,5.0d0,5.0d0,5.0d0,5.0d0/) ! H08
+  real(r_size) :: OBSERR_PQ = 0.001d0 ! (kg/m3)
 
   !--- PARAM_OBSSIM
   character(filelenmax) :: OBSSIM_IN_TYPE = 'history'
@@ -777,6 +780,7 @@ subroutine read_nml_letkf
     OUT_GRADS_DAFCST_ALL_ZSKIP, &
     OUT_DAFCST_DSEC, &
     OUT_GRADS_DA_ALL, &
+    OUT_GRADS_DA_ALL_ZSKIP, &
     OUT_GRADS_DA_ALL_PATH, &
     OUT_PAWR_GRADS, &
     OUT_PAWR_GRADS_PATH, &
@@ -1108,7 +1112,9 @@ subroutine read_nml_letkf_radar
     PAWR_MASK_FILE, &
     RADAR_THIN_LETKF_METHOD, &
     RADAR_THIN_LETKF_HGRID, &
-    RADAR_THIN_LETKF_VGRID
+    RADAR_THIN_LETKF_VGRID, &
+    RADAR_PQV, &
+    RADAR_PQV_OMB
 
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_LETKF_RADAR,iostat=ierr)
@@ -1189,6 +1195,7 @@ subroutine read_nml_obs_error
     OBSERR_TCX, &
     OBSERR_TCY, &
     OBSERR_TCP, &
+    OBSERR_PQ, &
     OBSERR_H08    ! H08
 
   rewind(IO_FID_CONF)
