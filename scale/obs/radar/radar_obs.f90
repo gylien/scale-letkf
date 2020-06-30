@@ -204,6 +204,7 @@ SUBROUTINE calc_ref_vr(qv,qc,qr,qci,qs,qg,u,v,w,t,p,az,elev,ref,vr)
   REAL(r_size)  :: nor, nos, nog !Rain, snow and graupel's intercepting parameters.
   REAL(r_size)  :: ror, ros, rog , roi !Rain, snow and graupel, ice densities.
   REAL(r_size)  :: a,b,c,d,Cd    !Constant for fall speed computations.
+  REAL(r_size)  :: cr_t08,cs_t08,cg_t08,dr_t08,ds_t08,dg_t08    !Constant for fall speed computations (Tomita2008)
   REAL(r_size)  :: cf, pip , roo
   REAL(r_size)  :: ki2 , kr2
   REAL(r_size)  :: lr , ls , lg
@@ -473,48 +474,64 @@ SUBROUTINE calc_ref_vr(qv,qc,qr,qci,qs,qg,u,v,w,t,p,az,elev,ref,vr)
     !Lin et al 1983. (The distribution parameters are 
     !consistent with the work of Jung et al 2007)
 
+    !!! graupel paramters and terminal velocity equations are modified to be
+    !!! consistent with Tomita2008 default settings
+
     IF( ref > 0.0d0 )THEN
       !There are hidrometeors, compute their terminal velocity.
       !Units according to Lin et al 1983.
       nor=8.0d-2      ![cm^-4]
       nos=3.0d-2      ![cm^-4]
-      nog=4.0d-4      ![cm^-4]
+!!!      nog=4.0d-4      ![cm^-4]
+      nog=4.0d-2      ![cm^-4]          !!!!! Tomita 2008
       ror=1.0d0        ![g/cm3]
       ros=0.1d0        ![g/cm3]
-      rog=0.917d0      ![g/cm3] 
+!!!      rog=0.917d0      ![g/cm3] 
+      rog=0.400d0      ![g/cm3]         !!!!! Tomita 2008
       roo=0.001d0      ![g/cm3] Surface air density.
       ro=1.0d-3 * ro
-      a=2115d0   ![cm**1-b / s]
-      b=0.8d0
-      c=152.93d0 ![cm**1-b / s]
-      d=0.25d0
-      Cd=0.6d0
+!!!      a=2115d0   ![cm**1-b / s]
+!!!      b=0.8d0
+!!!      c=152.93d0 ![cm**1-b / s]
+!!!      d=0.25d0
+      Cd=0.6d0         !!!!! drag_g in SCALE
+
+!!!!      cr_t08=0.5d0 ![m**1-b / s]  !!! Tomita 2008 but not used in SCALE
+      cr_t08=130.0d0 ![m**1-b / s]     !!! SCALE default
+      dr_t08=0.5d0
+      cs_t08=4.84d0 ![m**1-b / s]
+      ds_t08=0.25d0
+!!!      cg_t08=82.5d0 ![m**1-b / s]   !!! Tomita 2008 but not used in SCALE
+      dg_t08=0.5d0  !!! SCALE default
+
 
       rofactor= ( roo / ro  ) ** 0.5
 
       IF ( qr .GT. 0.0d0 )THEN
-      CALL com_gamma( 4.0_r_size + b , tmp_factor )
-      lr= ( pi * ror * nor / ( ro * qr ) ) ** 0.25
-      wr= a * tmp_factor / ( 6.0d0 * ( lr ** b ) )
-      wr= 1.0d-2 * wr * rofactor
+      CALL com_gamma( 4.0_r_size + dr_t08 , tmp_factor )
+      lr= ( pi * ror * nor / ( ro * qr ) ) ** 0.25 !!! [cm ^-1]
+      wr= cr_t08 * tmp_factor / ( 6.0d0 * ( ( lr * 1.0e2 ) ** dr_t08 ) ) !!! [m/s]
+      wr= wr * rofactor
       ELSE
       wr=0.0d0
       ENDIF
 
       IF( qs .GT. 0.0d0 )THEN
-      ls= ( pi * ros * nos / ( ro * qs ) ) ** 0.25
-      CALL com_gamma( 4.0_r_size + d , tmp_factor )
-      ws= c * tmp_factor / ( 6.0d0 * ( ls ** d ) )
-      ws= 1.0d-2 * ws * rofactor
+      ls= ( pi * ros * nos / ( ro * qs ) ) ** 0.25 !!! [cm ^-1]
+      CALL com_gamma( 4.0_r_size + ds_t08 , tmp_factor )
+      ws= cs_t08 * tmp_factor / ( 6.0d0 * ( ( ls * 1.0e2 ) ** ds_t08 ) ) !!! [m/s]
+      ws= ws * rofactor
       ELSE
       ws=0.0d0
       ENDIF
 
       IF ( qg .GT. 0.0d0 )THEN
       lg= ( pi * rog * nog / ( ro * qg ) ) ** 0.25
-      CALL com_gamma( 4.5_r_size , tmp_factor )
-      wg= tmp_factor * ( ( ( 4.0d0 * gg * 100.0d0 * rog )/( 3.0d0 * Cd * ro ) ) ** 0.5 )
-      wg= 1.0d-2 * wg / ( 6.0d0 * ( lg ** 0.5 ) )
+      CALL com_gamma( 4.0_r_size + dg_t08 , tmp_factor )
+      wg = tmp_factor * ( ( ( 4.0d0 * gg * rog )/( 3.0d0 * Cd * ro ) ) ** 0.5 )
+      wg = wg / ( 6.0d0 * ( ( lg * 1.0e2 ) ** dg_t08 ) )   !!! [m/s]
+!!!      wg= cg_t08 * tmp_factor / ( 6.0d0 * ( ( lg * 1.0e2 ) ** dg_t08 ) ) !!! [m/s]
+      wg= wg * rofactor
       ELSE
       wg=0.0d0
       ENDIF
