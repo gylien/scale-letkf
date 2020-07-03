@@ -19,7 +19,9 @@ MODULE radar_tools
     RADAR_THIN_HORI, &
     RADAR_THIN_VERT, &
     LOG_LEVEL,       &
-    RADAR_USE_VR_STD
+    RADAR_USE_VR_STD, &
+    MIN_RADAR_REF_VR, &
+    RADAR_ZMIN
   use common_mpi_scale, only: &
     myrank_o, &
     nprocs_o, &
@@ -44,7 +46,6 @@ MODULE radar_tools
   REAL(r_size), parameter :: rad2deg = 180.0d0 / pi
 
   real(r_size), parameter :: minz = 0.01d0 !Minimum radar power.
-  real(r_size), parameter :: minz_vr = 31.6228d0 ! Munimum radar reflectivity to use vr
 
   real(r_size), parameter :: vr_min_dist = 8000.0d0
 
@@ -585,7 +586,7 @@ CONTAINS
              qced_ze = minz
 !             qced_vr = missing !added by Otsuka 
           end if
-          if(qced_ze .LT. minz_vr) then         
+          if(qced_ze .LT. MIN_RADAR_REF_VR) then         
             qced_vr = missing !added by Otsuka  
           end if                                
 

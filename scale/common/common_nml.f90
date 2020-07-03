@@ -326,6 +326,9 @@ MODULE common_nml
   INTEGER :: MIN_RADAR_REF_MEMBER_OBSNORAIN = 1 ! Minimum rainy ensemble members for assimilating clear-sky radar obs
 
   REAL(r_size) :: MIN_RADAR_REF_DBZ = 0.0d0    !Minimum reflectivity
+  REAL(r_size) :: MIN_RADAR_REF_DBZ_VR = 5.0d0 ! Minimum reflectivity (dBZ) for Doppler velocity observation
+  REAL(r_size) :: MIN_RADAR_REF_VR = 0.0d0    ! Minimum reflectivity (Z) for Doppler velocity observation
+  ! specifed when MIN_RADAR_REF_DBZ_VR is read
   REAL(r_size) :: LOW_REF_SHIFT = 0.0d0
 
   real(r_size) :: RADAR_ZMAX = 99.0d3          !Height limit of radar data to be used
@@ -1089,6 +1092,7 @@ subroutine read_nml_letkf_radar
     MIN_RADAR_REF_MEMBER_OBSRAIN, &
     MIN_RADAR_REF_MEMBER_OBSNORAIN, &
     MIN_RADAR_REF_DBZ, &
+    MIN_RADAR_REF_DBZ_VR, &
     LOW_REF_SHIFT, &
     RADAR_ZMAX, &
     RADAR_ZMIN, &
@@ -1137,6 +1141,8 @@ subroutine read_nml_letkf_radar
   if (LOG_LEVEL >= 4) then
     write(6, nml=PARAM_LETKF_RADAR)
   end if
+
+  MIN_RADAR_REF_VR = 10.0d0 ** (MIN_RADAR_REF_DBZ_VR/10.0d0)
 
   return
 end subroutine read_nml_letkf_radar
