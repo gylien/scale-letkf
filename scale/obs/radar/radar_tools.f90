@@ -47,7 +47,6 @@ MODULE radar_tools
   real(r_size), parameter :: minz_vr = 31.6228d0 ! Munimum radar reflectivity to use vr
 
   real(r_size), parameter :: vr_min_dist = 8000.0d0
-  real(r_size), parameter :: vr_min_height = 3000.0d0
 
   integer, parameter :: id_ze_obs = 4001 !Id for reflectivity in ouput file.
   integer, parameter :: id_vr_obs  = 4002 !Id for radial velocity in output file.
@@ -616,7 +615,7 @@ CONTAINS
           if(ri < 0 .or. ri >= nlon .or. rj < 0 .or. rj >= nlat .or. rk < 0 .or. rk >= nlev) cycle
 
           if (qced_vr > missing) then
-            if (radz(i, ie) < vr_min_height) then
+            if (radz(i, ie) < RADAR_ZMIN) then
                qced_vr = missing
             else
                dist_i = (radlon(i, ie) - lon0) * lon_coef
