@@ -879,6 +879,7 @@ subroutine read_obs_radar_toshiba(cfile, obs)
   integer :: ii, jj, kk
 
   real(r_sngl), allocatable :: ref3d(:,:,:)
+  real(r_sngl), allocatable :: vr3d(:,:,:)
   character(len=255) :: filename
   integer :: irec, iunit, iolen
   integer :: k
@@ -1184,7 +1185,9 @@ subroutine read_obs_radar_toshiba(cfile, obs)
 
   if ( OUT_PAWR_GRADS ) then
     if (.not. allocated(ref3d) ) allocate(ref3d(nlon,nlat,nlev))
+    if (.not. allocated(vr3d) ) allocate(vr3d(nlon,nlat,nlev))
     ref3d = undef
+    vr3d = undef
   endif
 
   obs%meta(1) = lon0
@@ -1234,10 +1237,15 @@ subroutine read_obs_radar_toshiba(cfile, obs)
     if ( OUT_PAWR_GRADS ) then
       if ( ii > 0 .and. ii <= nlon .and. &
            jj > 0 .and. jj <= nlat .and. &
-           kk > 0 .and. kk <= nlev .and. &
-           grid_count_ze(idx) > 0 .and. &
+           kk > 0 .and. kk <= nlev ) then
+        if ( grid_count_ze(idx) > 0 .and. &
            grid_ze(idx) > 0.0_r_size ) then
-        ref3d(ii,jj,kk) = 10.0*log10(grid_ze(idx))
+          ref3d(ii,jj,kk) = 10.0*log10(grid_ze(idx))
+        endif
+        if ( grid_count_vr(idx) > 0 .and. &
+           grid_vr(idx) > 0.0_r_size ) then
+          vr3d(ii,jj,kk) = grid_vr(idx)
+        endif
       endif
     endif
 
@@ -1337,6 +1345,10 @@ subroutine read_obs_radar_toshiba(cfile, obs)
       do k = 1, nlev
         irec = irec + 1
         write(iunit, rec=irec) ref3d(:,:,k)
+      enddo
+      do k = 1, nlev
+        irec = irec + 1
+        write(iunit, rec=irec) vr3d(:,:,k)
       enddo
       write(6,'(a)') 'PAWR GrADS info'
       write(6,'(i5,2f13.8)') nlon, lon(1), dlon
