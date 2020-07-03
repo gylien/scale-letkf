@@ -311,7 +311,7 @@ program dacycle
           end if
           if (DEPARTURE_STAT .and. LOG_LEVEL >= 1) then
             allocate (mean3d(nlev,nlon,nlat,nv3d))
-            allocate (mean2d(nlon,nlat,nv3d))
+            allocate (mean2d(nlon,nlat,nv2d))
           end if
 
           call mpi_timer('SET_GRID', 1, barrier=MPI_COMM_a)
