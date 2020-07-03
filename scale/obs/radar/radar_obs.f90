@@ -1242,8 +1242,7 @@ subroutine read_obs_radar_toshiba(cfile, obs)
            grid_ze(idx) > 0.0_r_size ) then
           ref3d(ii,jj,kk) = 10.0*log10(grid_ze(idx))
         endif
-        if ( grid_count_vr(idx) > 0 .and. &
-           grid_vr(idx) > 0.0_r_size ) then
+        if ( grid_count_vr(idx) > 0 ) then
           vr3d(ii,jj,kk) = grid_vr(idx)
         endif
       endif
