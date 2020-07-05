@@ -28,9 +28,7 @@ program scaleles_pp_ens
      PRC_MPIfinish, &
      PRC_MPIsplit, &
      PRC_UNIVERSAL_myrank, &
-     PRC_DOMAIN_nlim, &
-     PRC_GLOBAL_COMM_WORLD, &
-     PRC_LOCAL_COMM_WORLD
+     PRC_DOMAIN_nlim
   use mod_rm_prep
 
   implicit none
@@ -109,7 +107,7 @@ program scaleles_pp_ens
 
 !-----------------------------------------------------------------------
 
-  call set_common_conf(universal_nprocs)
+  call set_common_conf
   if (DET_RUN) then
     call set_mem_node_proc(MEMBER+2)
   else

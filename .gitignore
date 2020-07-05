@@ -6,6 +6,7 @@
 *.log
 log*
 *~
+*__*
 /scale/tmp
 /scale/configure.user
 /scale/common/datetime

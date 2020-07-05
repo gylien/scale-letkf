@@ -274,8 +274,6 @@ SUBROUTINE Trans_XtoY(elm,ri,rj,rk,lon,lat,v3d,v2d,yobs,qc,stggrd)
   INTEGER,INTENT(OUT) :: qc
   INTEGER,INTENT(IN),OPTIONAL :: stggrd
   REAL(r_size) :: u,v,t,q,topo
-  REAL(RP) :: rotc(1,1,2)
-  real(r_size) :: lon_tmp(1,1),lat_tmp(1,1)
   real(RP) :: lon_RP(1,1), lat_RP(1,1)
   REAL(RP) :: rotc_RP(2)
 

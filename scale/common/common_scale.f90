@@ -164,12 +164,11 @@ CONTAINS
 !-------------------------------------------------------------------------------
 ! Initialize standard I/O and read common namelist of SCALE-LETKF
 !-------------------------------------------------------------------------------
-subroutine set_common_conf(nprocs)
+subroutine set_common_conf()
   use scale_io, only: &
     IO_setup
 
   implicit none
-  integer, intent(in) :: nprocs
 
   ! setup standard I/O
   call IO_setup( modelname)
@@ -745,7 +744,7 @@ SUBROUTINE read_restart_coor(filename,lon,lat,height)
     PRC_HAS_S
   use scale_atmos_grid_cartesC_index, only: &
     IHALO, JHALO, &
-    IMAX, JMAX, KMAX
+    IMAX, JMAX
   use common_mpi, only: myrank
   use common_ncio
   IMPLICIT NONE
@@ -985,7 +984,7 @@ subroutine read_history(filename,step,v3dg,v2dg)
                       trim(v2dd_name(iv2d)), & ! [IN]
                       var2D                  ) ! [OUT]
     end if
-    v2dg_RP(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2d) = var2D(:,:)
+    v2dg_RP(IS:IE,JS:JE,iv2d) = var2D(:,:)
   end do
 
   ! Communicate halo
@@ -1022,7 +1021,7 @@ subroutine read_history(filename,step,v3dg,v2dg)
   !-------------
   if (.not. allocated(topo2d)) then
     allocate (topo2d(nlon,nlat))
-    topo2d = v2dg(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_topo)
+    topo2d = v2dg(IS:IE,JS:JE,iv2dd_topo)
   end if
 
   return
@@ -1147,7 +1146,7 @@ subroutine read_history_par(filename,step,v3dg,v2dg,comm)
 !    if ( err .NE. NF_NOERR ) &
 !       write (6,'(A)') 'failed nfmpi_wait_all '//' '//nfmpi_strerror(err)
 
-!    v2dg(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2d) = real(var2D(:,:,iv2d), r_size)
+!    v2dg(IS:IE,JS:JE,iv2d) = real(var2D(:,:,iv2d), r_size)
   end do
 
 !  call FILEIO_flush( fid )
@@ -1171,7 +1170,7 @@ subroutine read_history_par(filename,step,v3dg,v2dg,comm)
 
 !$OMP DO SCHEDULE(STATIC)
   do iv2d = 1, nv2dd
-    v2dg(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2d) = real(var2D(:,:,iv2d), r_size)
+    v2dg(IS:IE,JS:JE,iv2d) = real(var2D(:,:,iv2d), r_size)
   end do
 !$OMP END DO
 !$OMP END PARALLEL
@@ -1207,7 +1206,7 @@ subroutine read_history_par(filename,step,v3dg,v2dg,comm)
   !-------------
   if (.not. allocated(topo2d)) then
     allocate (topo2d(nlon,nlat))
-    topo2d = v2dg(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_topo)
+    topo2d = v2dg(IS:IE,JS:JE,iv2dd_topo)
   end if
 
   return
@@ -1330,7 +1329,6 @@ end subroutine state_trans_inv
 !-------------------------------------------------------------------------------
 subroutine state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
   use scale_atmos_grid_cartesC_index, only: &
-      IHALO, JHALO, KHALO, &
       IS, IE, JS, JE, KS, KE, KA
   use scale_comm_cartesC, only: &
       COMM_vars8, &
@@ -1346,50 +1344,50 @@ subroutine state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
   real(RP) :: v2dgh_RP(nlonh,nlath,nv2dd)
 
   real(r_size) :: height(nlev,nlon,nlat)
-  integer :: i, j, k, iv3d, iv2d
+  integer :: i, j, iv3d, iv2d
 
   ! Variables that can be directly copied
   !---------------------------------------------------------
 
-  v3dgh_RP(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_u) = v3dg(:,:,:,iv3d_u)
-  v3dgh_RP(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_v) = v3dg(:,:,:,iv3d_v)
-  v3dgh_RP(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_w) = v3dg(:,:,:,iv3d_w)
-  v3dgh_RP(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_t) = v3dg(:,:,:,iv3d_t)
-  v3dgh_RP(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_p) = v3dg(:,:,:,iv3d_p)
-  v3dgh_RP(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_q) = v3dg(:,:,:,iv3d_q)
-  v3dgh_RP(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qc) = v3dg(:,:,:,iv3d_qc)
-  v3dgh_RP(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qr) = v3dg(:,:,:,iv3d_qr)
-  v3dgh_RP(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qi) = v3dg(:,:,:,iv3d_qi)
-  v3dgh_RP(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qs) = v3dg(:,:,:,iv3d_qs)
-  v3dgh_RP(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qg) = v3dg(:,:,:,iv3d_qg)
+  v3dgh_RP(KS:KE,IS:IE,JS:JE,iv3dd_u) = v3dg(:,:,:,iv3d_u)
+  v3dgh_RP(KS:KE,IS:IE,JS:JE,iv3dd_v) = v3dg(:,:,:,iv3d_v)
+  v3dgh_RP(KS:KE,IS:IE,JS:JE,iv3dd_w) = v3dg(:,:,:,iv3d_w)
+  v3dgh_RP(KS:KE,IS:IE,JS:JE,iv3dd_t) = v3dg(:,:,:,iv3d_t)
+  v3dgh_RP(KS:KE,IS:IE,JS:JE,iv3dd_p) = v3dg(:,:,:,iv3d_p)
+  v3dgh_RP(KS:KE,IS:IE,JS:JE,iv3dd_q) = v3dg(:,:,:,iv3d_q)
+  v3dgh_RP(KS:KE,IS:IE,JS:JE,iv3dd_qc) = v3dg(:,:,:,iv3d_qc)
+  v3dgh_RP(KS:KE,IS:IE,JS:JE,iv3dd_qr) = v3dg(:,:,:,iv3d_qr)
+  v3dgh_RP(KS:KE,IS:IE,JS:JE,iv3dd_qi) = v3dg(:,:,:,iv3d_qi)
+  v3dgh_RP(KS:KE,IS:IE,JS:JE,iv3dd_qs) = v3dg(:,:,:,iv3d_qs)
+  v3dgh_RP(KS:KE,IS:IE,JS:JE,iv3dd_qg) = v3dg(:,:,:,iv3d_qg)
 
   ! RH
   !---------------------------------------------------------
 
-!  v3dgh_RP(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_rh) = [[RH calculator]]
+!  v3dgh_RP(KS:KE,IS:IE,JS:JE,iv3dd_rh) = [[RH calculator]]
 
   ! Calculate height based the the topography and vertical coordinate
   !---------------------------------------------------------
 
   call scale_calc_z(topo, height)
-  v3dgh_RP(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_hgt) = height
+  v3dgh_RP(KS:KE,IS:IE,JS:JE,iv3dd_hgt) = height
 
   ! Surface variables: use the 1st level as the surface (although it is not)
   !---------------------------------------------------------
 
-  v2dgh_RP(:,:,iv2dd_topo) = v3dgh(1+KHALO,:,:,iv3dd_hgt)                ! Use the first model level as topography (is this good?)
-!  v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_topo) = topo(:,:) ! Use the real topography
+  v2dgh_RP(IS:IE,JS:JE,iv2dd_topo) = v3dgh(KS,:,:,iv3dd_hgt)                ! Use the first model level as topography (is this good?)
+!  v2dgh(IS:IE,JS:JE,iv2dd_topo) = topo(:,:) ! Use the real topography
 
-  v2dgh_RP(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_ps) = v3dg(1,:,:,iv3d_p)
-  v2dgh_RP(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_u10m) = v3dg(1,:,:,iv3d_u)
-  v2dgh_RP(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_v10m) = v3dg(1,:,:,iv3d_v)
-  v2dgh_RP(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_t2m) = v3dg(1,:,:,iv3d_t)
-  v2dgh_RP(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_q2m) = v3dg(1,:,:,iv3d_q)
+  v2dgh_RP(IS:IE,JS:JE,iv2dd_ps) = v3dg(1,:,:,iv3d_p)
+  v2dgh_RP(IS:IE,JS:JE,iv2dd_u10m) = v3dg(1,:,:,iv3d_u)
+  v2dgh_RP(IS:IE,JS:JE,iv2dd_v10m) = v3dg(1,:,:,iv3d_v)
+  v2dgh_RP(IS:IE,JS:JE,iv2dd_t2m) = v3dg(1,:,:,iv3d_t)
+  v2dgh_RP(IS:IE,JS:JE,iv2dd_q2m) = v3dg(1,:,:,iv3d_q)
 
-!  v2dgh_RP(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_rain) = [[No way]]
+!  v2dgh_RP(IS:IE,JS:JE,iv2dd_rain) = [[No way]]
 
 #ifdef H08
-  v2dgh_RP(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_skint) = v3dg(1,:,:,iv3d_t)
+  v2dgh_RP(IS:IE,JS:JE,iv2dd_skint) = v3dg(1,:,:,iv3d_t)
 
   ! Assume the point where terrain height is less than 10 m is the ocean. T.Honda (02/09/2016)
   !---------------------------------------------------------
@@ -1772,19 +1770,20 @@ subroutine rij_rank(ig, jg, rank)
 #ifdef DEBUG
   use scale_atmos_grid_cartesC_index, only: &
       IHALO, JHALO, &
-      IA, JA
+      IA, JA, IS, JS
   use scale_prc, only: &
       PRC_myrank
   use scale_atmos_grid_cartesC, only: &
-      GRID_CX, &
-      GRID_CY, &
-      GRID_CXG, &
-      GRID_CYG, &
+      GRID_CX => ATMOS_GRID_CARTESC_CX, &
+      GRID_CY => ATMOS_GRID_CARTESC_CY, &
+      GRID_CXG =>  ATMOS_GRID_CARTESC_CXG, &
+      GRID_CYG => ATMOS_GRID_CARTESC_CYG, &
       DX, &
       DY
 #else
   use scale_atmos_grid_cartesC_index, only: &
-      IHALO, JHALO
+      IHALO, JHALO, &
+      IS, IE, JS, JE
 #endif
   implicit none
   real(r_size), intent(in) :: ig
@@ -1792,8 +1791,8 @@ subroutine rij_rank(ig, jg, rank)
   integer, intent(out) :: rank
   integer :: rank_i, rank_j
 
-  if (ig < real(1+IHALO,r_size) .or. ig > real(nlon*PRC_NUM_X+IHALO,r_size) .or. &
-      jg < real(1+JHALO,r_size) .or. jg > real(nlat*PRC_NUM_Y+JHALO,r_size)) then
+  if (ig < real(IS,r_size) .or. ig > real(nlon*PRC_NUM_X+IHALO,r_size) .or. &
+      jg < real(JS,r_size) .or. jg > real(nlat*PRC_NUM_Y+JHALO,r_size)) then
     rank = -1
     return
   end if
@@ -1836,19 +1835,20 @@ subroutine rij_rank_g2l(ig, jg, rank, il, jl)
 #ifdef DEBUG
   use scale_atmos_grid_cartesC_index, only: &
       IHALO, JHALO, &
-      IA, JA
+      IA, JA, IS, JS
   use scale_prc, only: &
       PRC_myrank
   use scale_atmos_grid_cartesC, only: &
-      GRID_CX, &
-      GRID_CY, &
-      GRID_CXG, &
-      GRID_CYG, &
+      GRID_CX => ATMOS_GRID_CARTESC_CX, &
+      GRID_CY => ATMOS_GRID_CARTESC_CX, &
+      GRID_CXG => ATMOS_GRID_CARTESC_CXG, &
+      GRID_CYG => ATMOS_GRID_CARTESC_CYG, &
       DX, &
       DY
 #else
   use scale_atmos_grid_cartesC_index, only: &
-      IHALO, JHALO
+      IHALO, JHALO, &
+      IS, IE, JS, JE
 #endif
   implicit none
   real(r_size), intent(in) :: ig
@@ -1858,8 +1858,8 @@ subroutine rij_rank_g2l(ig, jg, rank, il, jl)
   real(r_size), intent(out) :: jl
   integer :: rank_i, rank_j
 
-  if (ig < real(1+IHALO,r_size) .or. ig > real(nlon*PRC_NUM_X+IHALO,r_size) .or. &
-      jg < real(1+JHALO,r_size) .or. jg > real(nlat*PRC_NUM_Y+JHALO,r_size)) then
+  if (ig < real(IS,r_size) .or. ig > real(nlon*PRC_NUM_X+IHALO,r_size) .or. &
+      jg < real(JS,r_size) .or. jg > real(nlat*PRC_NUM_Y+JHALO,r_size)) then
     il = -1.0d0
     jl = -1.0d0
     rank = -1

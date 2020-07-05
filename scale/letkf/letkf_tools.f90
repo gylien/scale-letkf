@@ -1326,9 +1326,6 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, depd
   use common_sort
   use scale_atmos_grid_cartesC, only: &
     DX, DY
-  use scale_prc_cartesC, only: &
-    PRC_NUM_X, &
-    PRC_NUM_Y
   implicit none
 
   real(r_size), intent(in) :: ri, rj, rlev, rz
@@ -1351,7 +1348,7 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, depd
 
   real(r_size) :: nrloc, nrdiag
   real(r_size) :: ndist_dummy
-  integer :: iob, ityp, ielm, ielm_u
+  integer :: iob, ityp, ielm
   integer :: imin, imax, jmin, jmax
   integer :: ic, ic2, icm
   integer :: n, nn, nn_prev

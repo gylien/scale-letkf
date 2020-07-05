@@ -48,7 +48,7 @@ program obssim
 
 !-----------------------------------------------------------------------
 
-  call set_common_conf(nprocs)
+  call set_common_conf
 
   call set_mem_node_proc(1)
   call set_scalelib('OBSSIM')

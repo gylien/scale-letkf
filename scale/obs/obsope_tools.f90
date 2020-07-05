@@ -72,7 +72,6 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
   real(r_size), allocatable :: v3dg(:,:,:,:)
   real(r_size), allocatable :: v2dg(:,:,:)
 
-  integer, allocatable :: qc_p(:)
 #ifdef H08
   real(r_size), allocatable :: lev_p(:)
   real(r_size), allocatable :: val2_p(:)
@@ -118,11 +117,8 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
 ! -- for TC vital assimilation --
 !  INTEGER :: obs_set_TCX, obs_set_TCY, obs_set_TCP ! obs set
 !  INTEGER :: obs_idx_TCX, obs_idx_TCY, obs_idx_TCP ! obs index
-  INTEGER :: bTC_proc ! the process where the background TC is located.
 ! bTC: background TC in each subdomain
 ! bTC(1,:) : tcx (m), bTC(2,:): tcy (m), bTC(3,:): mslp (Pa)
-  REAL(r_size),ALLOCATABLE :: bTC(:,:)
-  REAL(r_size) :: bTC_mslp
 
 !-------------------------------------------------------------------------------
 
@@ -779,7 +775,6 @@ SUBROUTINE obsmake_cal(obs)
   real(r_size),allocatable :: bufr(:)
   real(r_size),allocatable :: error(:)
 
-  CHARACTER(10) :: obsoutfile = 'obsout.dat'
   INTEGER :: ns 
 #ifdef H08
 ! obsmake for H08 is not available !! (03/17/2016) T.Honda

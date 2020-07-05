@@ -534,9 +534,6 @@ subroutine set_scalelib(execname)
   use scale_io, only: &
     IO_setup, &
     IO_LOG_setup, &
-    IO_FID_CONF, &
-    IO_FID_LOG, &
-    IO_L, &
     H_LONG
   use scale_prc, only: &
     PRC_mpi_alive, &
@@ -562,15 +559,10 @@ subroutine set_scalelib(execname)
     RANDOM_setup
 !  use scale_time, only: &
 !    TIME_setup
-  use scale_time, only: &
-    TIME_DTSEC,       &
-    TIME_STARTDAYSEC
   use scale_atmos_grid_cartesC, only: &
     ATMOS_GRID_CARTESC_setup, &
     ATMOS_GRID_CARTESC_DOMAIN_CENTER_X, &
-    ATMOS_GRID_CARTESC_DOMAIN_CENTER_Y, &
-    DX, &
-    DY
+    ATMOS_GRID_CARTESC_DOMAIN_CENTER_Y
   use scale_atmos_grid_cartesC_index
 !  use scale_atmos_grid_cartesC_nest, only: &
 !    NEST_setup
@@ -635,9 +627,6 @@ subroutine set_scalelib(execname)
 
   integer :: color, key, idom, ierr
   integer :: rankidx(2)
-
-  integer :: HIST_item_limit    ! dummy
-  integer :: HIST_variant_limit ! dummy
 
   character(len=7) :: execname_ = ''
 
