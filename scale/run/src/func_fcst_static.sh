@@ -487,12 +487,11 @@ if [ "$TOPO_FORMAT" != "prep" ] || [ "$LAND_FORMAT" != "prep" ] ; then
   mkdir -p $OUTDIR/const/topo
   mkdir -p $OUTDIR/const/landuse
   config_file_scale_launcher fcst fcst_scale-rm_pp_ens "f<member>/pp" 1
-
   OFFLINE_PARENT_BASENAME=
 
   if ((BDY_FORMAT == 1)); then
-    BDYCATALOGUE=${TMPDAT_BDYDATA}/bdyorg/latlon_domain_catalogue.txt
-    BDYTOPO=${TMPDAT_BDYDATA}/bdytopo/const/topo
+    BDYCATALOGUE=${DATA_BDY_SCALE}/const/log/latlon_domain_catalogue.txt
+    BDYTOPO=${DATA_BDY_SCALE}/const/topo
   fi
 
 #  if ((BDY_FORMAT == 1)) && [ "$TOPO_FORMAT" != 'prep' ]; then
@@ -535,8 +534,8 @@ if [ "$TOPO_FORMAT" != "prep" ] || [ "$LAND_FORMAT" != "prep" ] ; then
                -e "/!--OFFLINE_PARENT_PRC_NUM_X--/a OFFLINE_PARENT_PRC_NUM_X = ${DATA_BDY_SCALE_PRC_NUM_X}," \
                -e "/!--OFFLINE_PARENT_PRC_NUM_Y--/a OFFLINE_PARENT_PRC_NUM_Y = ${DATA_BDY_SCALE_PRC_NUM_Y}," \
           )"
-   mkdir -p $TMP/f$(printf $MEMBER_FMT $m)
-   conf_file="$TMP/f$(printf $MEMBER_FMT $m)/pp.d01_${STIME}.conf"
+   mkdir -p $TMP/f$(printf $MEMBER_FMT 1)
+   conf_file="$TMP/f$(printf $MEMBER_FMT 1)/pp.d01_${STIME}.conf"
    echo "$conf" > ${conf_file}
 
 #   for q in $(seq ${SCALE_NP[1]}); do
@@ -710,7 +709,7 @@ while ((time_s <= ETIME)); do
 
           if ((BDY_FORMAT == 1)); then
             FILETYPE_ORG='SCALE-RM'
-            LATLON_CATALOGUE_FNAME="${TMPROOT_BDYDATA}/latlon_domain_catalogue.bdy.txt"
+            LATLON_CATALOGUE_FNAME="${DATA_BDY_SCALE}/const/log/latlon_domain_catalogue.txt"
           elif ((BDY_FORMAT == 2)); then
             FILETYPE_ORG='WRF-ARW'
             LATLON_CATALOGUE_FNAME=
