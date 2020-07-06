@@ -1,4 +1,4 @@
-include ../configure.user
+include ../configure
 
 PROGS   = scale-rm_pp_ens scale-rm_init_ens scale-rm_ens
 

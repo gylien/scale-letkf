@@ -1,0 +1,29 @@
+# Version flags
+SCALE_USER_VER = T
+
+# Precision
+LETKF_SINGLE_FP = F
+SCALE_SINGLE_FP = F
+
+# Libraries
+#-----------------
+
+LAPACK_LIB = -mkl=sequential
+
+#BUFR_LIB   = -L/data/opt/bufrlib/10.1.0_intel/lib -lbufrlib
+
+
+# Compiler flags
+#-----------------
+
+FOPTS_SCALE = $(FFLAGS)
+
+FOPTS     = $(FOPTS_SCALE)
+
+FOPTS_EXE  = $(FOPTS)
+
+#FMCMODEL  = -mcmodel=medium -shared-intel
+FBYTESWAP = -convert little_endian
+FFREE     = -free
+FFIXED    = -fixed
+

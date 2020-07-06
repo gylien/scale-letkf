@@ -136,7 +136,8 @@ end subroutine finalize_mpi_scale
 !-------------------------------------------------------------------------------
 subroutine set_common_mpi_scale
   use scale_atmos_grid_cartesC, only: &
-      ATMOS_GRID_CARTESC_CX, ATMOS_GRID_CARTESC_CY, &
+      CX => ATMOS_GRID_CARTESC_CX, &
+      CY => ATMOS_GRID_CARTESC_CY, &
       DX, DY
   use scale_atmos_grid_cartesC_index, only: &
       IHALO, JHALO
@@ -149,9 +150,12 @@ subroutine set_common_mpi_scale
   real(r_size), allocatable :: height3dtmp(:,:,:)
   real(r_size), allocatable :: lon2dtmp(:,:)
   real(r_size), allocatable :: lat2dtmp(:,:)
-  integer :: i, j
-  real(RP) :: ri_RP, rj_RP
+  real(RP), allocatable :: lon2dtmp_RP(:,:)
+  real(RP), allocatable :: lat2dtmp_RP(:,:)
+  real(RP), allocatable :: height3dtmp_RP(:,:,:)
   real(RP) :: lon_RP, lat_RP
+  integer :: i, j
+  real(r_size) :: ri, rj
 
   call mpi_timer('', 2)
 
@@ -193,25 +197,26 @@ subroutine set_common_mpi_scale
       end if
 !      call scale_calc_z(topo2d, height3d)
 
-!$OMP PARALLEL DO PRIVATE(i,j,ri_RP,rj_RP, lon_RP, lat_RP) COLLAPSE(2)
+!$OMP PARALLEL DO PRIVATE(i,j,ri,rj, lon_RP, lat_RP) COLLAPSE(2)
       do j = 1, nlat
         do i = 1, nlon
-          ri_RP = real( i + IHALO, kind=RP )
-          rj_RP = real( j + JHALO, kind=RP )
-          call MAPPROJECTION_xy2lonlat( (ri_RP-1.0_RP) * DX + ATMOS_GRID_CARTESC_CX(1), &
-                                        (rj_RP-1.0_RP) * DY + ATMOS_GRID_CARTESC_CY(1), &
+          ri = real(i + IHALO, r_size)
+          rj = real(j + JHALO, r_size)
+          call MAPPROJECTION_xy2lonlat( real(ri-1.0_r_size, kind=RP)*DX + CX(1), &
+                                        real(rj-1.0_r_size, kind=RP)*DY + CY(1), &
                                         lon_RP, lat_RP )
+!                                        lon2d(i,j), lat2d(i,j))
 
-          lon2d(i,j) = real( lon_RP, kind=r_size ) * rad2deg
-          lat2d(i,j) = real( lat_RP, kind=r_size ) * rad2deg
+          lon2d(i,j) = real(lon_RP, kind=r_size)*rad2deg
+          lat2d(i,j) = real(lat_RP, kind=r_size)*rad2deg
         end do
       end do
 !$OMP END PARALLEL DO
 
       filename = GUES_IN_BASENAME
       call filename_replace_mem(filename, myrank_to_mem(1))
-      call read_restart_coor(filename, lon2dtmp, lat2dtmp, height3dtmp)
-
+      call read_restart_coor( filename, lon2dtmp, lat2dtmp, height3dtmp )
+     
       if (maxval(abs(lon2dtmp - lon2d)) > 1.0d-6 .or. maxval(abs(lat2dtmp - lat2d)) > 1.0d-6) then
         write (6, '(A,F15.7,A,F15.7)') '[Error] Map projection settings are incorrect! -- maxdiff(lon) = ', &
                                        maxval(abs(lon2dtmp - lon2d)), ', maxdiff(lat) = ', maxval(abs(lat2dtmp - lat2d))
@@ -524,9 +529,6 @@ subroutine set_scalelib(execname)
   use scale_io, only: &
     IO_setup, &
     IO_LOG_setup, &
-    IO_FID_CONF, &
-    IO_FID_LOG, &
-    IO_L, &
     H_LONG
   use scale_prc, only: &
     PRC_mpi_alive, &
@@ -552,15 +554,10 @@ subroutine set_scalelib(execname)
     RANDOM_setup
 !  use scale_time, only: &
 !    TIME_setup
-  use scale_time, only: &
-    TIME_DTSEC,       &
-    TIME_STARTDAYSEC
   use scale_atmos_grid_cartesC, only: &
     ATMOS_GRID_CARTESC_setup, &
     ATMOS_GRID_CARTESC_DOMAIN_CENTER_X, &
-    ATMOS_GRID_CARTESC_DOMAIN_CENTER_Y, &
-    DX, &
-    DY
+    ATMOS_GRID_CARTESC_DOMAIN_CENTER_Y
   use scale_atmos_grid_cartesC_index
 !  use scale_atmos_grid_cartesC_nest, only: &
 !    NEST_setup
@@ -631,9 +628,6 @@ subroutine set_scalelib(execname)
 
   integer :: color, key, idom, ierr
   integer :: rankidx(2)
-
-  integer :: HIST_item_limit    ! dummy
-  integer :: HIST_variant_limit ! dummy
 
   character(len=7) :: execname_ = ''
 

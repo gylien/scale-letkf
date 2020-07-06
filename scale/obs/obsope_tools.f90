@@ -68,7 +68,6 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
   real(r_size), allocatable :: v3dg(:,:,:,:)
   real(r_size), allocatable :: v2dg(:,:,:)
 
-
   real(r_size) :: ril, rjl, rk, rkz
 
   character(filelenmax) :: obsdafile
@@ -94,19 +93,6 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
 
   real(r_size) :: yobs_H08_ens_clr(nens,nlon,nlat,NIRB_HIM8)
   real(r_size) :: yobs_H08_esprd_clr(nlon,nlat,NIRB_HIM8)
-
-#ifdef TCV
-! -- for TC vital assimilation --
-! bTC: background TC in each subdomain
-! bTC(1,:) : tcx (m), bTC(2,:): tcy (m), bTC(3,:): mslp (Pa)
-  real(r_size),allocatable :: bTC(:,:)
-  real(r_size) :: bTC_mslp
-
-! Multiple TCs are not considered (04/14/2017)
-  real(r_size) :: TC_rij(2) = -1.0d0
-  integer :: bTC_rank_d ! the process where the background TC is located.
-  integer :: obs_nn_TCP ! TCP
-#endif
 
 !-------------------------------------------------------------------------------
 
@@ -742,7 +728,6 @@ SUBROUTINE obsmake_cal(obs)
   real(r_size),allocatable :: bufr(:)
   real(r_size),allocatable :: error(:)
 
-  CHARACTER(10) :: obsoutfile = 'obsout.dat'
   INTEGER :: ns 
 #ifdef H08
 ! obsmake for H08 is not available !! (03/17/2016) T.Honda
@@ -1030,7 +1015,8 @@ end subroutine obsmake_cal
 !-------------------------------------------------------------------------------
 subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, stggrd)
   use scale_atmos_grid_cartesC, only: &
-      ATMOS_GRID_CARTESC_CX, ATMOS_GRID_CARTESC_CY, &
+      CX => ATMOS_GRID_CARTESC_CX, &
+      CY => ATMOS_GRID_CARTESC_CY, &
       DX, DY
   use scale_atmos_grid_cartesC_index, only: &
       IHALO, JHALO, KHALO
@@ -1049,9 +1035,9 @@ subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, stggrd)
   real(r_size) :: ri, rj, rk
   real(r_size) :: lon, lat, lev
   real(r_size) :: tmpobs
+  real(RP) :: lon_RP, lat_RP
   integer :: tmpqc
   real(RP) :: ri_RP, rj_RP
-  real(RP) :: lon_RP, lat_RP
 
 #ifdef H08
 ! -- for Himawari-8 obs --
@@ -1074,12 +1060,12 @@ subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, stggrd)
     rj_RP = real( j + JHALO, kind=RP )
 
     do i = 1, nlon
-      ri_RP = real( i + IHALO, kind=RP )
-      call MAPPROJECTION_xy2lonlat( (ri_RP-1.0_RP) * DX + ATMOS_GRID_CARTESC_CX(1), &
-                                    (rj_RP-1.0_RP) * DY + ATMOS_GRID_CARTESC_CY(1), &
+      ri = real(i + IHALO, r_size)
+      call MAPPROJECTION_xy2lonlat( real(ri - 1.0_r_size, kind=RP)*DX + CX(1), &
+                                    real(rj - 1.0_r_size, kind=RP)*DY + CY(1), &
                                     lon_RP, lat_RP )
-      lon = real( lon_RP, kind=r_size ) * rad2deg
-      lat = real( lat_RP, kind=r_size ) * rad2deg
+      lon = real(lon_RP, kind=r_size)*rad2deg
+      lat = real(lat_RP, kind=r_size)*rad2deg
 
       do k = 1, nlev
         rk = real(k + KHALO, r_size)

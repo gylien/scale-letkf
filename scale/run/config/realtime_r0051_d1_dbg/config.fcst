@@ -1,0 +1,68 @@
+#!/bin/bash
+#===============================================================================
+#
+#  Settings for fcst.sh
+#
+#===============================================================================
+
+STIME='20180701000000'
+STIME='20180701060000'
+STIME='20180701120000'
+ETIME=$STIME
+#ETIME='20180701000000'
+TIME_LIMIT='00:30:00'
+MEMBERS='mean mdet 1 2 3 '
+CYCLE=
+CYCLE_SKIP=1
+CONF_MODE='static'
+#CONF_MODE=
+ISTEP=
+FSTEP=
+
+#===============================================================================
+# Forecast settings
+
+FCSTLEN=21600      # SCALE forecast length in the forecast mode (second)
+FCSTOUT=3600
+
+
+#===============================================================================
+
+MAKEINIT=0       # 0: No
+                 # 1: Yes
+
+#===============================================================================
+# Diagnostic output settings
+
+                 #      fcst
+                 #      history restart
+OUT_OPT=1        # 1:   o       o
+                 # 2:   o
+
+                 #      topo
+TOPOOUT_OPT=2    # 1:   o
+                 # 2:   (none)
+
+                 #      landuse
+LANDUSEOUT_OPT=2 # 1:   o
+                 # 2:   (none)
+
+                 #      bdy
+                 #      mean members
+BDYOUT_OPT=3     # 1:   o    o
+                 # 2:   o
+                 # 3:   (none)
+
+                 #      topo landuse bdy perturb        scale
+                 #      log  log     log (not finished) log
+LOG_OPT=2        # 1:   o    o       o   o              o
+                 # 2:   o    o       o                  o
+                 # 3:                                   o
+                 # 4:   (none)
+
+LOG_TYPE=2       # 1:   Only save the log file from the head process
+                 # 2:   Save all log files
+                 # 3:   Save all log files in an archive file
+                 # 4:   Save all log files in a compressed archive file
+
+#===============================================================================

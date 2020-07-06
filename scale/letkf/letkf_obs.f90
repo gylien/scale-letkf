@@ -79,14 +79,6 @@ SUBROUTINE set_letkf_obs
   use scale_atmos_grid_cartesC, only: &
     DX, &
     DY
-  use scale_atmos_grid_cartesC_index, only: &
-    IHALO,JHALO
-!  use scale_prc, only: &
-!    MPI_COMM_d => LOCAL_COMM_WORLD, &
-!    PRC_myrank
-  use scale_prc_cartesC, only: &
-    PRC_NUM_X, &
-    PRC_NUM_Y
   use scale_const, only: &
     Rdry   => CONST_Rdry, &
     Rvap   => CONST_Rvap, &

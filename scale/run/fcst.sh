@@ -31,10 +31,10 @@ job='fcst'
 . config.main || exit $?
 . config.${job} || exit $?
 
-. src/func_distribute.sh || exit $?
+#. src/func_distribute.sh || exit $?
 . src/func_datetime.sh || exit $?
 . src/func_util.sh || exit $?
-. src/func_${job}.sh || exit $?
+. src/func_${job}_static.sh || exit $?
 
 #-------------------------------------------------------------------------------
 
@@ -42,10 +42,8 @@ echo "[$(datetime_now)] Start $myname $@" >&2
 
 setting "$@" || exit $?
 
-if [ "$CONF_MODE" = 'static' ]; then
-  . src/func_common_static.sh || exit $?
-  . src/func_${job}_static.sh || exit $?
-fi
+. src/func_common_static.sh || exit $?
+. src/func_${job}_static.sh || exit $?
 
 echo
 print_setting || exit $?
@@ -72,7 +70,7 @@ declare -a proc2grpproc
 if ((RUN_LEVEL <= 2)); then
   safe_init_tmpdir $NODEFILE_DIR || exit $?
 fi
-distribute_fcst "$MEMBERS" $CYCLE "$NODELIST_TYPE" $NODEFILE_DIR || exit $?
+#distribute_fcst "$MEMBERS" $CYCLE "$NODELIST_TYPE" $NODEFILE_DIR || exit $?
 
 if ((CYCLE == 0)); then
   CYCLE=$cycle_auto
@@ -85,15 +83,11 @@ if ((RUN_LEVEL <= 1)) && ((ISTEP == 1)); then
   echo "[$(datetime_now)] Initialization (stage in)" >&2
 
   safe_init_tmpdir $STAGING_DIR || exit $?
-  if [ "$CONF_MODE" = 'static' ]; then
-    staging_list_static || exit $?
-    if ((DISK_MODE == 3)); then
-      config_file_list $TMP/config || exit $?
-    else
-      config_file_list || exit $?
-    fi
+  staging_list_static || exit $?
+  if ((DISK_MODE == 3)); then
+    config_file_list $TMP/config || exit $?
   else
-    staging_list || exit $?
+    config_file_list || exit $?
   fi
 
   stage_in node || exit $?
@@ -125,11 +119,31 @@ cd $TMPROOT
 
 declare -a stimes
 declare -a stimesfmt
-lcycles=$((LCYCLE * CYCLE_SKIP))
+lcycles=$((LCYCLE*CYCLE_SKIP))
 s_flag=1
 e_flag=0
 time=$STIME
 loop=0
+
+fmember=0
+for iname in $MEMBERS; do
+  fmember=$((fmember+1))
+  name_m[$fmember]=$iname
+done
+
+totalnp=$((PPN*NNODES))
+SCALE_NP_TOTAL=0
+for d in `seq $DOMNUM`; do
+  SCALE_NP_TOTAL=$((SCALE_NP_TOTAL+SCALE_NP[$d]))
+done
+
+CYCLE=$((fmember*SCALE_NP_TOTAL/totalnp))
+if (( CYCLE < 1 )) ; then
+  CYCLE=1
+fi
+
+repeat_mems=$((fmember*SCALE_NP_TOTAL/totalnp))
+nitmax=$((fmember*SCALE_NP_TOTAL/totalnp))
 
 #-------------------------------------------------------------------------------
 while ((time <= ETIME)); do
@@ -237,36 +251,16 @@ while ((time <= ETIME)); do
 
       nodestr=proc
 
-      if [ "$CONF_MODE" = 'static' ]; then
+      if ((enable_iter == 1 && nitmax > 1)); then
+        for it in $(seq $nitmax); do
+          echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: start" >&2
 
-        if ((enable_iter == 1 && nitmax > 1)); then
-          for it in $(seq $nitmax); do
-            echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: start" >&2
+          mpirunf ${nodestr} ./${stepexecname[$s]} fcst_${stepexecname[$s]}_${stimes[1]}_${it}.conf log/${stepexecname[$s]}.NOUT_${stimes[1]}_${it} || exit $?
 
-            mpirunf ${nodestr} ./${stepexecname[$s]} fcst_${stepexecname[$s]}_${stimes[1]}_${it}.conf log/${stepexecname[$s]}.NOUT_${stimes[1]}_${it} || exit $?
-
-            echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: end" >&2
-          done
-        else
-          mpirunf ${nodestr} ./${stepexecname[$s]} fcst_${stepexecname[$s]}_${stimes[1]}.conf log/${stepexecname[$s]}.NOUT_${stimes[1]} || exit $?
-        fi
-
+          echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: end" >&2
+        done
       else
-
-        execpath="${stepexecdir[$s]}/${stepexecname[$s]}"
-        stdout_dir="$TMPOUT/${stimes[1]}/log/fcst_$(basename ${stepexecdir[$s]})"
-        if ((enable_iter == 1)); then
-          for it in $(seq $nitmax); do
-            echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: start" >&2
-
-            mpirunf proc $execpath ${execpath}.conf "${stdout_dir}/NOUT-${it}" "$SCRP_DIR/fcst_step.sh" $loop $it || exit $?
-
-            echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: end" >&2
-          done
-        else
-          mpirunf proc $execpath ${execpath}.conf "${stdout_dir}/NOUT" "$SCRP_DIR/fcst_step.sh" $loop || exit $?
-        fi
-
+        mpirunf ${nodestr} ./${stepexecname[$s]} fcst_${stepexecname[$s]}_${stimes[1]}.conf log/${stepexecname[$s]}.NOUT_${stimes[1]} || exit $?
       fi
 
     fi
@@ -316,12 +310,10 @@ if ((RUN_LEVEL <= 3)); then
 fi
 
 if ((RUN_LEVEL <= 1)); then
-  if [ "$CONF_MODE" = 'static' ]; then
-    if ((DISK_MODE == 3)); then
-      config_file_save $TMP/config || exit $?
-    else
-      config_file_save || exit $?
-    fi
+  if ((DISK_MODE == 3)); then
+    config_file_save $TMP/config || exit $?
+  else
+    config_file_save || exit $?
   fi
 fi
 

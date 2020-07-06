@@ -33,10 +33,9 @@ job='cycle'
 . config.main || exit $?
 . config.${job} || exit $?
 
-. src/func_distribute.sh || exit $?
 . src/func_datetime.sh || exit $?
 . src/func_util.sh || exit $?
-. src/func_${job}.sh || exit $?
+. src/func_${job}_static.sh || exit $?
 
 echo "[$(datetime_now)] ### 1" >&2
 
@@ -68,19 +67,9 @@ echo "[$(datetime_now)] ### 3" >&2
 #===============================================================================
 # Determine the distibution schemes
 
-declare -a node_m
-declare -a name_m
-declare -a mem2node
-declare -a mem2proc
-declare -a proc2node
-declare -a proc2group
-declare -a proc2grpproc
-
-#if ((RUN_LEVEL <= 2)) && ((ISTEP == 1)); then
 if ((RUN_LEVEL <= 2)); then
   safe_init_tmpdir $NODEFILE_DIR || exit $?
 fi
-distribute_da_cycle "$NODELIST_TYPE" $NODEFILE_DIR || exit $?
 
 echo "[$(datetime_now)] ### 4" >&2
 
@@ -121,6 +110,21 @@ function online_stgout_bgjob () {
 cd $TMPROOT
 
 #-------------------------------------------------------------------------------
+
+mtot=$((MEMBER+1))
+if (( DET_RUN == 1 )); then
+  mtot=$((MEMBER+2))
+fi
+
+totalnp=$((PPN*NNODES))
+SCALE_NP_TOTAL=0
+for d in `seq $DOMNUM`; do
+  SCALE_NP_TOTAL=$((SCALE_NP_TOTAL+SCALE_NP[$d]))
+done
+
+repeat_mems=$((mtot*SCALE_NP_TOTAL/totalnp))
+nitmax=$((mtot*SCALE_NP_TOTAL/totalnp))
+
 
 s_flag=1
 e_flag=0
@@ -170,12 +174,12 @@ while ((time <= ETIME)); do
   done
   echo
   echo "  Nodes used:               $NNODES_APPAR"
-  for n in $(seq $NNODES_APPAR); do
-    echo "    ${node[$n]}"
-  done
+#  for n in $(seq $NNODES_APPAR); do
+#    echo "    ${node[$n]}"
+#  done
   echo
   echo "  Processes per node:       $PPN_APPAR"
-  echo "  Total processes:          $totalnp"
+#  echo "  Total processes:          $totalnp"
   echo
   echo "  Nodes per SCALE run:      $mem_nodes"
   echo "  Processes per SCALE run:  $mem_np"
@@ -184,7 +188,7 @@ while ((time <= ETIME)); do
 #  for m in $(seq $mtot); do
 #    echo "      ${name_m[$m]}: ${node_m[$m]}"
 #  done
-#  echo
+  echo
 
 #-------------------------------------------------------------------------------
 # Call functions to run the job
@@ -194,6 +198,8 @@ while ((time <= ETIME)); do
 
       ######
       if ((s == 1)); then
+        logd=$OUTDIR/$time/log/scale_pp
+
         if [ "$TOPO_FORMAT" == 'prep' ] && [ "$LANDUSE_FORMAT" == 'prep' ]; then
           echo "[$(datetime_now)] ${time}: ${stepname[$s]} ...skipped (use prepared topo and landuse files)" >&2
           continue
@@ -206,6 +212,7 @@ while ((time <= ETIME)); do
         fi
       fi
       if ((s == 2)); then
+        logd=$OUTDIR/$time/log/scale_init
         if ((BDY_FORMAT == 0)); then
           echo "[$(datetime_now)] ${time}: ${stepname[$s]} ...skipped (use prepared boundary files)" >&2
           continue
@@ -218,6 +225,7 @@ while ((time <= ETIME)); do
         fi
       fi
       if ((s == 4)); then
+        logd=$OUTDIR/$atime/log/letkf
         if ((OBSOPE_RUN == 0)); then
           echo "[$(datetime_now)] ${time}: ${stepname[$s]} ...skipped (only use integrated observation operators)" >&2
           continue
@@ -247,38 +255,21 @@ while ((time <= ETIME)); do
         conf_time=$atime
       fi
 
-      if [ "$CONF_MODE" = 'static' ]; then
 
-        if ((enable_iter == 1 && nitmax > 1)); then
-          for it in $(seq $nit); do
-            echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: start" >&2
+      if ((enable_iter == 1 && nitmax > 1)); then
+        for it in $(seq $nit); do
+          echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: start" >&2
 
-            mpirunf $nodestr $execpath ${execpath}.conf "${stdout_dir}/NOUT-${it}" "$SCRP_DIR/${job}_step.sh" "$time" $loop $it || exit $?
-
-            echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: end" >&2
-          done
-        else
-          mpirunf $nodestr $execpath ${execpath}.conf "${stdout_dir}/NOUT" "$SCRP_DIR/${job}_step.sh" "$time" "$loop" || exit $?
-        fi
-
+          mkdir -p $logd
+          mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}_${it}.conf ${logd}/NOUT_${conf_time}_${it} || exit $?
+         
+          echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: end" >&2
+        done
       else
-
-        execpath="${stepexecdir[$s]}/${stepexecname[$s]}"
-        stdout_dir="$OUTDIR/${conf_time}/log/$(basename ${stepexecdir[$s]})"
-        mkdir -p $stdout_dir
-        if ((enable_iter == 1)); then
-          for it in $(seq $nit); do
-            echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: start" >&2
-
-            mpirunf $nodestr $execpath ${execpath}.conf "${stdout_dir}/NOUT-${it}" "$SCRP_DIR/${job}_step.sh" "$time" $loop $it || exit $?
-
-            echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: end" >&2
-          done
-        else
-          mpirunf $nodestr $execpath ${execpath}.conf "${stdout_dir}/NOUT" "$SCRP_DIR/${job}_step.sh" "$time" "$loop" || exit $?
-        fi
-
+        mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}.conf ${logd}/NOUT_${conf_time} || exit $?
       fi
+
+      rm -f  $logd/NOUT_*????[1-9]
 
     fi
   done

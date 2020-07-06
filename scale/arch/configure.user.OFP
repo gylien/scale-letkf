@@ -1,0 +1,36 @@
+# Version flags
+SCALE_USER_VER = T
+
+# Precision
+LETKF_SINGLE_FP = F
+SCALE_SINGLE_FP = T
+
+
+# Libraries
+#-----------------
+
+LAPACK_LIB = -mkl=sequential
+
+BUFR_LIB   = -L/data/opt/bufrlib/10.1.0_intel/lib -lbufrlib
+
+
+# Compiler flags
+#-----------------
+
+FOPTS_SCALE = $(FFLAGS)
+
+FOPTS     = $(FOPTS_SCALE)
+
+FOPTS_EXE  = $(FOPTS)
+
+#FMCMODEL  = -mcmodel=medium -shared-intel
+FBYTESWAP = -convert little_endian
+FFREE     = -free
+FFIXED    = -fixed
+
+DIR_RTTOV = /work/hp150019/share/honda/RTTOV12.3
+RT_LDFLAGS = -L$(DIR_RTTOV)/lib  -lrttov12_brdf_atlas -lrttov12_emis_atlas -lrttov12_other -lrttov12_parallel -lrttov12_coef_io -lrttov12_main
+RT_INCLUDE = -I$(DIR_RTTOV)/mod -I$(DIR_RTTOV)/include
+
+H08 = T
+
