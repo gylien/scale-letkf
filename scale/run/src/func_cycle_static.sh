@@ -548,6 +548,10 @@ if ((PNETCDF_BDY_SCALE == 1)); then
   local mem_np_bdy_=1
 else
   local mem_np_bdy_=$((DATA_BDY_SCALE_PRC_NUM_X*DATA_BDY_SCALE_PRC_NUM_Y))
+  if (( mem_np_bdy_ < 1 )) ; then
+    echo "[Error] $0: Specify DATA_BDY_SCALE_PRC_NUM_X/Y" >&2
+    exit 1
+  fi
 fi
 
 #-------------------------------------------------------------------------------
