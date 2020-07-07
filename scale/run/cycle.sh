@@ -138,6 +138,7 @@ nitmax=$((mtot*SCALE_NP_TOTAL/totalnp))
 s_flag=1
 e_flag=0
 time=$STIME
+btime=$STIME
 atime=$(datetime $time $LCYCLE s)
 loop=0
 
@@ -219,13 +220,21 @@ while ((time <= ETIME)); do
           continue
         fi
       fi
+
       if ((s == 2)); then
         logd=$OUTDIR/$time/log/scale_init
         if ((BDY_FORMAT == 0)); then
           echo "[$(datetime_now)] ${time}: ${stepname[$s]} ...skipped (use prepared boundary files)" >&2
           continue
         fi
+        if ((SKIP_BDYINIT == 1 && $(datetime $time -$BDYINT s) < btime && time != btime)); then
+          echo "[$(datetime_now)] ${time}: ${stepname[$s]} ...skipped (use boundary files produced in a previous cycle)" >&2
+          continue
+        else
+          btime=$(datetime $btime $BDYINT s)
+        fi
       fi
+
       if ((s == 4)); then
         logd=$OUTDIR/$atime/log/letkf
         if ((OBSOPE_RUN == 0)); then
