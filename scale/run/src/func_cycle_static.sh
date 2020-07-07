@@ -65,6 +65,8 @@ cp ${LETKF_DIR}/letkf ${TMPROOT}/letkf
 cp -r ${SCALEDIR}/scale-rm/test/data/rad ${TMPROOT}/dat/rad
 cp -r ${SCALEDIR}/scale-rm/test/data/land ${TMPROOT}/dat/land
 
+cp ${RTTOV_COEF} $TMPROOT/dat/
+cp ${RTTOV_SCCOEF} $TMPROOT/dat/
 #-------------------------------------------------------------------------------
 # time-variant outputs
 
@@ -1050,6 +1052,7 @@ while ((time <= ETIME)); do
     fi
 
     mkdir -p ${OUTDIR[$d]}/$atime/log/letkf
+    mkdir -p ${OUTDIR[$d]}/${atime}/Him8
 
     cat $SCRP_DIR/config.nml.ensmodel | \
         sed -e "/!--MEMBER--/a MEMBER = $MEMBER," \
@@ -1083,6 +1086,9 @@ while ((time <= ETIME)); do
             -e "/!--INFL_ADD_IN_BASENAME--/a INFL_ADD_IN_BASENAME = \"<member>/addi.d${dfmt}\"," \
             -e "/!--RELAX_SPREAD_OUT--/a RELAX_SPREAD_OUT = ${RTPS_INFL_OUT_TF}," \
             -e "/!--RELAX_SPREAD_OUT_BASENAME--/a RELAX_SPREAD_OUT_BASENAME = \"rtpsinfl.d${dfmt}_$(datetime_scale $atime).nc\"," \
+            -e "/!--H08_NOWDATE--/a H08_NOWDATE = $S_YYYY, $S_MM, $S_DD, $S_HH, $S_II, $S_SS," \
+            -e "/!--H08_RTTOV_COEF_PATH--/a H08_RTTOV_COEF_PATH = \"${TMPROOT_CONSTDB}/dat\"," \
+            -e "/!--H08_OUTFILE_BASENAME--/a H08_OUTFILE_BASENAME = \"${OUTDIR[$d]}/${atime}/Him8/Him8_${atime}\"," \
             -e "/!--NOBS_OUT--/a NOBS_OUT = ${NOBS_OUT_TF}," \
             -e "/!--NOBS_OUT_BASENAME--/a NOBS_OUT_BASENAME = \"nobs.d${dfmt}_$(datetime_scale $atime).nc\"," \
         >> ${conf_file}
@@ -1090,6 +1096,8 @@ while ((time <= ETIME)); do
     # Most of these parameters are not important for letkf
     cat $conf_file_src2 | \
         sed -e "/!--FILE_AGGREGATE--/a FILE_AGGREGATE = ${FILE_AGGREGATE}," \
+            -e "/!--ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME--/a ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME = \"${TMPROOT_CONSTDB}/dat/rad/cira.nc\"," \
+            -e "/!--ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME--/a ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME = \"${TMPROOT_CONSTDB}/dat/rad/MIPAS\"," \
         >> ${conf_file}
 
 #    if ((stage_config == 1)); then
