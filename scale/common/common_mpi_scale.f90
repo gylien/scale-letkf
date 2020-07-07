@@ -2176,7 +2176,6 @@ subroutine write_grd_all_mpi(timelabel, v3dg, step)
   return
 end subroutine write_grd_all_mpi
 
-#ifdef PLOT_DCL
 !-------------------------------------------------------------------------------
 ! Plot forecast/analysis 3D data by DCL
 !-------------------------------------------------------------------------------
@@ -2275,8 +2274,13 @@ subroutine plot_dafcst_mpi(timelabel, ref3d, step)
       write(cheight,'(I5.5)')  int(CZ(k+KHALO)) ! tentative
 
       plotname = header // "_dbz_"//trim(timelabel) // trim(footer_fcst) // "_z" // cheight // "m"
+#ifdef PLOT_DCL
       call plot_dbz_DCL (bufr3d(nlev_plot,1:nlong,1:nlatg),trim(plotname),cheight,ftsec)
-    elseif ( ( myrank_d + 1 ) < k) then
+#endif
+#ifdef PLOT_OPE
+      if (k == 15) call plot_dbz (bufr3d(nlev_plot,1:nlong,1:nlatg),trim(DACYCLE_RUN_FCST_OUTNAME)//"_img/"//trim(plotname)) !!!! only z=1957m TORI AEZU 
+#endif
+     elseif ( ( myrank_d + 1 ) < k) then
       exit
     end if
 
@@ -2292,7 +2296,6 @@ subroutine plot_dafcst_mpi(timelabel, ref3d, step)
 
   return
 end subroutine plot_dafcst_mpi
-#endif
 
 subroutine send_recv_analysis_others( fcst_cnt )
   use scale_atmos_grid_cartesC_index, only: &
@@ -2821,5 +2824,271 @@ subroutine pawr_toshiba_hd_mpi(lon0, lat0, z0, missing, range_res, na, nr, ne, &
 
   return
 end subroutine pawr_toshiba_hd_mpi
+
+
+subroutine plot_dbz(val_plot_s,cfile) 
+  use iso_c_binding
+  use scale_const, only: &
+      D2R => CONST_D2R
+  use scale_atmos_grid_cartesC_index, only: &
+      IHALO, JHALO
+  use scale_atmos_grid_cartesC, only: &
+      GRID_CXG => ATMOS_GRID_CARTESC_CXG, &
+      GRID_CYG => ATMOS_GRID_CARTESC_CYG
+  use scale_mapprojection, only: &
+      MAPPROJECTION_xy2lonlat
+ 
+  real(r_sngl),intent(in) :: val_plot_s(nlong,nlatg)
+  character(*),intent(in) :: cfile
+
+  character(len=200,kind=c_char) :: cfile_out
+
+  real(r_sngl) :: val_rain
+
+  integer :: ilon, ilat, ipat, ilen, ires
+  integer,parameter :: imiss=0
+
+  integer,parameter :: ntpat=11
+  real(r_sngl),parameter :: vtlevs(ntpat+1)=(/ -1.0e8, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0, 20.0, 30.0, 50.0, 80.0, 1.0e8 /)
+ 
+  real(r_sngl),parameter::plotarea_south=35.500956
+  real(r_sngl),parameter::plotarea_north=36.220411
+  real(r_sngl),parameter::plotarea_west=139.165107
+  real(r_sngl),parameter::plotarea_east=140.052849
+
+  integer::ifact_multi
+  integer::ifact_lon,ifact_lat
+
+  integer(1),allocatable,save :: idx_plot(:,:)
+  real(RP) :: lon_RP, lat_RP
+  real(r_sngl) :: grid_long(nlong)
+  real(r_sngl) :: grid_latg(nlatg)
+
+  integer,save :: ilonl, ilonr, ilatl, ilatr
+  integer,save :: lenlon = 0, lenlat = 0 
+
+  interface 
+    integer(kind=c_int) function plot(nwidth,nheight,idata,nchar,cfile) bind(C,name="plot")
+      use iso_c_binding
+      integer(kind=c_int),value :: nwidth
+      integer(kind=c_int),value :: nheight
+      integer(kind=c_signed_char),intent(in) :: idata(nwidth,nheight)
+      integer(kind=c_int),value :: nchar
+      character(kind=c_char),intent(in) :: cfile(*)
+    end function plot
+  end interface
+
+  write(cfile_out,'(A,A)') trim(cfile),'.png'
+
+  ifact_multi=1
+  if (nlong.le.200) ifact_multi=2 
+
+  if ( .not.allocated(idx_plot) ) then
+   ilon = 1
+    call MAPPROJECTION_xy2lonlat( GRID_CXG(IHALO+ilon), GRID_CYG(1), lon_RP, lat_RP )
+    GRID_LONG(ilon) = real(lon_RP / D2R)
+   do ilon = 2, nlong
+    call MAPPROJECTION_xy2lonlat( GRID_CXG(IHALO+ilon), GRID_CYG(1), lon_RP, lat_RP )
+    GRID_LONG(ilon) = real(lon_RP / D2R)
+    if ( GRID_LONG(ilon-1) < plotarea_west .and. GRID_LONG(ilon) >= plotarea_west) ilonl = ilon
+    if ( GRID_LONG(ilon-1) < plotarea_east .and. GRID_LONG(ilon) >= plotarea_east) ilonr = ilon - 1
+  end do
+   ilat = 1
+    call MAPPROJECTION_xy2lonlat( GRID_CXG(1),GRID_CYG(JHALO+ilat), lon_RP, lat_RP )
+    GRID_LATG(ilat) = real(lat_RP / D2R)
+   do ilat = 2, nlatg
+    call MAPPROJECTION_xy2lonlat( GRID_CXG(1),GRID_CYG(JHALO+ilat), lon_RP, lat_RP )
+    GRID_LATG(ilat) = real(lat_RP / D2R)
+    if ( GRID_LATG(ilat-1) < plotarea_south .and. GRID_LATG(ilat) >= plotarea_south) ilatl = ilat
+    if ( GRID_LATG(ilat-1) < plotarea_north .and. GRID_LATG(ilat) >= plotarea_north) ilatr = ilat - 1 
+  end do
+
+  lenlon = ifact_multi * ( ilonr - ilonl + 1 )
+  lenlat = ifact_multi * ( ilatr - ilatl + 1 )
+
+ if (lenlon <= 0 .or. lenlat <= 0) then
+       write(6,*) 'plot_dbz : ERROR defining plot area '
+       write(6,*) 'ilonl,ilonr,ilatl,ilatr :: ', ilonl,ilonr,ilatl,ilatr
+       write(6,*) 'GRID_LATG(1, nlatg) :: ', GRID_LATG(1), GRID_LATG(nlatg)
+       write(6,*) 'GRID_LONG(1, nlong) :: ', GRID_LONG(1), GRID_LONG(nlong)
+       stop
+    end if
+
+ 
+  allocate(idx_plot(lenlon,lenlat))
+  end if
+
+  idx_plot(:,:) = 1 !!! no rain
+
+  do ilat = ilatl, ilatr
+  do ilon = ilonl, ilonr
+    if ( val_plot_s(ilon,ilat) >= 10.0 ) then
+      val_rain = dbz2rr(val_plot_s(ilon,ilat))
+      do ipat=1, ntpat
+        if (val_rain >= vtlevs(ipat) .and. val_rain <= vtlevs(ipat+1)) then
+          do ifact_lon = 1,ifact_multi
+          do ifact_lat = 1,ifact_multi
+           idx_plot(ifact_multi*(ilon-ilonl)+ifact_lon,ifact_multi*(ilat-ilatl)+ifact_lat) = ipat 
+          end do
+          end do
+          exit
+        end if
+      end do 
+    end if
+  end do
+  end do
+
+  idx_plot(:,:) = idx_plot(1:lenlon,lenlat:1:-1)
+
+  ilen=len(trim(cfile_out))
+  ires = plot(int(lenlon,c_int), int(lenlat,c_int), idx_plot, ilen, cfile_out)
+  if (ires /= 0) then
+    write(6,*) '[ plot_dbz:ERROR ]', ires  
+    stop
+  end if
+ 
+return
+end subroutine plot_dbz
+
+subroutine plot_dbz_obs(nobs, ze_radar, lon_radar, lat_radar, z_radar,  & 
+                        nlons, nlats, lons, lats, dlons, dlats, cfile) 
+  use iso_c_binding
+  use scale_atmos_grid_cartesC_index, only: KHALO
+  use scale_atmos_grid_cartesC, only: GRID_CZ  => ATMOS_GRID_CARTESC_CZ
+
+  integer, intent(in) :: nobs
+  real(r_sngl),intent(in) :: ze_radar(nobs)
+  real(r_sngl),intent(in) :: lon_radar(nobs), lat_radar(nobs), z_radar(nobs)
+  character(*),intent(in) :: cfile
+
+  integer,intent(in) :: nlons,nlats !!! grid superob
+  real(r_sngl),intent(in) :: lons(nlons), lats(nlats)
+  real(r_sngl),intent(in) :: dlons, dlats
+
+  character(len=5)::cheight
+  real(r_sngl) :: zmin, zmax
+
+  real(r_sngl),parameter::plotarea_south=35.500956
+  real(r_sngl),parameter::plotarea_north=36.220411
+  real(r_sngl),parameter::plotarea_west=139.165107
+  real(r_sngl),parameter::plotarea_east=140.052849
+
+  integer(1),allocatable,save :: idx_plot(:,:)
+
+  integer,save :: ilonl, ilonr, ilatl, ilatr
+  integer,save :: lenlon = 0, lenlat = 0 
+
+  real(r_sngl) :: val_dbz
+  real(r_sngl) :: val_rain
+
+  integer :: ilon, ilat, ipat, iobs, iplot_lev, pcnt, ilen, ires
+  integer,parameter :: imiss=0
+
+  integer,parameter :: ntpat=11
+  real(r_sngl),parameter :: vtlevs(ntpat+1)=(/ -1.0e8, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0, 20.0, 30.0, 50.0, 80.0, 1.0e8 /)
+
+  character(len=200,kind=c_char) cfile_out
+
+  interface 
+    integer(kind=c_int) function plot(nwidth,nheight,idata,nchar,cfile) bind(C,name="plot")
+      use iso_c_binding
+      integer(kind=c_int),value :: nwidth
+      integer(kind=c_int),value :: nheight
+      integer(kind=c_signed_char),intent(in) :: idata(nwidth,nheight)
+      integer(kind=c_int),value :: nchar
+      character(kind=c_char),intent(in) :: cfile(*)
+    end function plot
+  end interface
+
+
+  if ( .not.allocated(idx_plot) ) then
+  do ilon = 1, nlons
+    if ( lons(ilon) .lt. plotarea_west .and. lons(min(ilon+1,nlons)).ge.plotarea_west) ilonl=min(ilon+1,nlons)
+    if ( lons(ilon) .lt. plotarea_east .and. lons(min(ilon+1,nlons)).ge.plotarea_east) ilonr=ilon
+  end do
+  do ilat = 1, nlats
+    if ( lats(ilat) .lt. plotarea_south .and. lats(min(ilat+1,nlats)).ge.plotarea_south) ilatl=min(ilat+1,nlats)
+    if ( lats(ilat) .lt. plotarea_north .and. lats(min(ilat+1,nlats)).ge.plotarea_north) ilatr=ilat
+  end do
+  lenlon = ilonr - ilonl + 1
+  lenlat = ilatr - ilatl + 1
+    if (lenlon <= 0 .or. lenlat <= 0) then
+      write(6,*) 'plot_dbz : ERROR defining plot area '
+       write(6,*) 'ilonl,ilonr,ilatl,ilatr :: ', ilonl,ilonr,ilatl,ilatr
+       write(6,*) 'lats(1, nlats) :: ', lats(1), lats(nlats)
+       write(6,*) 'lons(1, nlons) :: ', lons(1), lons(nlons)
+!       stop
+     lenlon=nlons
+     lenlat=nlats
+     ilonl=1
+     ilonr=nlons
+     ilatl=1
+     ilatr=nlats
+    end if
+  allocate(idx_plot(lenlon,lenlat))
+  end if
+
+
+!!!  pcnt = 0
+!!!  do iplot_lev = PLOT_ZLEV_MIN, PLOT_ZLEV_MAX, PLOT_ZLEV_INTV
+!!!    if ( GRID_CZ(iplot_lev+KHALO) > RADAR_ZMAX) cycle !!! exclude stratosphere
+
+!!!    pcnt = pcnt + 1
+
+    pcnt = 1
+    iplot_lev = 15  !!! 1957m fixed TORI AEZU  
+
+    if ( mod(pcnt, nprocs_o) /= myrank_o ) return
+    write(cheight,'(I5.5)') int(GRID_CZ(iplot_lev+KHALO))
+    
+    idx_plot(:,:) = 1 !!! no rain
+ 
+    zmin = real( GRID_CZ(iplot_lev+KHALO) - 0.5 * RADAR_SO_SIZE_VERT )
+    zmax = real( GRID_CZ(iplot_lev+KHALO) + 0.5 * RADAR_SO_SIZE_VERT )
+
+    do iobs = 1, nobs
+      if ( z_radar(iobs) >= zmin .and. z_radar(iobs) < zmax  ) then
+          ilon = int((lon_radar(iobs)-lons(1)-0.5*dlons)/dlons)+1
+          ilat = int((lat_radar(iobs)-lats(1)-0.5*dlats)/dlats)+1
+          if (ilon.ge.ilonl.and.ilon.le.ilonr.and.ilat.ge.ilatl.and.ilat.le.ilatr) then
+            val_dbz  = 10.0*log10(max(ze_radar(iobs),1.0e-10))
+            if (val_dbz >= 10.0) then
+              val_rain = dbz2rr(val_dbz)
+              do ipat=1, ntpat
+                if (val_rain >= vtlevs(ipat) .and. val_rain <= vtlevs(ipat+1)) then
+                  idx_plot(ilon-ilonl+1,ilat-ilatl+1) = ipat 
+                  exit
+                end if
+              end do
+            end if
+          end if
+      end if
+    end do
+
+  idx_plot(:,:) = idx_plot(1:lenlon,lenlat:1:-1)
+
+  write(cfile_out,'(4A)') trim(cfile),'_z',trim(cheight),'m.png'
+   
+   ilen=len(trim(cfile_out))
+
+   ires = plot(int(lenlon,c_int), int(lenlat,c_int), idx_plot, ilen, cfile_out)
+
+  if (ires /= 0) then
+    write(6,*) '[ plot_dbz:ERROR ]', ires  
+    stop
+  end if
+ !!! end do !!! iplot_lev
+
+return
+end subroutine plot_dbz_obs
+
+function dbz2rr(dat)
+  real(r_sngl)::dat
+  real(r_sngl)::dbz2rr
+    dbz2rr = (10.0 ** ( min(dat,60.0) * 0.1 ) / 200.0) **(1.0/1.6)       
+end function dbz2rr 
+
+!==============================================================!==================================================!
+
 
 END MODULE common_mpi_scale

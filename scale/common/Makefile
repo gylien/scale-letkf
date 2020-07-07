@@ -11,6 +11,9 @@ endif
 ifeq ($(ENABLE_PLOT_DCL),T)
 OBJS    += plot_dbz_DCL.o plot_dbz_DCL_obs.o
 endif
+ifeq ($(ENABLE_PLOT_OPE),T)
+OBJS    += plot.o image.o png.o
+endif
 
 all:	$(OBJS) datetime pdbash 
 
@@ -21,13 +24,29 @@ pdbash:	pdbash.o SFMT.o
 
 common.o:	../../common/common.f90
 	$(SFC) $(FOPTS) -c $<
+
 ifeq ($(ENABLE_PLOT_DCL),T)
 common_mpi_scale.o:	common_mpi_scale.f90 common.o common_nml.o common_mpi.o common_scale.o plot_dbz_DCL.o
 	$(FC) $(FOPTS) -c $< $(NETCDF_INC) $(SCALE_INC) -I$(SCALE_RM_OBJDIR)
-plot_dbz_DCL.o:	plot_dbz_DCL.f90 common.o common_scale.o
+plot_dbz_DCL.o:	plot/plot_dbz_DCL.f90 common.o common_scale.o
 	$(SFC) $(FOPTS) -c $< $(SCALE_INC)
-plot_dbz_DCL_obs.o: plot_dbz_DCL_obs.f90 common.o common_scale.o common_mpi_scale.o
+plot_dbz_DCL_obs.o: plot/plot_dbz_DCL_obs.f90 common.o common_scale.o common_mpi_scale.o
 	$(SFC) $(FOPTS) -c $< $(SCALE_INC)
+else
+common_mpi_scale.o:	common_mpi_scale.f90 common.o common_nml.o common_mpi.o common_scale.o
+	$(FC) $(FOPTS) -c $< $(NETCDF_INC) $(SCALE_INC) -I$(SCALE_RM_OBJDIR)
+endif
+
+
+ifeq ($(ENABLE_PLOT_OPE),T)
+common_mpi_scale.o:	common_mpi_scale.f90 common.o common_nml.o common_mpi.o common_scale.o plot.o png.o image.o
+	$(FC) $(FOPTS) -c $< $(NETCDF_INC) $(SCALE_INC) -I$(SCALE_RM_OBJDIR)
+plot.o:	plot/plot.c plot/image.h plot/def.h
+	$(CC) $(COPTS) -c $< 
+png.o: plot/png.c plot/image.h plot/def.h
+	$(CC) $(COPTS) -c $< 
+image.o: plot/image.c plot/image.h plot/def.h
+	$(CC) $(COPTS) -c $< 
 else
 common_mpi_scale.o:	common_mpi_scale.f90 common.o common_nml.o common_mpi.o common_scale.o
 	$(FC) $(FOPTS) -c $< $(NETCDF_INC) $(SCALE_INC) -I$(SCALE_RM_OBJDIR)

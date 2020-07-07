@@ -53,6 +53,11 @@ COMMON_OBJS += $(COMMON_DIR)/plot_dbz_DCL.o
 COMMON_OBJS += $(COMMON_DIR)/plot_dbz_DCL_obs.o
 LIBS += $(LIBDCL)
 endif
+ifeq ($(ENABLE_PLOT_OPE),T)
+COMMON_OBJS += $(COMMON_DIR)/plot.o $(COMMON_DIR)/image.o $(COMMON_DIR)/png.o
+LIBS += -lpng
+endif
+
 
 .PHONY:	all clean FORCE
 

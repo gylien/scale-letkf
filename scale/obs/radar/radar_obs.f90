@@ -12,7 +12,8 @@ module radar_obs
   use common_mpi_scale, only: &
     MPI_COMM_o, &
     myrank_a, myrank_o, &
-    mpi_timer!, &
+    mpi_timer, &
+    plot_dbz_obs!, &
     !pawr_toshiba_scattv_mpi, &
     !pawr_3dvar_allreduce
 
@@ -872,8 +873,8 @@ subroutine read_obs_radar_toshiba(cfile, obs)
 #ifdef PLOT_DCL
   character(len=8)  :: date
   character(len=10) :: time
-  character(len=90) :: plotname
 #endif
+  character(len=90) :: plotname
   character(len=19) :: timelabel
 
   integer :: ii, jj, kk
@@ -1311,11 +1312,11 @@ subroutine read_obs_radar_toshiba(cfile, obs)
 
   call mpi_timer('read_obs_radar_toshiba:save_obs_info:', 2)
 
-#ifdef PLOT_DCL
   if (PLOT_OBS)then
   
     call TIME_gettimelabel(timelabel)
     plotname = "obs_dbz_"//trim(timelabel(1:15))
+#ifdef PLOT_DCL
     call MPI_ALLREDUCE( MPI_IN_PLACE, radlon, na*ne*nr, MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_o, ierr)
     call MPI_ALLREDUCE( MPI_IN_PLACE, radlat, na*ne*nr, MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_o, ierr)
     call MPI_ALLREDUCE( MPI_IN_PLACE, radz, na*ne*nr, MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_o, ierr)
@@ -1323,9 +1324,14 @@ subroutine read_obs_radar_toshiba(cfile, obs)
     obs_ref%nobs, real(obs_ref%dat), real(obs_ref%lon), real(obs_ref%lat), real(obs_ref%lev), &
     nlon, nlat, real(lon), real(lat), real(dlon), real(dlat), na, nr, ne, real(az(:, 1, 1)), real(radlon), real(radlat), real(radz), &
     trim(plotname) )
+#endif
+#ifdef PLOT_OPE
+    call plot_dbz_obs( &
+    obs_ref%nobs, real(obs_ref%dat), real(obs_ref%lon), real(obs_ref%lat), real(obs_ref%lev), &
+    nlon, nlat, real(lon), real(lat), real(dlon), real(dlat), trim(DACYCLE_RUN_FCST_OUTNAME)//"_img/"//trim(plotname) )
+#endif
   endif
   call mpi_timer('read_obs_radar_toshiba:plot_obs:', 2, barrier=MPI_COMM_o)
-#endif
   if(allocated(radlon)) deallocate(radlon)
   if(allocated(radlat)) deallocate(radlat)
   if(allocated(radz)) deallocate(radz)

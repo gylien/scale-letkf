@@ -262,6 +262,7 @@ if ((DACYCLE_RUN_FCST == 1)); then
   mkdir -p ${DACYCLE_RUN_FCST_OUTNAME}_ncl
   chmod 774 ${DACYCLE_RUN_FCST_OUTNAME}_nc
   chmod 774 ${DACYCLE_RUN_FCST_OUTNAME}_ncl
+  mkdir -p ${DACYCLE_RUN_FCST_OUTNAME}_img
 else
   DACYCLE_RUN_FCST_TF='.false.'
   DACYCLE_RUN_FCST_OUTNAME=""
