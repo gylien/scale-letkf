@@ -95,7 +95,7 @@ timed3_new=`date -d "$lend3 sec ${yyyy}-${mm}-${dd} ${hh}:${mon}:${sec}" +%Y%m%d
 done
 fi
 
-D4mode=d4_1km
+D4mode=d4_500m
 
 timed4=$timed4_p
 

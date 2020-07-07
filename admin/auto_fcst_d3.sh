@@ -25,7 +25,10 @@ limitsec=21600
 PARENT_TIME_B=`date -d "-1 year" +"%F %T"`
 
 
-FCSTHOUR_DEF=8 ### 6+1
+spinup_hour=2
+fcst_hour=6
+
+FCSTHOUR_DEF=`expr $fcst_hour + $spinup_hour` ### 6+2
 
 
 ####PARENT_FCSTLEN=${FCSTLEN_d2}
@@ -65,7 +68,7 @@ done
 
  if [ `date -d "$PARENT_TIME" +%s` -gt `date -d "$PARENT_TIME_B" +%s` ] ;then
 
- echo "PARENT_TIME" $PARENT_TIME $PARENT_TIME_B
+# echo "PARENT_TIME" $PARENT_TIME $PARENT_TIME_B
  PARENT_TIME_B=$PARENT_TIME
 
  INIT_LIMITf="$(date -ud "$PARENT_FCSTLEN second -10800 second  ${PARENT_TIME}"  +'%Y%m%d%H%M%S')"
@@ -73,13 +76,13 @@ done
 
 
  starth="$(date -ud "${START_TIME}" +%H)"
- hdif=`expr \( $starth + 1 \) \% 6`
+ hdif=`expr \( $starth + ${spinup_hour} \) \% 6`
 
  INIT_START="$(date -ud " - $hdif hour ${START_TIME}" +'%Y-%m-%d %H:00:00')"
  INIT_STARTf="$(date -ud "${INIT_START}" +'%Y%m%d%H%M%S')"
 
  while [ $INIT_STARTf -le $INIT_LIMITf ]; do
- echo "INIT_STARTf" $INIT_STARTf $INIT_LIMITf
+# echo "INIT_STARTf" $INIT_STARTf $INIT_LIMITf
     now="$(date -u +'%Y-%m-%d %H:%M:%S')"
     echo "$now ${PARENT_TIMEf}.${INIT_STARTf} start "
     FCSTHOUR=$FCSTHOUR_DEF
@@ -90,8 +93,8 @@ done
     done
     FCSTLEN=`expr $FCSTHOUR \* 3600`
     nohup ./admin_fcst_d3.sh "$PARENT_TIME" "$INIT_START" "$FCSTLEN" &> admin_fcst_d3.log.${PARENT_TIMEf}.${INIT_STARTf} &
-    echo "$PARENT_TIME" "$INIT_START" "$FCSTLEN" 
-    INIT_START="$(date -ud " $FCSTHOUR hour -1 hour  ${INIT_START}" +'%Y-%m-%d %H:00:00')"
+#    echo "$PARENT_TIME" "$INIT_START" "$FCSTLEN" 
+    INIT_START="$(date -ud " $FCSTHOUR hour -${spinup_hour} hour  ${INIT_START}" +'%Y-%m-%d %H:00:00')"
     INIT_STARTf="$(date -ud "${INIT_START}" +'%Y%m%d%H%M%S')"
  sleep 31
  isec=0

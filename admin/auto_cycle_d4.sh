@@ -28,11 +28,14 @@ isec=0
 cyclesec=60
 limitsec=86400
 
-END_TIME="2020-04-23 18:00:00"
+END_TIME="2020-06-26 00:00:00"
 
 rundir=${realtimebase}/scale_${scale_ver}/scale-letkf_${letkf_ver}_d4/scale/run
 
 INIT_TIME="$(date -ud "$time_offset second now" +'%Y-%m-%d %H:00:00')"
+
+[ $(date -ud "$time_offset second now" +'%M') -ge 40 ] && INIT_TIME="$(date -ud "1 hour $time_offset second now" +'%Y-%m-%d %H:00:00')"
+
 INIT_TIMEf="$(date -ud "$INIT_TIME" +'%Y%m%d%H0000')"
 
 cd $rundir
