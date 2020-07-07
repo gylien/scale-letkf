@@ -211,6 +211,7 @@ while ((time <= ETIME)); do
           continue
         fi
       fi
+
       if ((s == 2)); then
         logd=$OUTDIR/$time/log/scale_init
         if ((BDY_FORMAT == 0)); then
@@ -224,6 +225,7 @@ while ((time <= ETIME)); do
           btime=$(datetime $btime $BDYINT s)
         fi
       fi
+
       if ((s == 4)); then
         logd=$OUTDIR/$atime/log/letkf
         if ((OBSOPE_RUN == 0)); then
