@@ -1208,6 +1208,7 @@ subroutine set_dafcst( ncycle, dafcst_slist, dafcst_list_last, dafcst_list_sum )
   character(len=19) :: timelabel
 
   integer :: dummy( ncycle )
+  integer :: slistmax
 
   time_nowdate_org = TIME_NOWDATE
 
@@ -1248,6 +1249,12 @@ subroutine set_dafcst( ncycle, dafcst_slist, dafcst_list_last, dafcst_list_sum )
   enddo
   TIME_NOWDATE = time_nowdate_org
 
+  if ( NUM_DACYCLE_FCST_MEM > 0 ) then
+    slistmax = min( NUM_DACYCLE_FCST_MEM, ncycle )
+  else
+    slistmax = ncycle
+  endif
+
   if ( myrank_a == 0 ) then
     write(6,'(a)')"### Summary of dafcst ###"
     write(6,'(a9,1x,a15,1x,a)')"cycle", "time,","flag for fcst membsers"
@@ -1257,7 +1264,7 @@ subroutine set_dafcst( ncycle, dafcst_slist, dafcst_list_last, dafcst_list_sum )
         call advance_nowdate( TIME_NOWDATE, TIME_DTSEC_ATMOS_DA )
         call TIME_gettimelabel( timelabel )
   
-        write(6,'(i9,1x,a15,1x,' // trim(str) // 'l3)') n, timelabel(1:15), dafcst_slist(n,1:NUM_DACYCLE_FCST_MEM)
+        write(6,'(i9,1x,a15,1x,' // trim(str) // 'l3)') n, timelabel(1:15), dafcst_slist(n,1:slistmax)
       enddo
     else
       write(6,'(a)')"No dafcst"
@@ -1269,14 +1276,14 @@ subroutine set_dafcst( ncycle, dafcst_slist, dafcst_list_last, dafcst_list_sum )
   do n = 1, ncycle
     dummy(n) = n
   enddo
-  do n = 1, NUM_DACYCLE_FCST_MEM
+  do n = 1, slistmax
     dafcst_list_last(n) = maxval( dummy, dafcst_slist(:,n) )
   enddo
 
   do n = 1, ncycle
     dummy(n) = 1
   enddo
-  do n = 1, NUM_DACYCLE_FCST_MEM
+  do n = 1, slistmax
     dafcst_list_sum(n) = sum( dummy, dafcst_slist(:,n) )
   enddo
 
