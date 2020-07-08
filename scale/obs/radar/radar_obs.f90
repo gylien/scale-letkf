@@ -12,8 +12,12 @@ module radar_obs
   use common_mpi_scale, only: &
     MPI_COMM_o, &
     myrank_a, myrank_o, &
+#ifdef PLOT_OPE
     mpi_timer, &
     plot_dbz_obs!, &
+#else
+    mpi_timer
+#endif
     !pawr_toshiba_scattv_mpi, &
     !pawr_3dvar_allreduce
 

@@ -2826,6 +2826,7 @@ subroutine pawr_toshiba_hd_mpi(lon0, lat0, z0, missing, range_res, na, nr, ne, &
 end subroutine pawr_toshiba_hd_mpi
 
 
+#ifdef PLOT_OPE
 subroutine plot_dbz(val_plot_s,cfile) 
   use iso_c_binding
   use scale_const, only: &
@@ -3081,6 +3082,8 @@ subroutine plot_dbz_obs(nobs, ze_radar, lon_radar, lat_radar, z_radar,  &
 
 return
 end subroutine plot_dbz_obs
+
+#endif
 
 function dbz2rr(dat)
   real(r_sngl)::dat
