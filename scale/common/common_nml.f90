@@ -351,10 +351,16 @@ MODULE common_nml
   real(r_size) :: RADAR_MAX_ABS_VR = 100.0d0
   integer :: RADAR_THIN_LETKF_METHOD = 0 ! Thinning method
                                          ! 0: No thinning
-                                         ! 1: Nearest 8 grids & their columns and
+                                         ! 1: Nearest (2z)*(2x)^2 grids & their columns and
                                          ! rows + staggered grids
+                                         ! x is given by
+                                         ! RADAR_THIN_LETKF_HGRID_HNEAR
+                                         ! z is given by
+                                         ! RADAR_THIN_LETKF_HGRID_VNEAR
   integer :: RADAR_THIN_LETKF_HGRID = 1 ! Horizontal thinning level in obs_local
   integer :: RADAR_THIN_LETKF_VGRID = 1 ! Vertical thinning level in obs_local
+  integer :: RADAR_THIN_LETKF_HNEAR = 1 
+  integer :: RADAR_THIN_LETKF_VNEAR = 1 
 
   integer :: RADAR_THIN_HORI = 1 ! Thinning horizontal interval (# of grids)
   integer :: RADAR_THIN_VERT = 1 ! Thinning vertical interval (# of grids)
@@ -1117,6 +1123,8 @@ subroutine read_nml_letkf_radar
     RADAR_THIN_LETKF_METHOD, &
     RADAR_THIN_LETKF_HGRID, &
     RADAR_THIN_LETKF_VGRID, &
+    RADAR_THIN_LETKF_HNEAR, &
+    RADAR_THIN_LETKF_VNEAR, &
     RADAR_PQV, &
     RADAR_PQV_OMB
 

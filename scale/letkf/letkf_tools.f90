@@ -1571,9 +1571,12 @@ subroutine obs_local_cal(ri, rj, rlev, rz, nvar, iob, ic, ndist, nrloc, nrdiag)
       dj = int( abs( rdy / RADAR_SO_SIZE_HORI ) )
       dk = int( abs( obs(obset)%lev(obidx) - rz ) / RADAR_SO_SIZE_VERT ) 
 
-      if ( mod( di, RADAR_THIN_LETKF_HGRID ) /= 0 .or. &
-           mod( dj, RADAR_THIN_LETKF_HGRID ) /= 0 .or. &
-           mod( dk, RADAR_THIN_LETKF_VGRID ) /= 0 ) then
+      if ( ( mod( di, RADAR_THIN_LETKF_HGRID ) /= 0 .or. &
+             mod( dj, RADAR_THIN_LETKF_HGRID ) /= 0 .or. &
+             mod( dk, RADAR_THIN_LETKF_VGRID ) /= 0 ) .and. &
+            ( ( di >= RADAR_THIN_LETKF_HNEAR ) .or. &
+              ( dj >= RADAR_THIN_LETKF_HNEAR ) .or. &
+              ( dk >= RADAR_THIN_LETKF_VNEAR ) ) ) then
         nrloc = 0.0d0
         ndist = -1.0d0
         return
