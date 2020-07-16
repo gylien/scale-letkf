@@ -200,6 +200,7 @@ MODULE common_nml
   logical :: OUT_GRADS_DAFCST = .false. ! Outut dacycle forecast in GrADS format (radar reflectivity)
   real(r_size) :: OUT_DAFCST_DSEC = 30.0d0 ! Outut dacycle forecast interval (sec)
   logical :: OUT_GRADS_DAFCST_ALL = .false. ! Outut dacycle forecast in GrADS format (all variables)
+  real(r_size) :: OUT_GRADS_DAFCST_ZLEV = 15.0d3 ! Maximum z level for GrADS output
   integer :: OUT_GRADS_DAFCST_ALL_ZSKIP = 1 ! Outut Z interval
   logical :: OUT_GRADS_DA_ALL = .false. ! Outut dacycle analysis/guess in GrADS format
   integer :: OUT_GRADS_DA_ALL_ZSKIP = 1  ! Output Z interval
@@ -785,6 +786,7 @@ subroutine read_nml_letkf
     OUT_NETCDF_ZLEV_MAX, &
     OUT_NETCDF_ZLEV_INTV, &
     OUT_GRADS_DAFCST, &
+    OUT_GRADS_DAFCST_ZLEV, &
     OUT_GRADS_DAFCST_ALL, &
     OUT_GRADS_DAFCST_ALL_ZSKIP, &
     OUT_DAFCST_DSEC, &
@@ -903,10 +905,6 @@ subroutine read_nml_letkf
     NOBS_OUT = .false.
   end if
 
-
-  if ( OUT_NETCDF_DAFCST ) then
-      OUT_GRADS_DAFCST = .true.
-  endif
 
   !*** for backward compatibility ***
   if (COV_INFL_MUL /= 1.0d0 .and. INFL_MUL == 1.0d0) then

@@ -633,7 +633,8 @@ program dacycle
 
         if ( .not. allocated(ref3d) ) allocate( ref3d(nlev,nlon,nlat) )
         call calc_ref_direct( ref3d )
-        if ( OUT_GRADS_DAFCST ) then ! Output of dacycle-forecast in GrADS/NetCDF format
+        if ( OUT_GRADS_DAFCST .or. OUT_NETCDF_DAFCST ) then 
+          ! Output of dacycle-forecast in GrADS/NetCDF format
           call write_grd_dafcst_mpi(fstimelabel(1:15), ref3d, dafcst_ostep)
         endif
         if ( OUT_GRADS_DAFCST_ALL ) then ! Output of dacycle-forecast in GrADS format (all variables)
@@ -699,7 +700,8 @@ program dacycle
           if ( .not. allocated(ref3d) ) allocate( ref3d(nlev,nlon,nlat) )
           call calc_ref_direct( ref3d )
           call plot_dafcst_mpi(fstimelabel(1:15), ref3d, dafcst_ostep)
-          if ( OUT_GRADS_DAFCST ) then ! Output of dacycle-forecast in GrADS/NetCDF format
+          ! Output of dacycle-forecast in GrADS/NetCDF format
+          if ( OUT_GRADS_DAFCST .or. OUT_NETCDF_DAFCST ) then 
             call write_grd_dafcst_mpi(fstimelabel(1:15), ref3d, dafcst_ostep)
           endif
           if ( OUT_GRADS_DAFCST_ALL ) then ! Output of dacycle-forecast in GrADS format (all variables)
