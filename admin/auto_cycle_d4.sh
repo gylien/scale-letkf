@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash -l
 
 source ~/.bashrc
 
@@ -28,15 +28,23 @@ isec=0
 cyclesec=60
 limitsec=86400
 
-END_TIME="2020-06-26 00:00:00"
+END_TIME="2020-12-31 00:00:00"
 
-rundir=${realtimebase}/scale_${scale_ver}/scale-letkf_${letkf_ver}_d4/scale/run
+#rundir=${realtimebase}/scale_${scale_ver}/scale-letkf_${letkf_ver}_d4/scale/run
+rundir=${realtimebase}/scale_${scale_ver}/scale-letkf_test/scale/run
 
 INIT_TIME="$(date -ud "$time_offset second now" +'%Y-%m-%d %H:00:00')"
 
-[ $(date -ud "$time_offset second now" +'%M') -ge 40 ] && INIT_TIME="$(date -ud "1 hour $time_offset second now" +'%Y-%m-%d %H:00:00')"
+[ `date -ud "$time_offset second now" +%M` -ge 40 ] && INIT_TIME="$(date -ud "1 hour $time_offset second now" +'%Y-%m-%d %H:00:00')"
 
 INIT_TIMEf="$(date -ud "$INIT_TIME" +'%Y%m%d%H0000')"
+
+  echo "launch sync script"
+
+  cd ./send_img
+  ./auto_send_img.sh "$(date -ud "$time_offset second now" +'%Y-%m-%d %H:00:30')" "$END_TIME"  &> log_send_img&
+  cd -
+
 
 cd $rundir
 
@@ -45,6 +53,7 @@ cd $rundir
   echo " $INIT_TIME start "
 
   nohup ./start.sh "$INIT_TIMEf" &> admin_cycle_d4.log.${INIT_TIMEf}
+#  nohup ./restart.sh "$INIT_TIMEf" &> admin_cycle_d4.log.${INIT_TIMEf}
  res=$?
  [ "$res" != "0" ] && exit 99
   echo " $INIT_TIME complete "

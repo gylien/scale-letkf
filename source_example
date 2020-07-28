@@ -1,3 +1,8 @@
+# SCALE compilation
+export SCALE_SYS=OFP
+export SCALE_ENABLE_OPENMP=T 
+export LANG=C 
+
 # grads 
 export GRADSHOME=/work/hp150019/share/honda/local/grads
 export GADDIR=${GRADSHOME}/data

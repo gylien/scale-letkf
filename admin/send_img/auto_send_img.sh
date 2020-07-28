@@ -1,6 +1,6 @@
 #!/bin/bash -l
 
-SRCDIR="/work/hp150019/share/SCALE-LETKF-rt/result/ope/d4_500m/dafcst_img"
+SRCDIR="/work/hp150019/share/SCALE-LETKF-rt/result/ope/d4_1km/dafcst_img"
 
 hostname="weather"
 www_DATA="/srv/www/html/nowcast/scale-letkf_saitama/"
@@ -17,8 +17,6 @@ limit_waitsec=300
 
 startTimef=$1
 stopTimef=$2
-
-[ -z "$stopTimef" ] && stopTimef=`date -ud "1 day $startTimef" +"%Y-%m-%d %H:%M:%S"` 
 
 function array2json(){
   arrayin=("$@")
@@ -41,9 +39,15 @@ function array2jsons(){
 
 targetTimef=$startTimef
 
+nows=`date -u +%s`
+
 rm -rf work
 mkdir -p work
 cd work
+
+nowb=$nows
+nows=`date -u +%s`
+echo 'prep workdir : '`expr $nows - $nowb`
 
 while [ `date -ud "$targetTimef" +%s` -le `date -ud "$stopTimef" +%s` ] ;do
 
@@ -51,28 +55,41 @@ rm ${name}_*.png
 
 iwaitsec=0
 while [ $iwaitsec -lt $limit_waitsec ] ;do
-  timestamp=`date -ud "$targetTimef" +"%Y%m%d-%H%M%S"`
-  ffile=fcst_dbz_${timestamp}_FT`printf %04d $fcstlen`s_z01957m.png 	
 
-  if [ -f $SRCDIR/$ffile ]; then
-    echo "prep" $timestamp "..." 
+ echo "try" ${targetTimef} ...
+ 
+  ffile_prefix="fcst_dbz_"
+  ffile_suffix="_FT`printf %04d $fcstlen`s_z01957m.png"
+  ffiles=`ls -x $SRCDIR/${ffile_prefix}*${ffile_suffix}`
 
-  indx=0
-  list_flagforecast=()
-  list_image_timestamp=()
-  list_image_timestamp_en=()
-  list_image_unixtime=()
+  testTimef=`date -ud "- 30 second $targetTimef" +"%Y-%m-%d %H:%M:%S"` 
+
+  iflag=0
+  for fitem in $ffiles;do
+    ffile=`basename $fitem`
+    len=${#ffile_prefix}
+    testtime=${ffile:${len}:15}
+    testTimef="${testtime:0:4}-${testtime:4:2}-${testtime:6:2} ${testtime:9:2}:${testtime:11:2}:${testtime:13:2}"
+    tests=`date -ud "${testTimef}" +%s`
+  if [ -f $SRCDIR/$ffile ] && [ $tests -ge `date -ud "$targetTimef" +%s` ] ; then
+    iflag=1
+    timestamp=`date -ud "$testTimef" +"%Y%m%d-%H%M%S"`
+    indx=0
+    list_flagforecast=()
+    list_image_timestamp=()
+    list_image_timestamp_en=()
+    list_image_unixtime=()
 
   for i in `seq $nmax_anal`;do
     diff=`expr 30 \* \( $nmax_anal - $i \)`
-    timestampf=`date -ud "- $diff second $targetTimef" +"%Y-%m-%d %H:%M:%S"`
+    timestampf=`date -ud "- $diff second $testTimef" +"%Y-%m-%d %H:%M:%S"`
     timestamp=`date -ud "$timestampf" +"%Y%m%d-%H%M%S"`
     timestamps=`date -ud "$timestampf" +"%s"`
     timestampl=`date -ud "9 hour $timestampf" +"%Y/%m/%d %H:%M:%S"`
     afile=$SRCDIR/anal_dbz_${timestamp}_z01957m.png 
     if [ -f $afile ];then
       indx=`expr $indx + 1`
-      ln -s $afile ${name}_`printf %04d $indx`.png 
+      ln -sf $afile ${name}_`printf %04d $indx`.png 
       list_flagforecast=("${list_flagforecast[@]}" false)
       list_image_timestamp=("${list_image_timestamp[@]}" "解析 $timestampl")
       list_image_timestamp_en=("${list_image_timestamp[@]}" "analysis $timestampl")
@@ -80,17 +97,17 @@ while [ $iwaitsec -lt $limit_waitsec ] ;do
     fi
   done
 
-    timestamp=`date -ud "$targetTimef" +"%Y%m%d-%H%M%S"`
+    timestamp=`date -ud "$testTimef" +"%Y%m%d-%H%M%S"`
   for i in `seq $nmax_fcst`;do
     diff=`expr 30 \* $i`
-    timestampf=`date -ud "$diff second $targetTimef" +"%Y-%m-%d %H:%M:%S"`
+    timestampf=`date -ud "$diff second $testTimef" +"%Y-%m-%d %H:%M:%S"`
     timestamps=`date -ud "$timestampf" +"%s"`
     timestampl=`date -ud "9 hour $timestampf" +"%Y/%m/%d %H:%M:%S"`
     ffile=$SRCDIR/fcst_dbz_${timestamp}_FT`printf %04d $diff`s_z01957m.png 
 
     if [ -f $ffile ];then
     indx=`expr $indx + 1`
-      ln -s $ffile ${name}_`printf %04d $indx`.png 
+      ln -sf $ffile ${name}_`printf %04d $indx`.png 
       list_flagforecast=("${list_flagforecast[@]}" true)
       list_image_timestamp=("${list_image_timestamp[@]}" "予測 $timestampl")
       list_image_timestamp_en=("${list_image_timestamp[@]}" "forecast $timestampl")
@@ -98,8 +115,12 @@ while [ $iwaitsec -lt $limit_waitsec ] ;do
     fi
   done
 
-    timestampf=`date -ud "$targetTimef" +"%Y/%m/%d %H:%M:%S"`
-    timestamps=`date -ud "$targetTimef" +"%s"`
+#nowb=$nows
+#nows=`date -u +%s`
+#echo 'make link : '`expr $nows - $nowb`
+
+    timestampf=`date -ud "$testTimef" +"%Y/%m/%d %H:%M:%S"`
+    timestamps=`date -ud "$testTimef" +"%s"`
     timestampl=`date -ud "9 hour $timestampf" +"%Y/%m/%d %H:%M:%S"`
 
 json=$(cat <<EOS
@@ -128,13 +149,17 @@ EOS
   )
   echo "$json" > dataformat.json
   
+#nowb=$nows
+#nows=`date -u +%s`
+#echo 'make json : '`expr $nows - $nowb`
+
   chmod 644 *.png 
   chmod 664 *json* 
 
   img_list=`ls -x ${name}*`
   NowTime=$timestamps
 
-  echo "send" $NowTime "..." 
+  echo "send" $timestampl "..." 
 
   scp -p ${img_list} ${hostname}:${www_DATA}/raw/
   scp -p ${json_list}  ${hostname}:${www_DATA}/json/
@@ -145,16 +170,25 @@ EOS
   scp -p ${json_list} ${hostname}:${www_ARCHIVE}/${NowTime}/
 
   ssh ${hostname} "echo ${NowTime} > ${www_ARCHIVE}/../latestInitUnixTime"
+#  ssh ${hostname} "echo ${NowTime} > ${www_ARCHIVE}/../lastAcceptedUnixTime"
  iwaitsec=$limit_waitsec
 
-  else
-    sleep 5
-    iwaitsec=`expr $iwaitsec + 5`
+#nowb=$nows
+#nows=`date -u +%s`
+#echo 'send : '`expr $nows - $nowb`
+
   fi
-done
-   sleep 3
-targetTimef=`date -ud "30 second $targetTimef" +"%Y-%m-%d %H:%M:%S"`
-done
+
+done ### ffile
+
+if [ $iflag == 0 ];then
+  sleep 2
+  iwaitsec=`expr $iwaitsec + 2`
+fi
+done ### iwaitsec < limit_waitsec
+
+targetTimef=`date -ud "30 second $testTimef" +"%Y-%m-%d %H:%M:%S"`
+done ### while targetTimef < stopTimef
 
 echo "== finished =="
 cd -

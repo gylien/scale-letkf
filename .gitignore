@@ -1,4 +1,8 @@
 admin_*
 scale_develop
-scale_ope
 scale_ope_single
+scale_ope
+scale_noAVX
+scale_latest
+scale_prev
+scale_prev_single
