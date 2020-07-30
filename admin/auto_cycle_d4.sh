@@ -60,18 +60,27 @@ cd $rundir
 
   echo " $INIT_TIME start "
 
-  nohup ./start.sh "$INIT_TIMEf" &> admin_cycle_d4.log.${INIT_TIMEf}
+  nohup ./start.sh "$dx_d4" "$INIT_TIMEf" &> admin_cycle_d4.log.${INIT_TIMEf}
 #  nohup ./restart.sh "$INIT_TIMEf" &> admin_cycle_d4.log.${INIT_TIMEf}
  res=$?
- [ "$res" != "0" ] && exit 99
+ if [ "$res" != "0" ] then
+  echo " $INIT_TIME abort "
+  exit 99
+ else
   echo " $INIT_TIME complete "
+ fi
 
 while [ `date -ud "1 hour $INIT_TIME" +%s` -le `date -ud "$END_TIME" +%s` ] ; do
  INIT_TIME="$(date -ud "1 hour $INIT_TIME" +'%Y-%m-%d %H:00:00')"
  INIT_TIMEf="$(date -ud "$INIT_TIME" +'%Y%m%d%H0000')"
   echo " $INIT_TIME start "
- nohup ./restart.sh "$INIT_TIMEf" &> admin_cycle_d4.log.${INIT_TIMEf}
- [ "$res" != "0" ] && exit 99
+ nohup ./restart.sh "$dx_d4" "$INIT_TIMEf" &> admin_cycle_d4.log.${INIT_TIMEf}
+ res=$?
+ if [ "$res" != "0" ] then
+  echo " $INIT_TIME abort "
+  exit 99
+ else
   echo " $INIT_TIME complete "
+ fi
 done 
 
