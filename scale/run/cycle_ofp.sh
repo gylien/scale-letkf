@@ -179,13 +179,13 @@ export KMP_HW_SUBSET=1t
 export HFI_NO_CPUAFFINITY=1
 unset KMP_AFFINITY
 
-export I_MPI_DEBUG=5
+##export I_MPI_DEBUG=5
 
 source /work/opt/local/cores/intel/performance_snapshots_2019.6.0.602217/apsvars.sh
 source /work/opt/local/cores/intel/parallel_studio_xe_2019/bin/psxevars.sh
 source /work/opt/local/cores/intel/itac_2019/bin/itacvars.sh
  
-export MPS_STAT_LEVEL=4
+##export MPS_STAT_LEVEL=4
 
 
 module load hdf5/1.10.5

@@ -14,7 +14,7 @@ SCALEDIR="$DIR/../.."                                                # Directory
 TOPDIR="$SCALEDIR/.."                                                
 
 OUTPUT="${TOPDIR}/result/ope"
-EXP4=d4_500m
+EXP4=d4_500m_verysmall
 EXP3=d3
 
 #===============================================================================
@@ -23,15 +23,19 @@ EXP3=d3
 DATADIR="/work/hp150019/share/database" 
 SCALE_DB="/work/hp150019/share/database" 
 
-DATA_TOPO="${OUTPUT}/${EXP4}"                                        # Directory of the prepared topo files
+#DATA_TOPO="${OUTPUT}/${EXP4}"                                        # Directory of the prepared topo files
+DATA_TOPO="/work/gx14/c24140/SCALE-LETKF-rt/result/ope_single/${EXP4}"                                        # Directory of the prepared topo files
 DATA_TOPO_BDY_SCALE="${OUTPUT}/${EXP3}/const/topo"
-DATA_LANDUSE="${OUTPUT}/${EXP4}"                                  # Directory of the prepared landuse files
+#DATA_LANDUSE="${OUTPUT}/${EXP4}"                                  # Directory of the prepared landuse files
+DATA_LANDUSE="/work/gx14/c24140/SCALE-LETKF-rt/result/ope_single/${EXP4}"                                  # Directory of the prepared landuse files
 DATA_BDY_SCALE="${OUTPUT}/${EXP3}/ref_<PARENT_REF_TIME_D2>"   # Directory of the boundary data in SCALE history format (parent domain)
-OUTDIR="${DATA_BDY_SCALE}/<PARENT_REF_TIME>/${EXP4}"
+OUTDIR="/work/gx14/c24140/SCALE-LETKF-rt/result/ope_single/${EXP4}"
 
 DATA_BDY_SCALE_PRC_NUM_X=16 # D3
 DATA_BDY_SCALE_PRC_NUM_Y=16 # D3
-DATA_BDY_SCALE_PREP=                                                 # Directory of the prepared SCALE boundary files
+#DATA_BDY_SCALE_PRC_NUM_X=32 # D3
+#DATA_BDY_SCALE_PRC_NUM_Y=32 # D3
+DDATA_BDY_SCALE_PREP=                                                 # Directory of the prepared SCALE boundary files
 DATA_BDY_WRF=                                                        # Directory of the boundary data in WRF format
 DATA_BDY_NICAM=                                                      # Directory of the boundary data in NICAM format (not finished)
 
@@ -114,8 +118,7 @@ PPN=64              # Number of processes per node
 
 THREADS=1          # Number of threads per process
 
-SCALE_NP=1024  # D4    # Number of processes to run SCALE
-##SCALE_NP=64  # D4 1km
+SCALE_NP=64  # D4    # Number of processes to run SCALE
 
 BGJOB_INT='0.1s'   # Interval of multiple background job submissions
 
@@ -126,7 +129,7 @@ ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait unti
                             #  0: No
                             #  1: Yes
 
-SYSNAME=d4_init_500m                 # A unique name in the machine
+SYSNAME=d4_init_500m_verysmall          # A unique name in the machine
 TMPSUBDIR="scale-letkf_${SYSNAME}_<PARENT_REF_TIME_D2>_<PARENT_REF_TIME>_<STIME>"           # (used to identify multiple runs in the same time)
 
 TMP="$DIR/tmp/$TMPSUBDIR" # Temporary directory shared among all nodes

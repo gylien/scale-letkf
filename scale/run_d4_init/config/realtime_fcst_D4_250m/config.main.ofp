@@ -74,7 +74,7 @@ BDY_ROTATING=1          # 0: Use a same series of boundary files for all initial
                         # 1: Use different series of boundary files for different initial time
 
 BDYINT=600
-BDYCYCLE_INT=21600
+BDYCYCLE_INT=43200
 
 PARENT_REF_TIME=<PARENT_REF_TIME>
 
