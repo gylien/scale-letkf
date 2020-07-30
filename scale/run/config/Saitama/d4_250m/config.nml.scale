@@ -8,7 +8,7 @@
 /
 
 &PARAM_FILE_CARTESC
- FILE_CARTESC_datacheck_criteria = 1.0D-4,
+ FILE_CARTESC_datacheck_criteria = 1.0D-3,
 /
 
 &PARAM_TIME
@@ -16,25 +16,25 @@
  TIME_STARTMS               = 0.D0,
 !--TIME_DURATION--
  TIME_DURATION_UNIT         = "SEC",
- TIME_DT                    = 5.0D0,
+ TIME_DT                    = 2.0D0,
  TIME_DT_UNIT               = "SEC",
  TIME_NSTEP_ATMOS_DYN       = 5,
  TIME_DT_ATMOS_DYN_UNIT     = "SEC",
- TIME_DT_ATMOS_PHY_MP       = 5.0D0,
+ TIME_DT_ATMOS_PHY_MP       = 2.0D0,
  TIME_DT_ATMOS_PHY_MP_UNIT  = "SEC",
- TIME_DT_ATMOS_PHY_CP       = 5.0D0,
+ TIME_DT_ATMOS_PHY_CP       = 2.0D0,
  TIME_DT_ATMOS_PHY_CP_UNIT  = "SEC",
  TIME_DT_ATMOS_PHY_RD       = 300.D0,
  TIME_DT_ATMOS_PHY_RD_UNIT  = "SEC",
- TIME_DT_ATMOS_PHY_SF       = 5.0D0,
+ TIME_DT_ATMOS_PHY_SF       = 2.0D0,
  TIME_DT_ATMOS_PHY_SF_UNIT  = "SEC",
- TIME_DT_ATMOS_PHY_BL       = 5.0D0,
+ TIME_DT_ATMOS_PHY_BL       = 2.0D0,
  TIME_DT_ATMOS_PHY_BL_UNIT  = "SEC",
- TIME_DT_OCEAN              = 2.D0,
+ TIME_DT_OCEAN              = 30.D0,
  TIME_DT_OCEAN_UNIT         = "SEC",
- TIME_DT_LAND               = 2.D0,
+ TIME_DT_LAND               = 30.D0,
  TIME_DT_LAND_UNIT          = "SEC",
- TIME_DT_URBAN              = 2.D0,
+ TIME_DT_URBAN              = 30.D0,
  TIME_DT_URBAN_UNIT         = "SEC",
 !--TIME_DT_ATMOS_RESTART--
  TIME_DT_ATMOS_RESTART_UNIT = "SEC",
@@ -45,8 +45,8 @@
 !--TIME_DT_URBAN_RESTART--
  TIME_DT_URBAN_RESTART_UNIT = "SEC",
 !--TIME_END_RESTART_OUT--
-!--TIME_DT_ATMOS_DA--
- TIME_DT_ATMOS_DA_UNIT = "SEC",
+!--TIME_DT_ATMOS_DA-- 
+TIME_DT_ATMOS_DA_UNIT = "SEC",
 /
 
 #&PARAM_COMM_CARTESC_NEST
@@ -97,8 +97,8 @@
 #################################################
 
 &PARAM_PRC_CARTESC
- PRC_NUM_X      = 32,
- PRC_NUM_Y      = 32,
+ PRC_NUM_X      = 64,
+ PRC_NUM_Y      = 64,
  PRC_PERIODIC_X = .false.,
  PRC_PERIODIC_Y = .false.,
 /
@@ -136,8 +136,9 @@
 /
 
 &PARAM_ATMOS_GRID_CARTESC
- DX = 500.D0,
- DY = 500.D0,
+ DX = 250.D0,
+ DY = 250.D0,
+ ! 04/02/2019
  FZ(:) =    110.0000D0,   220.0000D0,   330.0000D0,   440.0000D0,   550.0000D0,
             666.1600D0,   788.8249D0,   918.3591D0,  1055.1472D0,  1199.5955D0,
            1352.1328D0,  1513.2123D0,  1683.3123D0,  1862.9379D0,  2052.6226D0,
@@ -200,8 +201,6 @@
 ! r0051
 &PARAM_BULKFLUX
  BULKFLUX_type = "B91W01",
-! BULKFLUX_err_min = 1D-3, ! Use?
-! BULKFLUX_WSCF = 1.2D0,   ! Use? 
 /
 
 &PARAM_URBAN
@@ -259,7 +258,7 @@
 /
 
 &PARAM_ATMOS_PHY_TB_SMG
- ATMOS_PHY_TB_SMG_horizontal = .false.,  !!! MYNN off
+ ATMOS_PHY_TB_SMG_horizontal = .false.,
 /
 
 &PARAM_ATMOS_PHY_RD_MSTRN
@@ -404,8 +403,7 @@
 &HISTORY_ITEM name='W'    / ! LETKF
 &HISTORY_ITEM name='RH'   / ! LETKF (not analyzed)
 
-! To output all variables in dafcst, taverage should be false
-&HISTORY_ITEM name='PREC', taverage=.false. / 
+&HISTORY_ITEM name='PREC', taverage=.true. /
 &HISTORY_ITEM name='RAIN', taverage=.true. /
 &HISTORY_ITEM name='SNOW', taverage=.true. /
 

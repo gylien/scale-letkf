@@ -4,7 +4,7 @@
 /
 
 &PARAM_LOG
- LOG_LEVEL = 2,
+ LOG_LEVEL = 1,
  USE_MPI_BARRIER = .true.,
 /
 
@@ -68,6 +68,8 @@
  POSITIVE_DEFINITE_QHYD = .true.,
 !--NOBS_OUT--
 !--NOBS_OUT_BASENAME--
+!--OUT_PAWR_GRADS--
+!--OUT_PAWR_GRADS_PATH--
 !
 !--OUT_NETCDF_DAFCST--
  OUT_NETCDF_DAFCST_DSTEP = 10,
@@ -76,18 +78,19 @@
  OUT_NETCDF_DAFCST_DZ = 1.0d3,
 !
 !--OUT_DAFCST_DSEC--
- OUT_NETCDF_ZLEV_MIN = 1,
- OUT_NETCDF_ZLEV_MAX = 42,
- OUT_NETCDF_ZLEV_INTV = 1,
+ OUT_NETCDF_ZLEV_MIN = 1, 
+ OUT_NETCDF_ZLEV_MAX = 42, 
+ OUT_NETCDF_ZLEV_INTV = 1, 
+!--OUT_GRADS_DAFCST--
+ OUT_GRADS_DAFCST_ZLEV = 15.0d3,
 !--OUT_GRADS_DAFCST_ALL--
  OUT_GRADS_DAFCST_ALL_ZSKIP = 2,
-!--OUT_GRADS_DAFCST--
 !--OUT_GRADS_DA_ALL--
 !--OUT_GRADS_DA_ALL_PATH--
 /
 
 &PARAM_LETKF_OBS
- HORI_LOCAL = 4.0D3,
+ HORI_LOCAL = 2.0D3,
  VERT_LOCAL = 0.3D0,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,
                 -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,
                 -1., 2.0D3,
@@ -113,20 +116,20 @@
 &PARAM_LETKF_RADAR
  RADAR_NPROC = 12,
  USE_RADAR_REF = .true.,
- USE_RADAR_VR = .true.,
+ USE_RADAR_VR = .false.,
  METHOD_REF_CALC = 3,
  USE_TERMINAL_VELOCITY = .true.,
  USE_OBSERR_RADAR_REF = .true.
  USE_OBSERR_RADAR_VR = .true.
  RADAR_REF_THRES_DBZ = 10.0D0,
- MIN_RADAR_REF_MEMBER_OBSRAIN = 5,
- MIN_RADAR_REF_MEMBER_OBSNORAIN = 5,
+ MIN_RADAR_REF_MEMBER_OBSRAIN = 5, 
+ MIN_RADAR_REF_MEMBER_OBSNORAIN = 5, 
  MIN_RADAR_REF_DBZ = 10.0D0,
  LOW_REF_SHIFT = -5.0D0,
  RADAR_ZMAX = 11.0D3,
  RADAR_ZMIN = 500.0D0,
- RADAR_SO_SIZE_HORI = 500.0D0,
- RADAR_SO_SIZE_VERT = 500.0D0,
+ RADAR_SO_SIZE_HORI = 250.0D0,
+ RADAR_SO_SIZE_VERT = 250.0D0,
  RADAR_THIN_HORI = 1,
  RADAR_THIN_VERT = 1,
  RADAR_MAX_ABS_VR = 50.0D0,
@@ -159,6 +162,7 @@
  plot_obs  = .true. ,
  plot_anal = .true. ,
  plot_fcst = .true. ,
+ plot_fcst_t0 = .true. ,
  plot_zlev_min = 10 , 
  plot_zlev_max = 40 , 
  plot_zlev_intv = 5 , 

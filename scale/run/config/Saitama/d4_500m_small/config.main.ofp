@@ -19,8 +19,8 @@ EXP2=d2
 
 OUTDIR="${OUTPUT}/${EXP4}"
 
-INDIR=<INDIR>
 BGDIR=<BGDIR>
+INDIR=<INDIR>
 
 #===============================================================================
 # Location of model/data files
@@ -44,13 +44,12 @@ DATA_BDY_GRADS=
 #OBS="/work/hp150019/f22013/SCALE-LETKF/scale-5.3.2/OUTPUT/obs/PAWR_JRC"
 OBS="/work/hp150019/c24140/scale_database/PAWRtest/testcase"
 OBSNCEP=
-
-PAWR_MASK_FILE='${DIR}/obs/radar/saitama-shadow-mask.dat'
-
-OBS_USE_JITDT=0 # 1: Run with JIT-DT 
+OBS_USE_JITDT=1 # 1: Run with JIT-DT 
                 # 0: No JIT-DT
-OBS_USE_JITDT_OFFLINE=1 # 1: Offilne test
+OBS_USE_JITDT_OFFLINE=0 # 1: Offilne test
                         # 0: Online (data should be transfered from NICT)
+
+PAWR_MASK_FILE="${DIR}/obs/radar/saitama-shadow-mask.dat"
 
 JIT_TOP=/work/hp150019/share/honda/jitdt
 JIT_TARFILE=${JIT_TOP}/testdata/kobe_201901301200-09.tar
@@ -134,7 +133,7 @@ PPN=64              # Number of processes per node
 
 THREADS=1          # Number of threads per process
 
-SCALE_NP=256      # D4    # Number of processes to run SCALE
+SCALE_NP=256       # D4    # Number of processes to run SCALE
 
 BGJOB_INT='0.1s'   # Interval of multiple background job submissions
 
