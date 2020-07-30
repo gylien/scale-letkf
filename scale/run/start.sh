@@ -6,14 +6,14 @@ cd "$(dirname "$0")"
 #-------------------------------------------------------------------------------
 
 PLACE=Saitama
-DX=500m
-STIME=$1
+DX=$1
+STIME=$2
 
 NCYCLE=120
-WTIME_L="01:10:00"
-NMEM=50
+WTIME_L="01:30:00"
+NMEM=20
 DACYCLE_RUN_FCST_TIME=1800
-MAX_DACYCLE_RUN_FCST=$NCYCLE
+MAX_DACYCLE_RUN_FCST=110
 NUM_DACYCLE_FCST_MEM=10
 
 intv_sec=`expr \( $NCYCLE - 1 \) \* 30`
@@ -56,21 +56,19 @@ cat config/$CONFIG/config.cycle | \
 
 #-------------------------------------------------------------------------------
 ### prepare latest init and boundary files
-### ./prep.sh init 
+
  ./prep.sh $STIME 
 
 #-------------------------------------------------------------------------------
 
 ./cycle_ofp.sh > cycle_ofp.log 2>&1 || exit $?
 
-res=$?
-
 intv_sec_h=`expr \( $NCYCLE \) \* 30`
 ETIMEh=`date -d "${intv_sec_h} second ${STIME_in}" +'%Y%m%d%H%M%S'`
 
-[ "$res" == "0" ] && ./move_restart.sh $STIME $ETIMEh
+./move_restart.sh $STIME $ETIMEh
 
-./store_images.sh dacycle_${DX}_${STIME} &> log_store_images&
+./store_images.sh dacycle_${DX}_${STIME} $OUTDIR/${STIME}/dafcst &> log_store_images & 
 #-------------------------------------------------------------------------------
 
   jobname="cycle_${SYSNAME}"
@@ -91,4 +89,3 @@ ln -s $OUTDIR/exp/${jobid}_cycle_${STIME} exp
 
 #-------------------------------------------------------------------------------
 
-exit 0

@@ -17,7 +17,6 @@ job='cycle'
 RSCGRP=${RSCGRP:-"regular-flat"}
 GNAME=${GNAME:-`id -ng`}
 
-
 #===============================================================================
 # Configuration
 
@@ -258,8 +257,12 @@ archive_log
 
 #===============================================================================
 
+[ "`tail -n 1 ${jobscrp}.e${jobid} | cut -c 23-28`" == 'Finish' ] && result=0 || result=1
+
+echo "result" `tail -n 1 ${jobscrp}.e${jobid} | cut -c 23-28` 
+
 mv $TMP ${TMP}_$STIME
 
 echo "[$(datetime_now)] Finish $myname $@"
 
-exit $res
+exit $result

@@ -258,7 +258,7 @@ if ((DACYCLE_RUN_FCST == 1)); then
   DACYCLE_RUN_FCST_OUTNAME="${OUTDIR[$d]}/dafcst"
   mkdir -p $DACYCLE_RUN_FCST_OUTNAME
   mkdir -p ${DACYCLE_RUN_FCST_OUTNAME}_nc
-###  rm -rf ${DACYCLE_RUN_FCST_OUTNAME}_ncl
+  rm -rf ${DACYCLE_RUN_FCST_OUTNAME}_ncl
   mkdir -p ${DACYCLE_RUN_FCST_OUTNAME}_ncl
   chmod 774 ${DACYCLE_RUN_FCST_OUTNAME}_nc
   chmod 774 ${DACYCLE_RUN_FCST_OUTNAME}_ncl
