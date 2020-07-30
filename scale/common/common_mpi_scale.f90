@@ -1857,7 +1857,7 @@ end subroutine send_recv_analysis_direct
 !-------------------------------------------------------------------------------
 ! Write the subdomain model data (only radar reflectivity) into a single GrADS file from DACYCLE (additional) forecasts
 !-------------------------------------------------------------------------------
-subroutine write_grd_dafcst_mpi( timelabel, ref3d, step )
+subroutine write_grd_dafcst_mpi( timelabel, timelabel_jst, ref3d, step )
   use mod_atmos_vars, only: &
     TEMP
 !  use scale_atmos_hydrometeor, only: &
@@ -1871,10 +1871,11 @@ subroutine write_grd_dafcst_mpi( timelabel, ref3d, step )
     H_LONG
 
   implicit none
-  character(15), intent(in) :: timelabel
+  character(15), intent(in) :: timelabel, timelabel_jst
   real(r_size), intent(in) :: ref3d(nlev,nlon,nlat)
   integer, intent(in) :: step
 
+  character(15) :: timelabel_
   character(len=H_LONG) :: filename
   real(r_sngl) :: bufr4(nlong,nlatg)
   integer :: iunit, iolen
@@ -1899,8 +1900,14 @@ subroutine write_grd_dafcst_mpi( timelabel, ref3d, step )
   if ( OUT_NETCDF_DAFCST ) then
     if ( step == 0 .or. mod( step, OUT_NETCDF_DAFCST_DSTEP) == 0 ) then
 
-      ncfilename = trim(DACYCLE_RUN_FCST_OUTNAME)//"_nc/"//trim(timelabel)//".nc"
-      ncfilenamel = trim(DACYCLE_RUN_FCST_OUTNAME)//"_ncl/"//trim(timelabel)
+      if ( OUT_NETCDF_DAFCST_JST ) then
+        timelabel_ = timelabel_jst
+      else
+        timelabel_ = timelabel
+      endif
+
+      ncfilename = trim(DACYCLE_RUN_FCST_OUTNAME)//"_nc/"//trim(timelabel_)//".nc"
+      ncfilenamel = trim(DACYCLE_RUN_FCST_OUTNAME)//"_ncl/"//trim(timelabel_)
   
       nlev_plot = OUT_NETCDF_DAFCST_NZLEV
       if ( .not. allocated(bufr3d) ) allocate( bufr3d(nlev_plot,nlong,nlatg))

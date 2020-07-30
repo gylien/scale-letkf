@@ -207,6 +207,7 @@ MODULE common_nml
        
                                           ! NetCDF output (radar reflectivity)
   logical :: OUT_NETCDF_DAFCST = .false.  ! Outut dacycle forecast 
+  logical :: OUT_NETCDF_DAFCST_JST = .true. ! Output NetCDF in JST
   integer :: OUT_NETCDF_DAFCST_DSTEP = 10 ! Outut interval for forecast
                                           ! every OUT_NETCDF_DAFCST_DSTEP*LCYCLE (sec) 
   integer :: OUT_NETCDF_DAFCST_DHORI = 4  ! Outut interval of horizontal thinning for forecast
@@ -782,6 +783,7 @@ subroutine read_nml_letkf
     OUT_NETCDF_DAFCST_DZ, &
     OUT_NETCDF_DAFCST_DHORI, &
     OUT_NETCDF_DAFCST_HCUT,  &
+    OUT_NETCDF_DAFCST_JST, &
     OUT_NETCDF_ZLEV_MIN, &
     OUT_NETCDF_ZLEV_MAX, &
     OUT_NETCDF_ZLEV_INTV, &

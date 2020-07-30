@@ -975,7 +975,6 @@ subroutine write_dafcst_nc( filename, filenamel, step, nlev_plot, ref3d )
     allocate( tlevs(tlev) )
 
     ! Create the file. 
-    !write(6,'(2a)')"DEBUG ", trim(filename)
     call ncio_create( trim(filename), nf90_clobber, ncid )
 
     ! Define the dimensions. 
@@ -1020,6 +1019,10 @@ subroutine write_dafcst_nc( filename, filenamel, step, nlev_plot, ref3d )
     ! Define the netCDF variables
     call ncio_check( nf90_def_var(ncid, trim(ref_name), nf90_real, dimids, ref_varid) )
     call ncio_check( nf90_put_att(ncid, ref_varid, "units", trim(ref_unit) ) )
+
+    if ( OUT_NETCDF_DAFCST_JST ) then
+      call ncio_check( nf90_put_att(ncid, NF90_GLOBAL, "Time", "JST" ) )
+    endif
 
     ! Additional axis variables
 !    call ncio_check( nf90_def_var(ncid, trim(x_name), nf90_real, lon_dimid, x_varid) )
@@ -2550,6 +2553,48 @@ subroutine jst2utc(jyear, jmonth, jday, jhour, jminute, jsecond, jtime_ms, utime
   return
 end subroutine jst2utc
 
+subroutine utc2jst( uyear, umonth, uday, uhour, uminute, usecond, utime_ms, jtime )
+  use scale_calendar, only: &
+      CALENDAR_date2daysec, &
+      CALENDAR_daysec2date, &
+      CALENDAR_adjust_daysec
+  implicit none
+
+  integer, intent(in) :: uyear, umonth, uday
+  integer, intent(in) :: uhour, uminute, usecond
+  real(DP) :: utime_ms
+  integer, intent(out) :: jtime(6)
+  integer :: utime(6)
+  integer :: absday
+  real(DP) :: abssec, jtime_ms
+
+  utime(1) = uyear
+  utime(2) = umonth
+  utime(3) = uday
+  utime(4) = uhour
+  utime(5) = uminute
+  utime(6) = usecond
+
+  call CALENDAR_date2daysec( absday,       & ! [OUT]
+                             abssec,       & ! [OUT]
+                             utime,        & ! [IN]
+                             utime_ms,     & ! [IN]
+                             0             ) ! [IN]
+
+  abssec = abssec + real(3600*9, kind=DP)
+
+  call CALENDAR_adjust_daysec( absday,   & ! [INOUT]
+                               abssec )    ! [INOUT]
+
+  call CALENDAR_daysec2date( jtime,   & ! [OUT]
+                             jtime_ms, & ! [OUT]
+                             absday,      & ! [IN]
+                             abssec,      & ! [IN]
+                             0            ) ! [IN]
+
+  return
+end subroutine utc2jst
+
 subroutine advance_nowdate( date, dsec )
   use scale_calendar, only: &
       CALENDAR_date2daysec, &
@@ -2583,6 +2628,24 @@ subroutine advance_nowdate( date, dsec )
 
   return
 end subroutine advance_nowdate
+
+subroutine get_timelabel_jst( timelabel )
+  use scale_time, only: &
+    TIME_NOWDATE, &
+    TIME_time2label
+  implicit none
+
+  integer :: jtime(6)
+
+  character(len=19), intent(out) :: timelabel
+
+  call utc2jst( TIME_NOWDATE(1), TIME_NOWDATE(2), TIME_NOWDATE(3), TIME_NOWDATE(4), TIME_NOWDATE(5), TIME_NOWDATE(6), 0.0_DP, jtime )
+
+  call TIME_time2label( jtime(:), 0.0_DP, & ! [IN]
+                        timelabel       )   ! [OUT]
+
+  return
+end subroutine get_timelabel_jst
 
 !===============================================================================
 END MODULE common_scale

@@ -141,6 +141,7 @@ program dacycle
   integer :: dafcst_step_max ! dacycle-forecast step
   integer :: dafcst_ostep ! dacycle-forecast output step
   character(len=19) :: ftimelabel, fstimelabel, fetimelabel
+  character(len=19) ::  fstimelabel_jst ! JST
 
   ! List for dafcst (start cycle [x] dafcst member)
   logical, allocatable :: dafcst_slist(:,:)
@@ -635,7 +636,7 @@ program dacycle
         call calc_ref_direct( ref3d )
         if ( OUT_GRADS_DAFCST .or. OUT_NETCDF_DAFCST ) then 
           ! Output of dacycle-forecast in GrADS/NetCDF format
-          call write_grd_dafcst_mpi(fstimelabel(1:15), ref3d, dafcst_ostep)
+          call write_grd_dafcst_mpi( fstimelabel(1:15),  fstimelabel_jst(1:15), ref3d, dafcst_ostep )
         endif
         if ( OUT_GRADS_DAFCST_ALL ) then ! Output of dacycle-forecast in GrADS format (all variables)
           call write_grd_dafcst_all_mpi(fstimelabel(1:15), dafcst_ostep)
@@ -693,7 +694,8 @@ program dacycle
       if ( .not. myrank_use_da ) then
         dafcst_step = 0
         dafcst_ostep = 0
-        call TIME_gettimelabel(fstimelabel)
+        call get_timelabel_jst( fstimelabel_jst )
+        call TIME_gettimelabel( fstimelabel )
 
 #ifdef PLOT_DCL 
         if ( PLOT_FCST .and. PLOT_FCST_T0 ) then ! Output of dacycle-forecast        
@@ -702,7 +704,7 @@ program dacycle
           call plot_dafcst_mpi(fstimelabel(1:15), ref3d, dafcst_ostep)
           ! Output of dacycle-forecast in GrADS/NetCDF format
           if ( OUT_GRADS_DAFCST .or. OUT_NETCDF_DAFCST ) then 
-            call write_grd_dafcst_mpi(fstimelabel(1:15), ref3d, dafcst_ostep)
+            call write_grd_dafcst_mpi( fstimelabel(1:15), fstimelabel_jst(1:15), ref3d, dafcst_ostep )
           endif
           if ( OUT_GRADS_DAFCST_ALL ) then ! Output of dacycle-forecast in GrADS format (all variables)
             call write_grd_dafcst_all_mpi(fstimelabel(1:15), dafcst_ostep)
