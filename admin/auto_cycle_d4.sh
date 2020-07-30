@@ -28,7 +28,7 @@ isec=0
 cyclesec=60
 limitsec=86400
 
-END_TIME="2020-12-31 00:00:00"
+END_TIME="2020-07-31 00:00:00"
 
 #rundir=${realtimebase}/scale_${scale_ver}/scale-letkf_${letkf_ver}_d4/scale/run
 rundir=${realtimebase}/scale_${scale_ver}/scale-letkf_test/scale/run
@@ -39,11 +39,19 @@ INIT_TIME="$(date -ud "$time_offset second now" +'%Y-%m-%d %H:00:00')"
 
 INIT_TIMEf="$(date -ud "$INIT_TIME" +'%Y%m%d%H0000')"
 
+### transfer to MTI
   echo "launch sync script"
-
-  cd ./send_img
-  ./auto_send_img.sh "$(date -ud "$time_offset second now" +'%Y-%m-%d %H:00:30')" "$END_TIME"  &> log_send_img&
+  rubypath=$wkdir/send_img_MTI/transfer-fcst.rb
+  cd $realtimebase/result/ope/d4_${dx_d4}
+  ruby $rubypath/transfer-fcst.rb &> $rubypath/log_transfer_fcst &
   cd -
+
+
+### transfer to weather.riken.jp -- Disabled
+#  echo "launch sync script"
+#  cd ./send_img
+#  ./auto_send_img.sh "$(date -ud "$time_offset second now" +'%Y-%m-%d %H:00:30')" "$END_TIME"  &> log_send_img&
+#  cd -
 
 
 cd $rundir

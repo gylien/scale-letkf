@@ -5,8 +5,10 @@ myname=$0
 mydir=`dirname $myname`
 cd $mydir
 
+. $mydir/../../admin.rc || exit $?
+
 time_offset=0
-[ -f "../../time_offset.txt" ] && time_offset=`cat ../../time_offset.txt` 
+[ -f "$mydir/../../time_offset.txt" ] && time_offset=`cat $mydir/../../time_offset.txt` 
 nowtime="$(date -ud "$time_offset second now" +'%Y-%m-%d %H:%M:%S')"
 
 monitor_dir="$mydir/.."
@@ -95,11 +97,9 @@ timed3_new=`date -d "$lend3 sec ${yyyy}-${mm}-${dd} ${hh}:${mon}:${sec}" +%Y%m%d
 done
 fi
 
-D4mode=d4_500m
-
 timed4=$timed4_p
 
-list=`ls -1t ${OUTBASE}/d3/ref_20*/20*/$D4mode/anal/mean/init_*.pe000000.nc | head -n 10`
+list=`ls -1t ${OUTBASE}/d3/ref_20*/20*/d4_${dx_d4}/anal/mean/init_*.pe000000.nc | head -n 10`
 if [ ! -z "$list" ];then
 for file in $list;do
 based3=`echo $file | egrep --only-matching "init_[0-9]{8}-[0-9]{6}" | cut -c 6-20`
