@@ -189,11 +189,15 @@
 
 ! disabled
 ! r0051
-!&PARAM_URBAN_DYN_KUSAKA01
+&PARAM_URBAN_DYN_KUSAKA01
 ! STRGR = 0.24D0,
 ! STRGB = 0.009D0,
 ! STRGG = 0.24D0,
-!/
+STRGR = 0.0D0,
+STRGB = 0.0D0,
+STRGG = 0.0D0,
+/
+
 
 ! r0051
 &PARAM_BULKFLUX
@@ -202,6 +206,16 @@
 
 &PARAM_URBAN
  URBAN_DYN_TYPE = "KUSAKA01",
+/
+
+
+#################################################
+#  Updated KF parameter
+#################################################
+
+&PARAM_ATMOS_PHY_CP_KF
+ PARAM_ATMOS_PHY_CP_kf_trigger = 3 ,
+ PARAM_ATMOS_PHY_CP_kf_prec = 2 , 
 /
 
 #################################################

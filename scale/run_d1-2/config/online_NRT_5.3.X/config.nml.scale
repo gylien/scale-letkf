@@ -212,6 +212,15 @@ STRGG = 0.0D0,
 /
 
 #################################################
+#  Updated KF parameter
+#################################################
+
+&PARAM_ATMOS_PHY_CP_KF
+ PARAM_ATMOS_PHY_CP_kf_trigger = 3 ,
+ PARAM_ATMOS_PHY_CP_kf_prec = 2 , 
+/
+
+#################################################
 #
 # model configuration: atmosphere
 #
