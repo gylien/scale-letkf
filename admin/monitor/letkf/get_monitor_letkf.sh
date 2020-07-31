@@ -67,6 +67,10 @@ if [ `date -d "$time_end_fmt" +%H` == "00" ];then
   cp ./figs/*.png ./save/$time_end/
 fi
 
+### TORI AEZU
+exit 0 
+
+
   cd $wkdir/subdomain
   ./get_monitor_letkf.sh
   cd $wkdir/obsdep/sounding 

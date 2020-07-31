@@ -20,7 +20,7 @@ while true
 
       # TRANSFER DATA
 #      system("scp -p -P 2222 #{ff} nowcast_pawr@hibiki.r-ccs.riken.jp:/global_hibiki/nowcast/") || raise 
-      system("echo python #{SCRP_DIR}/aip.py --file #{ff} --bucket #{DEST}}") || raise 
+      system("python #{SCRP_DIR}/aip.py --file #{ff} --bucket #{DEST}}") || raise 
       
       if operational
         File.unlink(f) # FOR OPERATIONAL MODE

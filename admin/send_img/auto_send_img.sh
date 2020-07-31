@@ -1,6 +1,6 @@
 #!/bin/bash -l
 
-SRCDIR="/work/hp150019/share/SCALE-LETKF-rt/result/ope/d4_1km/dafcst_img"
+SRCDIR="/work/jh150019/share/SCALE-LETKF-rt/result/ope/d4_500m/dafcst_img"
 
 hostname="weather"
 www_DATA="/srv/www/html/nowcast/scale-letkf_saitama/"

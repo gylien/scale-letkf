@@ -3,9 +3,8 @@
 username=$(id -nu)
 groupname=$(id -ng)
 
-export GNAME=${groupname}
-export RSCGRP="regular-flat"
-#export RSCGRP="regular-cache"
+export GNAME="gx14"
+export RSCGRP="challenge"
 
 scale_ver="ope" 
 letkf_ver="ope" 
@@ -19,12 +18,8 @@ nmem=50
 #nmem_d1_ext='mdet' ### deterministic run
 nmem_d1_ext=50
 
-#nmem_d2=2 ### disk saving mode
-#nmem_d3=2 ### disk saving mode
-#nmem_d2=50
-#nmem_d3=50 
-nmem_d2=20
-nmem_d3=20 
+nmem_d2=50
+nmem_d3=50 
 
 realtimebase="${wkdir}/.."
 
