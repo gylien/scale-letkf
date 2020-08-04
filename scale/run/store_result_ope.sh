@@ -46,27 +46,27 @@ done
 
     cd $TMP
     echo "make tar anal..."
-    tar --remove-files -zcf $DEST/anal_ope.tar.gz --files-from $DEST/list_anal.txt    
+    tar --remove-files -z -v -c -f $DEST/anal_ope.tar.gz --files-from $DEST/list_anal.txt    
     echo "make tar obs..."
-    tar --remove-files -zcf $DEST/obs_ope.tar.gz  --files-from $DEST/list_obs.txt    
+    tar --remove-files -z -v -c -f $DEST/obs_ope.tar.gz  --files-from $DEST/list_obs.txt    
     echo "make tar fcst..."
-    tar --remove-files -zcf $DEST/fcst_ope.tar.gz --files-from $DEST/list_fcst.txt    
+    tar --remove-files -z -v -c -f $DEST/fcst_ope.tar.gz --files-from $DEST/list_fcst.txt    
     cd $TMPNC
     echo "make tar nc..."
-    tar --remove-files -zcf $DEST/ncfile_fcst_ref3d.tar.gz --files-from $DEST/list_nc.txt    
+    tar --remove-files -z -v -c -f $DEST/ncfile_fcst_ref3d.tar.gz --files-from $DEST/list_nc.txt    
     cd $TMPGRD
     echo "make tar grads..."
-    tar --remove-files -zcf $DEST/grads_ref3d.tar.gz --files-from $DEST/list_grd.txt    
+    tar --remove-files -v -c -f $DEST/grads_ref3d.tar --files-from $DEST/list_grd.txt    
+###    tar --remove-files -z -c -v -f $DEST/grads_ref3d.tar.gz --files-from $DEST/list_grd.txt   ### Too slow to use
 
-
-    cd $TMP
-    xargs rm < $DEST/list_anal.txt
-    xargs rm < $DEST/list_obs.txt
-    xargs rm < $DEST/list_fcst.txt
-    cd $TMPNC
-    xargs rm < $DEST/list_nc.txt
-    cd $TMPGRD
-    xargs rm < $DEST/list_grd.txt
+#    cd $TMP
+#    xargs rm < $DEST/list_anal.txt
+#    xargs rm < $DEST/list_obs.txt
+#    xargs rm < $DEST/list_fcst.txt
+#    cd $TMPNC
+#    xargs rm < $DEST/list_nc.txt
+#    cd $TMPGRD
+#    xargs rm < $DEST/list_grd.txt
 
 
 #if [ $z -eq 1 ]; then
