@@ -63,11 +63,12 @@ cd $rundir
   echo " $INIT_TIME start "
 
   nohup ./start.sh "$dx_d4" "$INIT_TIMEf" &> admin_cycle_d4.log.${INIT_TIMEf}
-#  nohup ./restart.sh "$INIT_TIMEf" &> admin_cycle_d4.log.${INIT_TIMEf}
+#  nohup ./restart.sh "$dx_d4" "$INIT_TIMEf" &> admin_cycle_d4.log.${INIT_TIMEf}
  res=$?
  if [ "$res" != "0" ]; then
   echo " $INIT_TIME abort "
   kill $id_sync
+  mv $rubypath/log_transfer_fcst $rubypath/save_log/log_transfer_fcst_$id_sync
   exit 99
  else
   echo " $INIT_TIME complete "
@@ -82,6 +83,7 @@ while [ `date -ud "1 hour $INIT_TIME" +%s` -le `date -ud "$END_TIME" +%s` ] ; do
  if [ "$res" != "0" ]; then
   echo " $INIT_TIME abort "
   kill $id_sync
+  mv $rubypath/log_transfer_fcst $rubypath/save_log/log_transfer_fcst_$id_sync
   exit 99
  else
   echo " $INIT_TIME complete "
@@ -89,5 +91,6 @@ while [ `date -ud "1 hour $INIT_TIME" +%s` -le `date -ud "$END_TIME" +%s` ] ; do
 done 
 
 kill $id_sync
+mv $rubypath/log_transfer_fcst $rubypath/save_log/log_transfer_fcst_$id_sync
 echo " == finish. == "
 exit 0
