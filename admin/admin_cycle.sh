@@ -59,9 +59,9 @@ if (($(date -ud "$TIME" +'%s') > $(date -ud "$TIMEstop" +'%s'))); then
   echo "$now [STOP] $ATIMEf" >> $logfile
   exit
 fi
-
+ 
 #-------------------------------------------------------------------------------
-
+ 
 now="$(date -u +'%Y-%m-%d %H:%M:%S')"
 echo "$now [TRY ] $ATIMEf" >> $logfile
 
@@ -70,6 +70,20 @@ istime="$TIME"
 istimef="$(date -ud "$istime" +'%Y%m%d%H%M%S')"
 iatime="$(date -ud "$LCYCLE second $istime" +'%Y-%m-%d %H:%M:%S')"
 iatimef="$(date -ud "$iatime" +'%Y%m%d%H%M%S')"
+
+#-------------------------------------------------------------------------------
+#
+# Total 1200 node = 992 for D4, 208 for others
+# when something else is running, do not start D1 cycle
+#   
+
+res=`ls *.lock*  2> /dev/null`
+
+if [ "$res" != "`basename $lockfile`" ] ; then  
+    echo "$now [WAIT] $iatimef - other process is using tokens " >> $logfile
+    exit
+fi
+
 while ((istimef <= $(date -ud "$TIMEstop" +'%Y%m%d%H%M%S') || n == 0)); do
 
   if [ ! -s "$gradsdir/$(date -ud "$istime" +'%Y%m%d%H')/atm_${istimef}.grd" ] ||

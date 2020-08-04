@@ -37,7 +37,7 @@ while [ "$RUN_TIME" != "$RUN_TIME_END" ] ;do
   CTIMEf="$(date -ud "${CYCLE_TIME}" +'%Y%m%d%H%M%S')"
   TIMEf="$(date -ud "${RUN_TIME}" +'%Y%m%d%H%M%S')"
    if [ $CTIMEf -ge $TIMEf ] ;then
-    if [ -s $INITSRC/$TIMEf/anal/mean/init.pe000000.nc ] ;then
+    if [ -s $INITSRC/$TIMEf/anal/mean/init.pe000000.nc ] && [ -z "`ls *lock*`" ] ;then
      now="$(date -u +'%Y-%m-%d %H:%M:%S')"
      echo "$now $RUN_TIME start " 
      nohup ./admin_fcst_d1-2.sh "$RUN_TIME" &> /dev/null &

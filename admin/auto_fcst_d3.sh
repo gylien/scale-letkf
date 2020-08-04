@@ -25,10 +25,10 @@ limitsec=43200
 PARENT_TIME_B=`date -d "-1 year" +"%F %T"`
 
 spinup_hour=2
-fcst_hour=7
+fcst_hour=7 ### 6+1 
 start_hour_fromnow=0
 
-FCSTHOUR_DEF=`expr $fcst_hour + $spinup_hour` ### 6+2
+FCSTHOUR_DEF=`expr $fcst_hour + $spinup_hour` ### 6+1+2
 
 
 ####PARENT_FCSTLEN=${FCSTLEN_d2}
@@ -66,7 +66,7 @@ while [ ! -f $ofp_parentdir/$PARENT_TIMEf/fcst/$cmem/history.pe000000.nc ] || [ 
  PARENT_TIMEf="$(date -ud "${PARENT_TIME}" +'%Y%m%d%H%M%S')"
 done
 
- if [ `date -d "$PARENT_TIME" +%s` -gt `date -d "$PARENT_TIME_B" +%s` ] ;then
+ if [ `date -d "$PARENT_TIME" +%s` -gt `date -d "$PARENT_TIME_B" +%s` ] && [ -z "`ls *lock*`" ] ;then
 
 # echo "PARENT_TIME" $PARENT_TIME $PARENT_TIME_B
  PARENT_TIME_B=$PARENT_TIME
@@ -76,9 +76,9 @@ done
 
 
  starth="$(date -ud "${START_TIME}" +%H)"
- hdif=`expr \( $starth + ${spinup_hour} \) \% 6` ### set aviable forecast hour to 0-6, 6-12, 12-18, or 18-24
-
- INIT_START="$(date -ud " - $hdif hour ${START_TIME}" +'%Y-%m-%d %H:00:00')"
+##### hdif=`expr \( $starth + ${spinup_hour} \) \% 6` ### set aviable forecast hour to 0-6, 6-12, 12-18, or 18-24
+##### INIT_START="$(date -ud " - $hdif hour ${START_TIME}" +'%Y-%m-%d %H:00:00')"
+ INIT_START="$(date -ud " + 1 hour - ${spinup_hour} hour ${START_TIME}" +'%Y-%m-%d %H:00:00')" ### quick mode
  INIT_STARTf="$(date -ud "${INIT_START}" +'%Y%m%d%H%M%S')"
 
  while [ $INIT_STARTf -le $INIT_LIMITf ]; do
@@ -92,7 +92,7 @@ done
      DESTFCSTf="$(date -ud "$FCSTHOUR hour ${INIT_START}" +'%Y%m%d%H%M%S')"    
     done
     FCSTLEN=`expr $FCSTHOUR \* 3600`
-    nohup ./admin_fcst_d3.sh "$PARENT_TIME" "$INIT_START" "$FCSTLEN" &> /dev/null &
+    nohup ./admin_fcst_d3.sh "$PARENT_TIME" "$INIT_START" "$FCSTLEN" &> /dev/null 
 #    echo "start" "$PARENT_TIME" "$INIT_START" "$FCSTLEN" 
     INIT_START="$(date -ud " $FCSTHOUR hour -${spinup_hour} hour -1 hour ${INIT_START}" +'%Y-%m-%d %H:00:00')"
     INIT_STARTf="$(date -ud "${INIT_START}" +'%Y%m%d%H%M%S')"

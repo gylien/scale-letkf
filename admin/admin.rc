@@ -35,7 +35,8 @@ obsdir="${realtimebase}/external/ncepobs_gdas_letkf"
 
 LCYCLE=21600
 FCSTLEN=432000
-FCSTLEN_d2=86400
+##FCSTLEN_d2=86400
+FCSTLEN_d2=64800
 
 
 
