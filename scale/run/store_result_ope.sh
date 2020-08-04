@@ -9,6 +9,7 @@ cd $mydir
 STIME=$1
 TMP=$OUTDIR/dafcst_img
 TMPNC=$OUTDIR/dafcst_nc
+TMPGRD=$OUTDIR/dafcst
 DEST=$OUTDIR/$STIME/dafcst
 
 STIMEf="${STIME:0:4}-${STIME:4:2}-${STIME:6:2} ${STIME:8:2}:${STIME:10:2}:${STIME:12:2}"
@@ -34,23 +35,29 @@ STIMEf="${STIME:0:4}-${STIME:4:2}-${STIME:6:2} ${STIME:8:2}:${STIME:10:2}:${STIM
 while [ `date -ud "$TIMEf" +%s` -le `date -ud "$TIMEENDf" +%s` ] ;do
     echo ${TIMEf}...
     tstamp=`date -ud "$TIMEf" +"%Y%m%d-%H%M%S"`
+    tstamp_jst=`date -ud "9 hour $TIMEf" +"%Y%m%d-%H%M%S"`
     find . -name "anal_dbz_${tstamp}*.png" -print >> $DEST/list_anal.txt
     find . -name "obs_dbz_${tstamp}*.png"  -print >> $DEST/list_obs.txt
     find . -name "fcst_dbz_${tstamp}*.png" -print >> $DEST/list_fcst.txt
-    [ -f $TMPNC/fcst_ref3d_${tstamp}.nc ] && echo "fcst_ref3d_${tstamp}.nc" >> $DEST/list_nc.txt
-    TIMEf=`date -ud "30 second $TIMEf" +"%Y-%m-%d %H:%M:%S"`
+    [ -f $TMPNC/${tstamp_jst}.nc ] && echo "${tstamp_jst}.nc" >> $DEST/list_nc.txt
+    [ -f $TMPGRD/${tstamp}.grd ] && echo "${tstamp}.grd" >> $DEST/list_grd.txt
+   TIMEf=`date -ud "30 second $TIMEf" +"%Y-%m-%d %H:%M:%S"`
 done
 
     cd $TMP
     echo "make tar anal..."
-    tar -zcf --remove-files $DEST/anal_ope.tar.gz --files-from $DEST/list_anal.txt    
+    tar --remove-files -zcf $DEST/anal_ope.tar.gz --files-from $DEST/list_anal.txt    
     echo "make tar obs..."
-    tar -zcf --remove-files  $DEST/obs_ope.tar.gz  --files-from $DEST/list_obs.txt    
+    tar --remove-files -zcf $DEST/obs_ope.tar.gz  --files-from $DEST/list_obs.txt    
     echo "make tar fcst..."
-    tar -zcf --remove-files $DEST/fcst_ope.tar.gz --files-from $DEST/list_fcst.txt    
+    tar --remove-files -zcf $DEST/fcst_ope.tar.gz --files-from $DEST/list_fcst.txt    
     cd $TMPNC
     echo "make tar nc..."
-    tar -zcf --remove-files $DEST/ncfile_fcst_ref3d.tar.gz --files-from $DEST/list_nc.txt    
+    tar --remove-files -zcf $DEST/ncfile_fcst_ref3d.tar.gz --files-from $DEST/list_nc.txt    
+    cd $TMPGRD
+    echo "make tar grads..."
+    tar --remove-files -zcf $DEST/grads_ref3d.tar.gz --files-from $DEST/list_grd.txt    
+
 
     cd $TMP
     xargs rm < $DEST/list_anal.txt
@@ -58,6 +65,9 @@ done
     xargs rm < $DEST/list_fcst.txt
     cd $TMPNC
     xargs rm < $DEST/list_nc.txt
+    cd $TMPGRD
+    xargs rm < $DEST/list_grd.txt
+
 
 #if [ $z -eq 1 ]; then
 #    mv list_[a,f,o]*.txt ./save/
@@ -70,6 +80,6 @@ done
 
   cd - > /dev/null
 
-  echo "End: store images"
+  echo "End: store results"
 
 
