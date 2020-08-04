@@ -19,7 +19,7 @@
 'set fwrite -ap -be history.grd'
 
 
-tmax=25
+tmax=19
 zmax=9
 
 t=1

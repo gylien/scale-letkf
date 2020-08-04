@@ -27,7 +27,7 @@ OUTDIR=${OUTDIR[${DOM}]}
 
 cd $POSTDIR
 
-FCSTLEN=86400
+FCSTLEN=64800
 PPN=64 # Process per node
 
 # Output file (X & Y process number) for each member
@@ -223,9 +223,11 @@ done
 echo 'plot...'
 echo $STIME > plot.lock 
 
+FCSTh=`expr $FCSTLEN \/ 3600 + 1`
+
 for mem in  ${SNO_MEM_L} ;do # member loop
  [ ! -z "`ls out/`" ] && rm out/*
- grads -bcl "plot_driver_d2_1h.gs $OUTDIR/$STIME/fcstgp/$mem/history.ctl 1 25 1" &> plot_driver_1h.log 
+ grads -bcl "plot_driver_d2_1h.gs $OUTDIR/$STIME/fcstgp/$mem/history.ctl 1 ${FCSTh} 1" &> plot_driver_1h.log 
  mkdir -p $OUTDIR/$STIME/fcstgpi/$mem 
  mv out/*.png $OUTDIR/$STIME/fcstgpi/$mem/
  mv out_d3/*.png $OUTDIR/$STIME/fcstgpi/$mem/

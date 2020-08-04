@@ -26,7 +26,7 @@ NMEM="$1"
 SCPNAME=fcst
 ETIME="$STIME"
 
-CONFIG='realtime_fcst_D4_1km'
+CONFIG='realtime_fcst_D4_500m'
 PRESET=`hostname | cut -d '.' -f 2 | tr '[a-z]' '[A-Z]'`
 
 #-------------------------------------------------------------------------------

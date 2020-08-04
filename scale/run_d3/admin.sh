@@ -230,7 +230,7 @@ cd ../run_d4_init
  while [ `date -d "$STIME_D4_f" +%s` -le `date -d "${FCSTLEN} second -${fcstlen_d4} second ${STIME_f}" +%s` ] ;do
    STIME_D4=`date -d "${STIME_D4_f}" +%Y%m%d%H%M%S`
    sleep 17s
-   ./admin.sh ${PARENT_REF_TIME} ${STIME} ${STIME_D4} ${fcstlen_d4} "00:25:00" $NMEM &>admin.log.${PARENT_REF_TIME}.${STIME}.${STIME_D4} &
+   ./admin.sh ${PARENT_REF_TIME} ${STIME} ${STIME_D4} ${fcstlen_d4} "00:25:00" $NMEM &>admin.log.${PARENT_REF_TIME}.${STIME}.${STIME_D4} 
  STIME_D4_f=`date -d "${intv_d4} second ${STIME_D4_f}" +"%F %T"`
  done
 cd -
