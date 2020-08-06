@@ -2,11 +2,11 @@
 
 source ~/.bashrc
 
-sg jh200062
-
 wkdir="$(cd "$( dirname "$0" )" && pwd)"
 . $wkdir/admin.rc || exit $1
 
+rubypath=$wkdir/send_img_MTI
+ 
 #-----------------------------
 running=$wkdir'/running_dacycle_d4'
 
@@ -19,8 +19,11 @@ fi
 
 function unlock () {
  [ `cat $running | awk '{print $2}'` == $$ ] && rm -f $running
+  $rubypath/clean.sh
+  mv $rubypath/log_transfer_fcst $rubypath/save_log/log_transfer_fcst_$$
 }
 trap unlock EXIT
+
 #-----------------------------
 
 time_offset=0
@@ -42,14 +45,13 @@ INIT_TIMEf="$(date -ud "$INIT_TIME" +'%Y%m%d%H0000')"
 
 ### transfer to MTI
   echo "launch sync script"
-  rubypath=$wkdir/send_img_MTI/
   cd $realtimebase/result/ope/d4_${dx_d4}
+  $rubypath/clean.sh 
   ruby $rubypath/transfer-fcst.rb &> $rubypath/log_transfer_fcst &
-  id_sync=$$
   cd -
 
 
-### transfer to weather.riken.jp -- Disabled
+### transfer to weather.riken.jp -- Disabled (launched from other machine)
 #  echo "launch sync script"
 #  cd ./send_img
 #  ./auto_send_img.sh "$(date -ud "$time_offset second now" +'%Y-%m-%d %H:00:30')" "$END_TIME"  &> log_send_img&
@@ -67,8 +69,6 @@ cd $rundir
  res=$?
  if [ "$res" != "0" ]; then
   echo " $INIT_TIME abort "
-  kill $id_sync
-  mv $rubypath/log_transfer_fcst $rubypath/save_log/log_transfer_fcst_$id_sync
   exit 99
  else
   echo " $INIT_TIME complete "
@@ -82,15 +82,11 @@ while [ `date -ud "1 hour $INIT_TIME" +%s` -le `date -ud "$END_TIME" +%s` ] ; do
  res=$?
  if [ "$res" != "0" ]; then
   echo " $INIT_TIME abort "
-  kill $id_sync
-  mv $rubypath/log_transfer_fcst $rubypath/save_log/log_transfer_fcst_$id_sync
   exit 99
  else
   echo " $INIT_TIME complete "
  fi
 done 
 
-kill $id_sync
-mv $rubypath/log_transfer_fcst $rubypath/save_log/log_transfer_fcst_$id_sync
 echo " == finish. == "
 exit 0

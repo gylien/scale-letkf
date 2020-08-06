@@ -2,8 +2,8 @@ LIST_DIR = "dafcst_ncl"
 NC_DIR = "dafcst_nc"
 POSTFIX = ".nc"
 SCRP_DIR = "/work/hp150019/share/saitama_aip_uploader"  
-###DEST = "pawr-netcdf-saitama-now"  ### OPE
-DEST = "pawr-netcdf-saitama-now-syd" ### TEST
+###DEST = "pawr-netcdf-saitama-forecast-aip"  ### OPE
+DEST = "pawr-netcdf-saitama-forecast-aip-syd" ### TEST
 
 operational = true
 
