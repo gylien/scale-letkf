@@ -153,7 +153,7 @@ EOS
 #nows=`date -u +%s`
 #echo 'make json : '`expr $nows - $nowb`
 
-  chmod 644 *.png 
+  chmod 664 *.png 
   chmod 664 *json* 
 
   img_list=`ls -x ${name}*`
