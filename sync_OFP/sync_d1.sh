@@ -11,18 +11,22 @@ testfile="sfc_wind_f432000.png"
 testdir='fcstgpi'
 res=`$sshcommand $hostname "find $FCSTDIR_OFP -type d -maxdepth 2 -name $testdir -mmin -10"`
 
-[ -z "$res" ] && [ ! -z "$timeget_in" ] && exit
+if [ -z "$res" ] && [ ! -z "$timeget_in" ] ;then
+   exit
+fi
 
 timegets=`echo $res | grep -o '[0-9]\{14\}'`
 
 timeget_in=$1
-[ ! -z "$timeget_in" ] && timegets=$timeget_in
+if [ ! -z "$timeget_in" ] ;then
+  timegets=$timeget_in
+fi
 
 for timeget in $timegets; do
 echo 'get ' $timeget ' ...'
 ymdh=${timeget:0:10}
 
-[ -f $FCSTDIR/$timeget/sfc_wind/$testfile ] && continue
+if [ -f $FCSTDIR/$timeget/sfc_wind/$testfile ] ;then
 
 
 ### TEST
@@ -45,9 +49,9 @@ for item in $items ;do
 done
 fi
 
+fi
 done
 
 cd $mydir/..
 php ./monitor_plot_d1.php
-
 

@@ -4,12 +4,13 @@ mydir=`dirname $0`
 
 source $mydir/admin.rc
 
-RUNDIR_OFP=$SCALEDIR_OFP/scale_ope/scale-letkf_ope_d4/scale/run/dacycle_1km ### 1km
+RUNDIR_OFP=$SCALEDIR_OFP/scale_ope/scale-letkf_ope_d4/scale/run/dacycle_500m ### 500m
+#RUNDIR_OFP=$SCALEDIR_OFP/scale_longtest/scale-letkf_ope_d4/scale/run/dacycle_1km ### 
 FCSTBASE=$DATADIR/d4/realtime
 TEMPDIR=$DATADIR/d4/temp
 
 wait_sec=5
-limit_sec=600
+limit_sec=432000
 levels='z01127m z01957m z03048m z04480m z06360m z08829m'
 num_fcst_past=20
 
@@ -19,7 +20,10 @@ rm -r $TEMPDIR
 mkdir -p $TEMPDIR
 for level in $levels ;do
 FCSTDIR=$FCSTBASE/$level
-[ -d $FCSTDIR ] || mkdir -p $FCSTDIR
+if [ ! -d $FCSTDIR ] ;then
+  mkdir -p $FCSTDIR
+fi
+
 rm $FCSTDIR/*.png
 done
 
@@ -47,7 +51,9 @@ if [ ! -z "$list" ];then
     file_obs=`echo $file_anal | sed -e "s/anal/obs/g"`
     tlabel=`echo $file_anal | grep -o '[0-9]\{8\}-[0-9]\{6\}'`
     tlabelf=${tlabel:0:8}${tlabel:9:6}
-    [ $tlabelf -gt $tlabelf_latest ] && tlabelf_latest=$tlabelf
+    if [ $tlabelf -gt $tlabelf_latest ] ;then 
+       tlabelf_latest=$tlabelf
+    fi
     cp $TEMPDIR/$file_anal $FCSTDIR/anal_${tlabelf}.png
     cp $TEMPDIR/$file_obs  $FCSTDIR/obs_${tlabelf}.png
     chmod 644 $FCSTDIR/anal_${tlabelf}.png
@@ -59,7 +65,9 @@ if [ ! -z "$list" ];then
    for file in $list; do
     file_fcst=`basename $file`
     fcst_base=`echo $file_fcst | grep -o '[0-9]\{14\}'`    
-   [ $fcst_base -le $tlabelf_latest ] && rm $FCSTDIR/$file_fcst
+   if [ $fcst_base -le $tlabelf_latest ] ;then
+      rm $FCSTDIR/$file_fcst
+   fi
    done
   fi
 fi
@@ -84,7 +92,9 @@ if [ ! -z "$list" ] ; then
     file_fcst=`basename $file`
     fcst_sec=`echo $file_fcst | grep -o 'FT[0-9]\{4\}' | cut -c 3-6`
     tlabelf=`date -ud "$fcst_sec sec $date_base" +%Y%m%d%H%M%S`
-     [ $tlabelf -gt $tlabelf_latest ] && cp $TEMPDIR/$file_fcst $FCSTDIR/fcst_${tlabelf}.png
+     if [ $tlabelf -gt $tlabelf_latest ] ; then
+        cp $TEMPDIR/$file_fcst $FCSTDIR/fcst_${tlabelf}.png
+     fi
     chmod 644 $FCSTDIR/fcst_${tlabelf}.png
   done
 fi

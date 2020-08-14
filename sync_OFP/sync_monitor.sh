@@ -4,6 +4,11 @@ mydir=`dirname $0`
 
 source $mydir/admin.rc
 
+
+echo "check ssh-add ..."
+echo `ssh-add -l`
+
+
 TXTDIR_OFP=$SCALEDIR_OFP/admin/monitor
 TXTDIR=$mydir/../monitor
 
@@ -49,5 +54,6 @@ php ./monitor_plot_d2.php
 php ./monitor_plot_d3.php
 
 res=`$sshcommand $hostname "ls $TXTDIR_OFP/../time_offset.txt"`
-[ ! -z "$res" ] && rsync -e "$sshcommand" $hostname:$TXTDIR_OFP/../time_offset.txt $TXTDIR/../
-
+if [ ! -z "$res" ] ;then
+   rsync -e "$sshcommand" $hostname:$TXTDIR_OFP/../time_offset.txt $TXTDIR/../
+fi

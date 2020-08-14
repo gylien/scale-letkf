@@ -13,12 +13,13 @@ timeget_OFP=`$sshcommand $hostname "cat $GFSDIR_OFP/mtime"`
 timeget=`date -d "$timeget_OFP" +%Y%m%d%H%M%S`
 
 timeget_in=$1
-[ ! -z $timeget_in ] && timeget=$timeget_in
+if [ ! -z $timeget_in ] then 
+   timeget=$timeget_in
+fi
 
 ymdh=${timeget:0:10}
 
-[ -f $GFSDIR/$timeget/sfc_wind/$testfile ] && exit
-
+if [ ! -f $GFSDIR/$timeget/sfc_wind/$testfile ];then
 
 ### TEST
 res=''
@@ -38,6 +39,8 @@ for item in $items ;do
  chmod 644 $GFSDIR/$timeget/$item/*.png
  fi
 done
+fi
+
 fi
 cd $mydir/..
 php ./monitor_plot_d1.php

@@ -16,11 +16,15 @@ timeget_OFP=`$sshcommand $hostname "cat $MSMDIR_OFP/mtime"`
 timeget=`date -d "$timeget_OFP" +%Y%m%d%H%M%S`
 
 timeget_in=$1
-[ ! -z $timeget_in ] && timeget=$timeget_in
+if [ ! -z $timeget_in ] ;then
+   timeget=$timeget_in
+fi
 
 ymdh=${timeget:0:10}
 
-[ -f $MSMDIR/$timeget/sfc_wind/$testfile ] && exit
+if [ -f $MSMDIR/$timeget/sfc_wind/$testfile ] ;then
+   exit
+fi
 
 ### TEST
 res=''
@@ -77,7 +81,9 @@ for item in $items ;do
   ftimep=`expr \( $iftime / 3 \) \* 3 \* $tint`
   ftimef=`printf %06d $ftime`
   ftimepf=`printf %06d $ftimep`
-  [ $ftimef != $ftimepf ] && ln -s $MSMDIR/$timeget/$item/${item}_f${ftimepf}.png  $MSMDIR/$timeget/$item/${item}_f${ftimef}.png 
+  if [ $ftimef != $ftimepf ] ;then
+     ln -s $MSMDIR/$timeget/$item/${item}_f${ftimepf}.png  $MSMDIR/$timeget/$item/${item}_f${ftimef}.png 
+  fi
  done
  fi
 done
