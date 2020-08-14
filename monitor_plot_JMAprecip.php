@@ -159,6 +159,7 @@ $TimeUFcstLatest=strtotime(substr($times_fcst_latest,0,4)."-".substr($times_fcst
 
 $TimeUXleft = $latestU + (1-max($NcyclePast,$FcstPastLimit)) * $CycleSecond ;
 
+$TimeUFcstLatest=max($TimeUFcstLatest,$TimeUAnalLatest);
 $TimeUAnalOldest=max($TimeUAnalOldest,$TimeUXleft);
 $TimeUintv=$TimeUAnalOldest-$TimeUXleft;
 $TimeUlengthA=$TimeUAnalLatest-$TimeUAnalOldest;

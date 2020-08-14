@@ -5,7 +5,7 @@ date_default_timezone_set('UTC');
   $cmem = 'mdet';
 
   $Xcampus = 2000 ;
-  $Ycampus = 520  ;
+  $Ycampus = 620  ;
   
   $image = ImageCreateTrueColor($Xcampus,$Ycampus);
 
@@ -106,6 +106,8 @@ date_default_timezone_set('UTC');
     $MMDDHHD2 = substr($line,4,6) ; 
     $stathh  = (substr($line,15,2) + 15) % 24 ;  
     $stat = $stathh . substr($line,17,3) ; 
+    $test_fsec=""; 
+    exec ("ls -1 data/d2/$dirname/$cmem/sfc_prcp/ | tail -n 1 | cut -c 11-16", $test_fsec, $ret);
 
   for  ( $i = (1 - $FcstPastLimit) ; $i <= 0 ; $i++ ) {
     $Xloc= $Xleft + $Xsize * ( $i - (1 - $NcyclePast) ) ;
@@ -114,7 +116,7 @@ date_default_timezone_set('UTC');
 
     $Yrect = $Yrecb + $YsizeIntvFcst ;
     $Yrecb = $Yrect + $YsizeBarFcstD2 ;
-
+    $HfcstD2 = intval($test_fsec[0]) / 3600 ;
 
     ImageFilledRectangle($image,$Xloc,$Yrect,$Xloc+($HfcstD2 * 60 / $CycleMin * $Xsize),$Yrecb,$green);
     ImageRectangle($image,$Xloc,$Yrect,$Xloc+($HfcstD2 * 60 / $CycleMin * $Xsize),$Yrecb,$gray);
@@ -175,7 +177,7 @@ $fh = fopen("monitor/monitor_fcst_d3.txt", 'rb');
   $MMDDHH = substr($line,19,6) ;
   $stat = substr($line,30,13) ;
 
-  $HfcstD3temp=6 ;
+  $HfcstD3temp=9 ;
 
 for  ( $i = (1 - $FcstPastLimit) ; $i <= $NcycleFuture ; $i++ ) {
     $Xloc= $Xleft + $Xsize * ( $i - (1 - $NcyclePast) ) ;
@@ -206,6 +208,34 @@ fclose($fh) ;
    } ;
 } ;
 
+$fh = fopen("monitor/monitor_fcst_d2.txt", 'rb');
+ while ( $line = fgets($fh)) {
+  $MMDDHH = substr($line,4,6) ;
+  $stat = substr($line,15,13) ;
+
+for  ( $i = (1 - $FcstPastLimit) ; $i <= 0 ; $i++ ) {
+    $Xloc= $Xleft + $Xsize * ( $i - (1 - $NcyclePast) ) ;
+   if ( $MMDDHH == $CycleMDH[$i] ) {
+  $Yrect = $Yrecb + $YsizeIntvFcst ;
+  $Yrecb = $Yrect + $YsizeBarFcstD2 ;
+
+  if (substr($stat,0,4) == 'plot' ){
+  ImageFilledRectangle($image,$Xloc,$Yrect,$Xloc +($HfcstD2 / $CycleH * $Xsize),$Yrecb,$green);
+}elseif (substr($stat,2,1) == '%') {
+  $istat=substr($stat,0,2);
+  ImageFilledRectangle($image,$Xloc,$Yrect,$Xloc+($istat / 100) *($HfcstD2 / $CycleH * $Xsize),$Yrecb,$green);
+}elseif (substr($stat,1,1) == '%') {
+  $istat=substr($stat,0,1);
+  ImageFilledRectangle($image,$Xloc,$Yrect,$Xloc+($istat / 100) *($HfcstD2 / $CycleH * $Xsize),$Yrecb,$green);
+};
+
+  ImageSetStyle($image,$dashedline_gray);
+  ImageRectangle($image,$Xloc,$Yrect,$Xloc+ ($HfcstD2 / $CycleH * $Xsize),$Yrecb,IMG_COLOR_STYLED); 
+  ImageString($image, 2, $Xloc+($HfcstD2 / $CycleH * $Xsize) -$Xsize + 3, $Yrecb-13, trim($stat) , $black);	
+ };
+ };
+};
+fclose($fh) ;
 
 
 /* MSM forecast */				       
@@ -306,9 +336,8 @@ $MMDDHH = date("mdH",$TimeUAnalOldest) ;
 /* JMA precip radar and nowcast 1km */				       
 /* 5min refresh  */
 
-/* TORI AEZU DISABLED
 
-  $Yrecb = 465 - $YsizeIntvFcst ;
+  $Yrecb = 555 - $YsizeIntvFcst ;
 
 $sout='';
  exec("ls -l1 data/JMA_precip/nowcast_d3/realtime/radar_* | head -n 1 | awk '{print $9}' |   rev | cut -d '/' -f 1 | rev | sed -e 's/[^0-9]//g' ",$sout  ,$ret);
@@ -332,6 +361,7 @@ $TimeUFcstLatest=strtotime(substr($times_fcst_latest,0,4)."-".substr($times_fcst
 
 $TimeUXleft = $latestU + (1-max($NcyclePast,$FcstPastLimit)) * $CycleSecond ;
 
+$TimeUFcstLatest=max($TimeUFcstLatest,$TimeUAnalLatest);
 $TimeUAnalOldest=max($TimeUAnalOldest,$TimeUXleft);
 $TimeUintv=$TimeUAnalOldest-$TimeUXleft;
 $TimeUlengthA=$TimeUAnalLatest-$TimeUAnalOldest;
@@ -349,13 +379,11 @@ $Yrecb = $Yrect + $YsizeBarJMA ;
 $MMDDHH = date("mdH",$TimeUAnalOldest) ;
 
    for ( $istep = 0 ; $istep <= ($TimeUlength/60/$PlotMin_JMA_radar) ; $istep++ ) { 
-     $XlocMarker[2][0][$istep] = $Xloc+($istep * $XsizePlot_JMA_radar);
-     $YlocMarker[2][0][$istep] = $Yrect; 
-     $InitTimes[2][0] = $MMDDHH; 
+     $XlocMarker[3][0][$istep] = $Xloc+($istep * $XsizePlot_JMA_radar);
+     $YlocMarker[3][0][$istep] = $Yrect; 
+     $InitTimes[3][0] = $MMDDHH; 
     }; 
 
-
-*/
 
 /* Legends */
 
@@ -365,9 +393,9 @@ $MMDDHH = date("mdH",$TimeUAnalOldest) ;
   ImageString($image, 5, 10, 135, " Domain 2" , $green);
   ImageString($image, 5, 10, 150, " Domain 3" , $blue);
   ImageString($image, 5, 10, 380, 'MSM' , $black);
-#  ImageString($image, 5, 10, 380, 'JMA_precip' , $black);
+  ImageString($image, 5, 10, 530, 'JMA_precip' , $black);
 #  ImageString($image, 5, 10, 425, 'anal_fcst' , $black);
-#  ImageString($image, 5, 10, 465, 'radar_nowcast' , $black);
+  ImageString($image, 5, 10, 565, 'radar_nowcast' , $black);
 
 
 

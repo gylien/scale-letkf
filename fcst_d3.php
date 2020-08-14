@@ -3,18 +3,18 @@
 date_default_timezone_set('UTC');
 $max_rtime = 24;
 
-$n_set = 3;
+$n_set = 4;
 $sets[0] = 'd3';
 $sets[1] = 'd2_d3';
 $sets[2] = 'msm_d3';
 #$sets[3] = 'JMA_precip/anal_d3/realtime';
-#$sets[4] = 'JMA_precip/nowcast_d3/realtime';
+$sets[3] = 'JMA_precip/nowcast_d3_grads/realtime';
 $set_name[0] = 'SCALE-LETKF Domain 3';
 $set_name[1] = 'SCALE-LETKF Domain 2';
 $set_name[2] = 'JMA MSM';
 
 #$set_name[1] = 'JMA precip anal/fcst';
-#$set_name[2] = 'JMA precip radar/nowcast';
+$set_name[3] = 'JMA precip radar';
 
 $n_prod = 8;
 $n_prod_msm = 2;
@@ -124,7 +124,12 @@ $n_imgs[$s]=0;
 for ($r_index = 0; $r_index < $n_rtimes[$s]; $r_index++) {
 if (isset($InitTimes[$s][$r_index])) {
 for ($p = 0; $p < $n_prod_msm; $p++) {
+
+if ($s == 1){ 
+$path = "$datadir/" . $sets[$s] . "/".$nowY.$InitTimes[$s][$r_index]. "0000/" .  $cmem ."/" .  $prods[$p] ; ###
+}else{
 $path = "$datadir/" . $sets[$s] . "/".$nowY.$InitTimes[$s][$r_index]. "0000/" .  $prods[$p] ; ###
+}
 $imgs = scandir($path);
 
 $n_img = 0;
@@ -180,8 +185,10 @@ foreach ($imgs as $img_file) {
 $n_rtimes[$s] = 1 ;
 $n_imgs[$s] = $n ;
 
+*/
+
 ### radar/nowcast 
-$s = 2 ;
+$s = 3 ;
 $p = 0 ;
 $path = "$datadir/" . "$sets[$s]";
 $imgs = scandir($path);
@@ -205,7 +212,6 @@ foreach ($imgs as $img_file) {
 $n_rtimes[$s] = 1 ;
 $n_imgs[$s] = $n ;
 
-*/
 
 ?>
 

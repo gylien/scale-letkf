@@ -2,6 +2,8 @@
 Header("Content-Type: image/png");
 date_default_timezone_set('UTC');
 
+  $cmem = 'mdet';
+
   $Xcampus = 800 ;
   $Ycampus = 520  ;
   
@@ -195,7 +197,6 @@ fclose($fh) ;
 
   $icount = 0;  
 
-  $Hfcst = 24 ;
   $Yrecb = 220 - $YsizeIntvFcst ;
 
 $stimes='';
@@ -204,8 +205,10 @@ $stimes='';
  foreach ($stimes as $line) {
  $test_fsec='';
  $dir=substr($line,0,14);
- exec ("ls -1 data/d2/$dir/sfc_prcp/ | tail -n 1 | cut -c 11-16", $test_fsec, $ret);
-  if ( $ret == 0 && intval($test_fsec[0]) == $Hfcst * 3600 ) {
+ exec ("ls -1 data/d2/$dir/$cmem/sfc_prcp/ | tail -n 1 | cut -c 11-16", $test_fsec, $ret);
+#  if ( $ret == 0 && intval($test_fsec[0]) == $Hfcst * 3600 ) {
+  if ( $ret == 0 ) {
+    $Hfcst = intval($test_fsec[0]) / 3600 ;
     $MMDDHH = substr($line,4,6) ;
     $stathh  = (substr($line,15,2) + 15) % 24 ;  
     $stat = $stathh . substr($line,17,3) ; 
@@ -305,13 +308,15 @@ for  ( $i = (1 - $FcstPastLimit) ; $i <= 0 ; $i++ ) {
 /* 1h refresh (30min not suppoted yet ) */
 
 /* Turned off since 2020.04.01 */
+/* Radar data is instead used since 2020.07.14 */
 
-/*
   $Hfcst = 24 ;
   $Yrecb = 480 - $YsizeIntvFcst ;
 
 $sout='';
 
+
+/*
  exec("ls -l1 data/JMA_precip/anal_d2/realtime/anal_* | head -n 1 | awk '{print $9}' |   rev | cut -d '/' -f 1 | rev | sed -e 's/[^0-9]//g' ",$sout  ,$ret);
 $times_anal_oldest=$sout[0];
 
@@ -325,8 +330,24 @@ $times_fcst_oldest=$sout[0];
 
 $sout='';
  exec("ls -l1 data/JMA_precip/anal_d2/realtime/fcst_* | tail -n 1 | awk '{print $9}' |  rev | cut -d '/' -f 1 | rev | sed -e 's/[^0-9]//g' ",$sout  ,$ret);
-
 $times_fcst_latest=$sout[0];
+*/
+
+ exec("ls -l1 data/JMA_precip/nowcast_d2/realtime/radar_*0000.png | head -n 1 | awk '{print $9}' |   rev | cut -d '/' -f 1 | rev | sed -e 's/[^0-9]//g' ",$sout  ,$ret);
+$times_anal_oldest=$sout[0];
+
+$sout='';
+ exec("ls -l1 data/JMA_precip/nowcast_d2/realtime/radar_*0000.png | tail -n 1 | awk '{print $9}' |   rev | cut -d '/' -f 1 | rev | sed -e 's/[^0-9]//g' ",$sout  ,$ret);
+$times_anal_latest=$sout[0];
+
+$sout='';
+ exec("ls -l1 data/JMA_precip/nowcast_d2/realtime/nowcast_*0000.png | head -n 1 | awk '{print $9}' |  rev | cut -d '/' -f 1 | rev | sed -e 's/[^0-9]//g' ",$sout  ,$ret);
+$times_fcst_oldest=$sout[0];
+
+$sout='';
+ exec("ls -l1 data/JMA_precip/nowcast_d2/realtime/nowcast_*0000.png | tail -n 1 | awk '{print $9}' |  rev | cut -d '/' -f 1 | rev | sed -e 's/[^0-9]//g' ",$sout  ,$ret);
+$times_fcst_latest=$sout[0];
+
 
 $TimeUAnalOldest=strtotime(substr($times_anal_oldest,0,4)."-".substr($times_anal_oldest,4,2)."-".substr($times_anal_oldest,6,2)." ".substr($times_anal_oldest,8,2).":00:00");
 $TimeUAnalLatest=strtotime(substr($times_anal_latest,0,4)."-".substr($times_anal_latest,4,2)."-".substr($times_anal_latest,6,2)." ".substr($times_anal_latest,8,2).":00:00");
@@ -336,6 +357,7 @@ $TimeUFcstLatest=strtotime(substr($times_fcst_latest,0,4)."-".substr($times_fcst
 $TimeUXleft = $latestU + (1-max($NcyclePast,$FcstPastLimit)) * $CycleSecond  +$CycleSecond ;
 
 
+$TimeUFcstLatest=max($TimeUFcstLatest,$TimeUAnalLatest);
 $TimeUAnalOldest=max($TimeUAnalOldest,$TimeUXleft);
 
 $MMDDHH = date("mdH",$TimeUAnalOldest) ;
@@ -357,7 +379,6 @@ $Yrecb = $Yrect + $YsizeBarFcst ;
      $YlocMarker[2][0][$istep] = $Yrect; 
      $InitTimes[2][0] = $MMDDHH; 
     }; 
-*/
 
 /*
    for ( $istep = 0 ; $istep <= ($TimeUlengthF/3600/$PlotH-1) ; $istep++ ) { 
@@ -376,7 +397,7 @@ $Yrecb = $Yrect + $YsizeBarFcst ;
   ImageString($image, 5, 10, 233, 'Forecast' , $black);
   ImageString($image, 5, 10, 248, 'online_nest' , $black);
   ImageString($image, 5, 10, 363, 'MSM_Forecast' , $black);
-/*  ImageString($image, 5, 10, 478, 'JMA_precip' , $black);*/
+  ImageString($image, 5, 10, 478, 'JMA_precip' , $black);
 
 /* Vertical lines */
 

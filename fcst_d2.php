@@ -10,11 +10,12 @@ $n_set = 3;
 
 $sets[0] = 'd2';
 $sets[1] = 'msm';
-$sets[2] = 'JMA_precip/anal_d2/realtime';
+#$sets[2] = 'JMA_precip/anal_d2/realtime';
+$sets[2] = 'JMA_precip/nowcast_d2/realtime';
 
 $set_name[0] = 'SCALE-LETKF 6km mdet';
 $set_name[1] = 'JMA MSM';
-$set_name[2] = 'JMA precip anal/fcst';
+$set_name[2] = 'JMA precip radar';
 
 $n_prod = 9;
 $prods[0] = 'sfc_prcp';
@@ -61,6 +62,7 @@ $prods_f[8] = '500hPa [T+RH+Wind]';
 #$prods_f[5] = 'Surface [SnowTot]';
 
 $datadir = 'data';
+$cmem='mdet' ;
 
 ###
 
@@ -131,6 +133,11 @@ for ($p = 0; $p < $n_prod; $p++) {
 $prod_l = $prods[$p] ;
 
 $path = "$datadir/" . $sets[$s] . "/".$rtimes[$s][$r_index]."/$prod_l";
+if  ($s == 0){
+$path = "$datadir/" . $sets[$s] . "/".$rtimes[$s][$r_index]."/".$cmem."/$prod_l";
+}
+#echo $path;
+#exit;
 
 $imgs = scandir($path);
 $n_img = 0;
@@ -156,21 +163,22 @@ for ($n = 0; $n < $n_img; $n++){
 }
 
 
-/*
+
 $s = $n_set-1 ;
 $p = 0;
 $path = "$datadir/" . "$sets[$s]";
 $imgs = scandir($path);
 $n = 0;
 foreach ($imgs as $img_file) {
-  if (ereg ("anal_([0-9]{14}).png", $img_file, $regs) || ereg  ("fcst_([0-9]{14}).png", $img_file, $regs)) {
+#  if (ereg ("anal_([0-9]{14}).png", $img_file, $regs) || ereg  ("fcst_([0-9]{14}).png", $img_file, $regs)) {
+  if (ereg ("radar_([0-9]{10})0000.png", $img_file, $regs) || ereg  ("nowcast_([0-9]{10})0000.png", $img_file, $regs)) {
     if (intval(substr($regs[1],4,6)) >= intval($InitTimes[$s][0]) ) {
     $imgsrc[$s][0][$n][$p] = "$path/" .$img_file;
     $n++ ;
   }
   }
 }
-*/
+
 
 
 
