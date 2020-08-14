@@ -121,6 +121,7 @@ $n_imgs[$s] = $n ;
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf8">
+<meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Cache-Control" content="no-cache">
 <meta http-equiv="Refresh" content="60">
 <title>Model forecasts quicklook for domain 4 realtime </title>
