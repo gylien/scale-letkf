@@ -44,7 +44,15 @@ while ((t <= 120)); do
   if [ ! -s "gfs.$YYYYMMDDHHMMSS_fcst" ]; then
     rm -f gfs.t${HH}z.pgrb2f${tf}
 #    wget --cache=off https://nomads.ncep.noaa.gov/pub/data/nccf/com/gfs/prod/gfs.${YYYYMMDDHH}/gfs.t${HH}z.pgrb2.0p50.f${tf}
-    wget --cache=off https://nomads.ncep.noaa.gov/pub/data/nccf/com/gfs/prod/gfs.${YYYY}${MM}${DD}/${HH}/gfs.t${HH}z.pgrb2.0p50.f${tf}
+  
+    itry=0
+    while [ $itry -le 10 ] ; do
+      wget --cache=off --timeout=20 https://nomads.ncep.noaa.gov/pub/data/nccf/com/gfs/prod/gfs.${YYYY}${MM}${DD}/${HH}/gfs.t${HH}z.pgrb2.0p50.f${tf}
+      [ $? == 0 ] && break
+       itry=`expr $itry + 1`
+       echo "retry " $itry " ..."
+    done
+
     if [ -s "gfs.t${HH}z.pgrb2.0p50.f${tf}" ]; then
       mv -f gfs.t${HH}z.pgrb2.0p50.f${tf} gfs.$YYYYMMDDHHMMSS_fcst
       now=`date -u +'%Y-%m-%d %H:%M:%S'`
