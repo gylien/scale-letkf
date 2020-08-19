@@ -7,18 +7,20 @@ cd "$(dirname "$0")"
 PLACE=Saitama
 DX=$1
 STIME=$2
+HOURS=$3
 
-NCYCLE=120
-WTIME_L="01:30:00"
-NMEM=50
+NCYCLE=`expr 120 \* $HOURS`
+WTIME_L="`printf %02d $HOURS`:30:00"
+NMEM=20
 DACYCLE_RUN_FCST_TIME=1800
-#MAX_DACYCLE_RUN_FCST=$NCYCLE
-MAX_DACYCLE_RUN_FCST=110
+MAX_DACYCLE_RUN_FCST=`expr $NCYCLE - 10`
 NUM_DACYCLE_FCST_MEM=10
 
 intv_sec=`expr \( $NCYCLE - 1 \) \* 30`
 STIME_in="${STIME:0:4}-${STIME:4:2}-${STIME:6:2} ${STIME:8:2}:${STIME:10:2}:${STIME:12:2}"
 ETIME=`date -d "${intv_sec} second ${STIME_in}" +'%Y%m%d%H%M%S'`
+
+BG_NFILES=`expr $HOURS + 1` ### for extended forecast
 
 [ "$DX" == "1km" ]            && NNODES=`expr \( $NMEM + 2 + $NUM_DACYCLE_FCST_MEM \) ` ### 1km / 64domain
 [ "$DX" == "500m_verysmall" ] && NNODES=`expr \( $NMEM + 2 + $NUM_DACYCLE_FCST_MEM \) ` ### 500m / 64domain
@@ -38,6 +40,7 @@ cp config/${CONFIG}/config.* .
 cat config.main.ofp | \
     sed -e "s/<MEMBER>/${NMEM}/g" | \
     sed -e "s/<NNODES>/${NNODES}/g"| \
+    sed -e "s/<BG_NFILES>/${BG_NFILES}/g" | \
     sed -e "s#<INDIR>#\${OUTDIR}#g" | \
     sed -e "s#<BGDIR>#\${DIR}/run/bgdata#g"  \
     > config.main
@@ -64,12 +67,18 @@ cat config/${CONFIG}/config.cycle | \
 
 ./cycle_ofp.sh > cycle_ofp.log 2>&1 || exit $?
 
-intv_sec_h=`expr \( $NCYCLE \) \* 30`
-ETIMEh=`date -d "${intv_sec_h} second ${STIME_in}" +'%Y%m%d%H%M%S'`
+intv_hour=$HOURS
+ETIMEh=`date -d "${intv_hour} hour ${STIME_in}" +'%Y%m%d%H%M%S'`
+./move_restart.sh $STIME $ETIMEh ### not background
 
-./move_restart.sh $STIME $ETIMEh
+while [ $intv_hour -gt 1 ] ;do
+  intv_hour=`expr $intv_hour - 1`
+  ETIMEh=`date -d "${intv_hour} hour ${STIME_in}" +'%Y%m%d%H%M%S'`
+  ./move_restart.sh $STIME $ETIMEh & ### background
+done
 
-./store_images.sh dacycle_${DX}_${STIME} $OUTDIR/${STIME}/dafcst &> log_store_images & 
+./store_images.sh dacycle_${DX}_${STIME} $OUTDIR &> log_store_images & 
+
 #
 #-------------------------------------------------------------------------------
 

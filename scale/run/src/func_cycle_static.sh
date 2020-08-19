@@ -1054,7 +1054,7 @@ EOF
             -e "/!--FILE_AGGREGATE--/a FILE_AGGREGATE = ${FILE_AGGREGATE}," \
             -e "/!--TIME_STARTDATE--/a TIME_STARTDATE = ${time:0:4}, ${time:4:2}, ${time:6:2}, ${time:8:2}, ${time:10:2}, ${time:12:2}," \
             -e "/!--TIME_DURATION--/a TIME_DURATION = ${TIME_DURATION}," \
-            -e "/!--TIME_DT_ATMOS_RESTART--/a TIME_DT_ATMOS_RESTART = ${TIME_DURATION}," \
+            -e "/!--TIME_DT_ATMOS_RESTART--/a TIME_DT_ATMOS_RESTART = ${RESTART_INT}.D0," \
             -e "/!--TIME_DT_OCEAN_RESTART--/a TIME_DT_OCEAN_RESTART = ${LCYCLE}.D0," \
             -e "/!--TIME_DT_LAND_RESTART--/a TIME_DT_LAND_RESTART = ${LCYCLE}.D0," \
             -e "/!--TIME_DT_URBAN_RESTART--/a TIME_DT_URBAN_RESTART = ${LCYCLE}.D0," \
@@ -1091,12 +1091,21 @@ EOF
         ATMOS_BOUNDARY_IN_BASENAME=${INDIR[$d]}/${bdy_start_time}/bdy/${mem_bdy}/boundary
       else
         ATMOS_BOUNDARY_IN_BASENAME=${BGDIR}/${parent_start_time}/bdy/${mem_bdy}/boundary_$(datetime_scale $parent_start_time)
+        ATMOS_BOUNDARY_IN_BASENAMES=
+      for j in `seq $BG_NFILES`;do      
+        ATMOS_BOUNDARY_IN_BASENAMES="$ATMOS_BOUNDARY_IN_BASENAMES '${BGDIR}/${parent_start_times[$j]}/bdy/${mem_bdy}/boundary_$(datetime_scale ${parent_start_times[$j]})', "
+      done
       fi
-
       conf="$(echo "$conf" | \
           sed -e "/!--ATMOS_BOUNDARY_IN_BASENAME--/a ATMOS_BOUNDARY_IN_BASENAME = \"${ATMOS_BOUNDARY_IN_BASENAME}\"," \
-              -e "/!--ATMOS_BOUNDARY_START_DATE--/a ATMOS_BOUNDARY_START_DATE = ${bdy_start_time:0:4}, ${bdy_start_time:4:2}, ${bdy_start_time:6:2}, ${bdy_start_time:8:2}, ${bdy_start_time:10:2}, ${bdy_start_time:12:2}," \
-              -e "/!--ATMOS_BOUNDARY_UPDATE_DT--/a ATMOS_BOUNDARY_UPDATE_DT = $BDYINT.D0,")"
+              -e "/!--ATMOS_BOUNDARY_START_DATE--/a ATMOS_BOUNDARY_START_DATE = ${bdy_start_timef}," \
+              -e "/!--ATMOS_BOUNDARY_UPDATE_DT--/a ATMOS_BOUNDARY_UPDATE_DT = $BDYINT.D0," \
+              -e "/!--ATMOS_BOUNDARY_NFILES--/a ATMOS_BOUNDARY_NFILES = ${BG_NFILES}," \
+              -e "/!--ATMOS_BOUNDARY_IN_BASENAMES--/a ATMOS_BOUNDARY_IN_BASENAMES = ${ATMOS_BOUNDARY_IN_BASENAMES}" )"
+      for j in `seq $BG_NFILES -1 1` ;do
+        conf="$(echo "$conf" | sed  -e "/!--ATMOS_BOUNDARY_START_DATES--/a ATMOS_BOUNDARY_START_DATES(:,$j) = ${bdy_start_timefs[$j]},")"
+      done
+
     fi
     if ((DACYCLE == 1)); then
       conf="$(echo "$conf" | \
@@ -1322,6 +1331,10 @@ EOF
     ANAL_MDET_OUT_FREQ=0
     GUES_MEAN_OUT_FREQ=0 # DEBUG
 
+###### hourly restart output
+    ANAL_OUT_FREQ=120
+######
+
     cat $conf_file_src | \
         sed -e "/!--OBS_IN_NUM--/a OBS_IN_NUM = $OBSNUM," \
             -e "/!--OBS_IN_NAME--/a OBS_IN_NAME = $OBS_IN_NAME_LIST" \
@@ -1347,7 +1360,7 @@ EOF
             -e "/!--GUES_SPRD_OUT_FREQ--/a GUES_SPRD_OUT_FREQ = ${GUES_SPRD_OUT_FREQ}," \
             -e "/!--GUES_SPRD_OUT_BASENAME--/a GUES_SPRD_OUT_BASENAME = \"${GUES_SPRD_OUT_BASENAME}\"," \
             -e "/!--ANAL_OUT_BASENAME--/a ANAL_OUT_BASENAME = \"${ANAL_OUT_BASENAME}\"," \
-            -e "/!--ANAL_OUT_FREQ--/a ANAL_OUT_FREQ = 100000," \
+            -e "/!--ANAL_OUT_FREQ--/a ANAL_OUT_FREQ = ${ANAL_OUT_FREQ}," \
             -e "/!--ANAL_MEAN_OUT_FREQ--/a ANAL_MEAN_OUT_FREQ = ${ANAL_MEAN_OUT_FREQ}," \
             -e "/!--ANAL_MDET_OUT_FREQ--/a ANAL_MDET_OUT_FREQ = ${ANAL_MDET_OUT_FREQ}," \
             -e "/!--ANAL_SPRD_OUT_FREQ--/a ANAL_SPRD_OUT_FREQ = ${ANAL_SPRD_OUT_FREQ}," \

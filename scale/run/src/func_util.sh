@@ -697,6 +697,14 @@ while ((parent_start_time > TIME)); do
   parent_start_time=$(datetime $parent_start_time -${PARENT_LCYCLE} s)
 done
 
+declare -a -g parent_start_times=()
+declare -a -g bdy_start_times=()
+declare -a -g bdy_start_timefs=()
+for j in `seq $BG_NFILES` ; do 
+  offset=`expr \( $j - 1 \) \* ${PARENT_LCYCLE}`
+  parent_start_times[$j]=$(datetime $parent_start_time ${offset} s)
+done
+
 #-------------------------------------------------------------------------------
 # compute $bdy_start_time, $ntsteps_skip, and $ntsteps_total based on $parent_start_time and $PARENT_FOUT
 # (assume $bdy_start_time <= $TIME)
@@ -709,6 +717,15 @@ while ((bdy_start_time <= TIME)); do
   ntsteps_skip=$((ntsteps_skip+1))
 done
 bdy_start_time=$bdy_start_time_prev
+
+bdy_start_timef="${bdy_start_time:0:4}, ${bdy_start_time:4:2}, ${bdy_start_time:6:2}, ${bdy_start_time:8:2}, ${bdy_start_time:10:2}, ${bdy_start_time:12:2}"
+
+
+
+for j in `seq $BG_NFILES` ; do 
+ bdy_start_times[$j]=${parent_start_times[$j]}
+ bdy_start_timefs[$j]="${bdy_start_times[$j]:0:4}, ${bdy_start_times[$j]:4:2}, ${bdy_start_times[$j]:6:2}, ${bdy_start_times[$j]:8:2}, ${bdy_start_times[$j]:10:2}, ${bdy_start_times[$j]:12:2}"
+done
 
 local ntsteps_total=$(((FCSTLEN-1)/PARENT_FOUT+2 + ntsteps_skip))
 

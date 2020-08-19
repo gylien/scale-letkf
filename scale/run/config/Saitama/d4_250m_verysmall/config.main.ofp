@@ -13,12 +13,13 @@ DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
 
 
 OUTPUT="${DIR}/../../../result/ope"
-EXP4=d4_500m
+EXP4=d4_250m_verysmall
 EXP3=d3
 EXP2=d2
 
 OUTDIR="${OUTPUT}/${EXP4}"
 
+BG_NFILES=<BG_NFILES>
 BGDIR=<BGDIR>
 INDIR=<INDIR>
 
@@ -93,7 +94,7 @@ BDY_ROTATING=0          # 0: Use a same series of boundary files for all initial
                         # 1: Use different series of boundary files for different initial time
 
 BDYINT=600
-BDYCYCLE_INT=21600
+BDYCYCLE_INT=3600
 
 PARENT_REF_TIME=
 
