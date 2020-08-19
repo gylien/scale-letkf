@@ -7,6 +7,9 @@ wkdir="$(cd "$( dirname "$0" )" && pwd)"
 
 rubypath=$wkdir/send_img_MTI
  
+
+scale_ver=longtest
+
 #-----------------------------
 running=$wkdir'/running_dacycle_d4'
 
@@ -33,7 +36,9 @@ isec=0
 cyclesec=60
 limitsec=86400
 
-END_TIME="2020-08-07 03:00:00"
+cycle_hour=6   ########
+
+END_TIME="2020-08-24 09:00:00"
 
 rundir=${realtimebase}/scale_${scale_ver}/scale-letkf_${letkf_ver}_d4/scale/run
 
@@ -64,7 +69,7 @@ cd $rundir
 
   echo " $INIT_TIME start "
 
-  nohup ./start.sh "$dx_d4" "$INIT_TIMEf" &> admin_cycle_d4.log.${INIT_TIMEf}
+  nohup ./start.sh "$dx_d4" "$INIT_TIMEf" $cycle_hour  &> admin_cycle_d4.log.${INIT_TIMEf}
 #  nohup ./restart.sh "$dx_d4" "$INIT_TIMEf" &> admin_cycle_d4.log.${INIT_TIMEf}
  res=$?
  if [ "$res" != "0" ]; then
@@ -74,11 +79,21 @@ cd $rundir
   echo " $INIT_TIME complete "
  fi
 
-while [ `date -ud "1 hour $INIT_TIME" +%s` -le `date -ud "$END_TIME" +%s` ] ; do
- INIT_TIME="$(date -ud "1 hour $INIT_TIME" +'%Y-%m-%d %H:00:00')"
+
+#####
+
+#echo "stop here"
+#exit 0
+
+#####
+
+
+
+while [ `date -ud "$cycle_hour hour $INIT_TIME" +%s` -le `date -ud "$END_TIME" +%s` ] ; do
+ INIT_TIME="$(date -ud "$cycle_hour hour $INIT_TIME" +'%Y-%m-%d %H:00:00')"
  INIT_TIMEf="$(date -ud "$INIT_TIME" +'%Y%m%d%H0000')"
   echo " $INIT_TIME start "
- nohup ./restart.sh "$dx_d4" "$INIT_TIMEf" &> admin_cycle_d4.log.${INIT_TIMEf}
+ nohup ./restart.sh "$dx_d4" "$INIT_TIMEf" $cycle_hour &> admin_cycle_d4.log.${INIT_TIMEf}
  res=$?
  if [ "$res" != "0" ]; then
   echo " $INIT_TIME abort "
