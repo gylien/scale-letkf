@@ -19,6 +19,7 @@ DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
 
 EXP4=D4_500m_TEST_DEFAULT_0604_MEAN_PQV_ALL
 
+BG_NFILES=1
 
 OUTDIR="/work/hp150019/share/honda/SCALE-LETKF/AIP_D4_VERIFY/${EXP4}"
 INDIR="/work/hp150019/share/honda/SCALE-LETKF/TEST_INPUT/D4_0515"

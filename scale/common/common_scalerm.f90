@@ -22,6 +22,7 @@ module common_scalerm
     myrank_use_obs, &
     mydom, &
     MPI_COMM_a, nprocs_a, myrank_a, &
+    MPI_COMM_ae, nprocs_ae, myrank_ae, &
     MPI_COMM_da, nprocs_da, myrank_da, &
     MPI_COMM_d, nprocs_d, myrank_d, &
     MPI_COMM_o, nprocs_o, myrank_o
@@ -471,6 +472,7 @@ subroutine scalerm_setup(execname)
         stop 1
       end if
 
+
 #ifdef SCALEUV
 
 
@@ -495,6 +497,8 @@ subroutine scalerm_setup(execname)
 
       ! member
       call IO_filename_replace_setup(memf_notation, scalerm_memf)
+
+
 #endif
 
       if (trim(CONF_FILES) /= '') then
@@ -609,6 +613,15 @@ subroutine scalerm_setup(execname)
 
   call MPI_COMM_SIZE(MPI_COMM_a, nprocs_a, ierr)
   call MPI_COMM_RANK(MPI_COMM_a, myrank_a, ierr)
+
+
+  color = myrank_d
+  key = myrank_to_mem(1) - 1
+
+  call MPI_COMM_SPLIT(MPI_COMM_WORLD, color, key, MPI_COMM_ae, ierr)
+
+  call MPI_COMM_SIZE(MPI_COMM_ae, nprocs_ae, ierr)
+  call MPI_COMM_RANK(MPI_COMM_ae, myrank_ae, ierr)
 
   call mpi_timer('scalerm_setup:mpi_comm_split_a:', 2, barrier=MPI_COMM_WORLD)
 
@@ -804,13 +817,18 @@ subroutine scalerm_setup(execname)
 
   call mpi_timer('scalerm_setup:other_setup10:', 2, barrier=MPI_COMM_WORLD)
 
-  if (exec_model .and. scalerm_run) then
+  if (exec_model .and. scalerm_run .and. myrank_ae == 0  ) then
+    ! Read only for 0001
+    !
     ! setup topography
     call TOPO_setup
 
     ! setup land use category index/fraction
     call LANDUSE_setup( OCEAN_do, (.not. URBAN_land), LAKE_do )
   end if
+
+  call bcast_topo( MPI_COMM_ae,  myrank_ae )
+  call bcast_land( MPI_COMM_ae,  myrank_ae )
 
   call mpi_timer('scalerm_setup:other_setup11:', 2, barrier=MPI_COMM_WORLD)
 
@@ -1291,6 +1309,111 @@ subroutine set_dafcst( ncycle, dafcst_slist, dafcst_list_last, dafcst_list_sum )
 
   return
 end subroutine set_dafcst
+
+subroutine bcast_topo( global_comm, m )
+  use scale_precision, only: RP
+  use scale_topography, only: &
+      TOPO_Zsfc
+  use scale_atmos_grid_cartesC_index, only: &
+      IA, JA
+  use scale_comm_cartesC, only: &
+      COMM_datatype
+  implicit none
+
+  integer, intent(in) :: global_comm
+  integer, intent(in) :: m
+
+  integer :: ierr
+
+  if (m /= 0 ) then
+    allocate( TOPO_Zsfc(IA,JA) )
+    TOPO_Zsfc(:,:) = 0.0_RP
+  endif
+  call MPI_BCAST( TOPO_Zsfc, IA*JA, COMM_datatype, 0, global_comm, ierr )
+
+  return
+end subroutine bcast_topo
+
+subroutine bcast_land( global_comm, m )
+  use scale_precision, only: RP
+  use scale_atmos_grid_cartesC_index, only: &
+      IA, JA
+  use scale_landuse, only: &
+    LANDUSE_frac_land,  &
+    LANDUSE_frac_urban, &
+    LANDUSE_frac_lake,  &
+    LANDUSE_frac_PFT,   &
+    LANDUSE_index_PFT,  &
+    LANDUSE_fact_ocean, &
+    LANDUSE_fact_land,  &
+    LANDUSE_fact_urban, &
+    LANDUSE_fact_lake,  &
+    LANDUSE_exists_ocean, &
+    LANDUSE_exists_land,  &
+    LANDUSE_exists_urban, &
+    LANDUSE_exists_lake,  &
+    LANDUSE_PFT_mosaic
+  use scale_comm_cartesC, only: &
+      COMM_datatype
+  implicit none
+
+  integer, intent(in) :: global_comm
+  integer, intent(in) :: m
+
+  integer :: ierr
+
+  if (m /= 0 ) then
+    allocate( LANDUSE_frac_land (IA,JA) )
+    allocate( LANDUSE_frac_urban(IA,JA) )
+    allocate( LANDUSE_frac_lake (IA,JA) )
+    LANDUSE_frac_land (:,:) = 0.0_RP
+    LANDUSE_frac_urban(:,:) = 0.0_RP
+    LANDUSE_frac_lake (:,:) = 0.0_RP
+
+    allocate( LANDUSE_index_PFT(IA,JA,LANDUSE_PFT_mosaic) )
+    allocate( LANDUSE_frac_PFT (IA,JA,LANDUSE_PFT_mosaic) )
+    LANDUSE_frac_PFT (:,:,:) = 0.0_RP
+    LANDUSE_frac_PFT (:,:,1) = 1.0_RP ! tentative, mosaic is off
+    LANDUSE_index_PFT(:,:,:) = 1      ! default
+
+    allocate( LANDUSE_fact_ocean(IA,JA) )
+    allocate( LANDUSE_fact_land (IA,JA) )
+    allocate( LANDUSE_fact_urban(IA,JA) )
+    allocate( LANDUSE_fact_lake (IA,JA) )
+    LANDUSE_fact_ocean(:,:) = 0.0_RP
+    LANDUSE_fact_land (:,:) = 0.0_RP
+    LANDUSE_fact_urban(:,:) = 0.0_RP
+    LANDUSE_fact_lake (:,:) = 0.0_RP
+
+    allocate( LANDUSE_exists_ocean(IA,JA) )
+    allocate( LANDUSE_exists_land (IA,JA) )
+    allocate( LANDUSE_exists_urban(IA,JA) )
+    allocate( LANDUSE_exists_lake (IA,JA) )
+    LANDUSE_exists_ocean(:,:) = .false.
+    LANDUSE_exists_land (:,:) = .false.
+    LANDUSE_exists_urban(:,:) = .false.
+    LANDUSE_exists_lake (:,:) = .false.
+  endif
+
+  call MPI_BCAST( LANDUSE_frac_land,  IA*JA, COMM_datatype, 0, global_comm, ierr )
+  call MPI_BCAST( LANDUSE_frac_urban, IA*JA, COMM_datatype, 0, global_comm, ierr )
+  call MPI_BCAST( LANDUSE_frac_lake,  IA*JA, COMM_datatype, 0, global_comm, ierr )
+
+  call MPI_BCAST( LANDUSE_frac_PFT,  IA*JA*LANDUSE_PFT_mosaic, COMM_datatype, 0, global_comm, ierr )
+  call MPI_BCAST( LANDUSE_index_PFT,  IA*JA*LANDUSE_PFT_mosaic, MPI_INTEGER, 0, global_comm, ierr )
+
+  call MPI_BCAST( LANDUSE_fact_ocean, IA*JA, COMM_datatype, 0, global_comm, ierr )
+  call MPI_BCAST( LANDUSE_fact_land,  IA*JA, COMM_datatype, 0, global_comm, ierr )
+  call MPI_BCAST( LANDUSE_fact_urban, IA*JA, COMM_datatype, 0, global_comm, ierr )
+  call MPI_BCAST( LANDUSE_fact_lake,  IA*JA, COMM_datatype, 0, global_comm, ierr )
+
+  call MPI_BCAST( LANDUSE_exists_ocean, IA*JA, MPI_LOGICAL, 0, global_comm, ierr )
+  call MPI_BCAST( LANDUSE_exists_land,  IA*JA, MPI_LOGICAL, 0, global_comm, ierr )
+  call MPI_BCAST( LANDUSE_exists_urban, IA*JA, MPI_LOGICAL, 0, global_comm, ierr )
+  call MPI_BCAST( LANDUSE_exists_lake,  IA*JA, MPI_LOGICAL, 0, global_comm, ierr )
+
+  return
+end subroutine bcast_land
 
 function true_mem( dafcst_slist1d )
   implicit none

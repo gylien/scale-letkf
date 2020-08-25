@@ -71,6 +71,7 @@ module common_mpi_scale
   integer,save :: MPI_COMM_da, nprocs_da, myrank_da
   integer,save :: MPI_COMM_d, nprocs_d, myrank_d
   integer,save :: MPI_COMM_e, nprocs_e, myrank_e
+  integer,save :: MPI_COMM_ae, nprocs_ae, myrank_ae
   integer,save :: MPI_COMM_ef, nprocs_ef, myrank_ef
   integer,save :: MPI_COMM_o, nprocs_o, myrank_o
 
@@ -148,6 +149,8 @@ subroutine set_common_mpi_scale
       IHALO, JHALO
   use scale_mapprojection, only: &
       MAPPROJECTION_xy2lonlat
+  use scale_atmos_grid_cartesC_index, only: &
+      IA, JA
   implicit none
   integer :: color, key
   integer :: ierr
@@ -167,6 +170,7 @@ subroutine set_common_mpi_scale
 
   color = myrank_to_pe
   key = myrank_to_mem(1) - 1
+
 
   if (myrank_use_da) then
     ! DA members
@@ -689,6 +693,10 @@ subroutine set_scalelib(execname)
 
   call PRC_GLOBAL_setup( .false.,    & ! [IN]
                          global_comm ) ! [IN]
+
+  color = myrank_to_pe
+  key = myrank_to_mem(1) - 1
+  call MPI_COMM_SPLIT( MPI_COMM_WORLD, color, key, MPI_comm_ae, ierr )
 
   call mpi_timer('set_scalelib:mpi_comm_split_d_global:', 2)
 
