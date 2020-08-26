@@ -18,7 +18,7 @@ PARENT_REF_TIME=$1
 STIME=$2
 FCSTLEN=$3
 
-RCSGRP=${RCSGRP:-"regular-flat"}
+RSCGRP=${RSCGRP:-"regular-flat"}
 GNAME=${GNAME:-`id -ng`}
 
 time_int=600 ### plot interval
@@ -144,7 +144,7 @@ jobsh="${RUNDIR}/job_sno.sh"
 
 cat << EOF >> $jobsh
 #!/bin/sh
-#PJM -L rscgrp=${RCSGRP}
+#PJM -L rscgrp=${RSCGRP}
 #PJM -L node=${SNO_NODE}
 #PJM -L elapse="00:30:00"
 #PJM --mpi proc=${NP_TOTAL}
@@ -263,7 +263,7 @@ jobsh="${RUNDIR}/job_sno.sh"
 
 cat << EOF >> $jobsh
 #!/bin/sh
-#PJM -L rscgrp=${RCSGRP}
+#PJM -L rscgrp=${RSCGRP}
 #PJM -L node=${SNO_NODE}
 #PJM -L elapse="00:30:00"
 #PJM --mpi proc=${NP_TOTAL}

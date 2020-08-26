@@ -222,7 +222,7 @@ echo 'exec d4 init...'
 
 spinup_d3=3600
 intv_d4=3600
-fcstlen_d4=5400
+fcstlen_d4=3600
 
 cd ../run_d4_init
  STIME_f=`date -d "${STIME:0:4}-${STIME:4:2}-${STIME:6:2} ${STIME:8:2}:${STIME:10:2}:${STIME:12:2}" +"%F %T"`
