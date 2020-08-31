@@ -614,9 +614,15 @@ done
 time=$STIME
 atime=$(datetime $time $LCYCLE s)
 time_bdy_start_prev=0
-loop=0
-while ((time <= ETIME)); do
-  loop=$((loop+1))
+
+
+### The loop below is not nessesary for D4 dacycle with direct transfer
+
+#####loop=0
+#####while ((time <= ETIME)); do
+#####  loop=$((loop+1))
+
+loop=1
 
 #  for s in $(seq $nsteps); do
 #    if (((s_flag == 0 || s >= ISTEP) && (e_flag == 0 || s <= FSTEP))); then
@@ -646,6 +652,7 @@ while ((time <= ETIME)); do
 
   obstime $time
 
+  echo "bdy_setting..."
   bdy_setting $time $CYCLEFLEN $BDYCYCLE_INT "$BDYINT" "$PARENT_REF_TIME" "$BDY_SINGLE_FILE"
 
 #  if ((BDY_FORMAT != 0)); then
@@ -1400,9 +1407,11 @@ EOF
   ######
 
   #-------------------
-  time=$(datetime $time $LCYCLE s)
-  atime=$(datetime $time $LCYCLE s)
-done
+
+
+####  time=$(datetime $time $LCYCLE s)
+####  atime=$(datetime $time $LCYCLE s)
+####  done
 
 echo
 
