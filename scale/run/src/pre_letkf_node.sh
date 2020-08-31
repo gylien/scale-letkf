@@ -123,6 +123,7 @@ cat $TMPDAT/conf/config.nml.letkf | \
         -e "/!--RELAX_SPREAD_OUT_BASENAME--/a RELAX_SPREAD_OUT_BASENAME = \"${TMPOUT}/${ATIME}/diag/rtps/init\"," \
         -e "/!--NOBS_OUT--/a NOBS_OUT = ${NOBS_OUT_TF}," \
         -e "/!--NOBS_OUT_BASENAME--/a NOBS_OUT_BASENAME = \"${TMPOUT}/${ATIME}/diag/nobs/init\"," \
+        -e "/!--CDF_FP_FILENAME--/a CDF_FP_FILENAME = \"${CDF_FP_FILENAME}\"," \
         -e "/!--NNODES--/a NNODES = $NNODES," \
         -e "/!--PPN--/a PPN = $PPN," \
         -e "/!--MEM_NODES--/a MEM_NODES = $MEM_NODES," \

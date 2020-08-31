@@ -15,7 +15,8 @@ OBSTYPE="ALL"
 OBSSIM_OBSOUT=".false." # anal/gues
 #OBSSIM_OBSOUT=".true." # fcst
 
-H08_RTTOV_CFRAC=1
+H08_RTTOV_CFRAC=1 # def
+#H08_RTTOV_CFRAC=0 
 
 TYPE=fcst
 #TYPE=hist
@@ -24,24 +25,43 @@ TYPE=fcst
 
 
 
-
-
-
-
 EXP=2000m_DA_0513_FP_M32_LOC90km
 
-EXP=2000m_NODA_0601
 EXP=2000m_DA_0601
 
 
-EXP=2000m_DA_0601_NOFP
-EXP=2000m_DA_0601_FP_M32_LOC90km
-EXP=2000m_DA_0601_FP_M32_LOC90km_TEST
-EXP=2000m_DA_0601_FP_M32_LOC30km_TEST
-#EXP=2000m_DA_0601_FP_M01_LOC90km
+EXP=2000m_DA_0723
 
-. config/${EXP}/config.main.$SYS
-. config/${EXP}/config.fcst
+EXP=2000m_DA_0723_FP
+#EXP=2000m_DA_0723_NOFP
+EXP=2000m_DA_0723_FP_M160
+EXP=2000m_DA_0723_FP_NOB
+EXP=2000m_DA_0723_FP_NOB_OBERR0.1
+EXP=2000m_DA_0723_FP_NOB_30km
+
+
+
+EXP=2000m_NODA_0723_H08_M0
+EXP=2000m_DA_0723_FP_30min
+EXP=2000m_DA_0723_FP_30min_NOB
+
+EXP=2000m_NODA_0723
+EXP=2000m_DA_0723_FP_LOC30km
+EXP=2000m_DA_0723_FP_30min_LOC30km
+EXP=2000m_DA_0723_FP_30min_LOC30km_GT
+
+EXP=2000m_DA_0723_FP_30min
+
+EXP=2000m_DA_0723_FP_30min_LOC10km_HT16
+EXP=2000m_DA_0723_FP_30min_LOC10km
+
+EXP=2000m_DA_0723_FP_30min_LOC30km_X175km_Y183km
+
+REXP=$EXP
+
+. config/${REXP}/config.main.$SYS
+. config/${REXP}/config.fcst
+
 
 OBSSIM_RADAR_LON=180
 OBSSIM_RADAR_LAT=180
@@ -49,21 +69,17 @@ OBSSIM_RADAR_LAT=180
 
 
 
-tstart='2001-01-01 1:10:00'
-tstart='2001-01-01 1:15:00'
-tstart='2001-01-01 1:20:00'
-tstart='2001-01-01 1:25:00'
-tstart='2001-01-01 1:30:00'
 
-#tstart='2001-01-01 1:00:00'
-#tend='2001-01-01 2:00:00'
-#tstart='2001-01-01 1:00:00'
-#tstart='2001-01-01 1:40:00'
-#tend=$tstart
 tstart='2001-01-01 1:05:00'
+
+
+tstart='2001-01-01 1:00:00'
+tend=$tstart
+
+tstart='2001-01-01 1:00:00'
 tend='2001-01-01 1:30:00'
 
-tstart='2001-01-01 1:05:00'
+tstart='2001-01-01 1:35:00'
 tend='2001-01-01 2:00:00'
 
 if [ "$TYPE" == "fcst" ] || [ "$TYPE" == "hist" ]; then
@@ -76,8 +92,9 @@ if [ "$TYPE" == "fcst" ] || [ "$TYPE" == "hist" ]; then
 
 
   tstart='2001-01-01 0:00:00'
-  tstart='2001-01-01 1:00:00'
-  tstart='2001-01-01 1:30:00'
+#  tstart='2001-01-01 1:00:00'
+#  tstart='2001-01-01 1:30:00'
+  tstart='2001-01-01 2:00:00'
 
   #tstart='2001-01-01 1:25:00'
 
@@ -87,18 +104,19 @@ if [ "$TYPE" == "fcst" ] || [ "$TYPE" == "hist" ]; then
   FCSTLEN=5400 
   TE=19
 
-  #FCSTLEN=3600 
-  #TE=13
-
-  #FCSTLEN=1200 
-  #TE=5
-  #TE=2
-
+#  FCSTLEN=3600 
+#  TE=13
+#
+#  FCSTLEN=5400 
+#  TE=3
+##
   FCSTLEN=1800 
   TE=7
 
-  #FCSTLEN=300 
-  #TE=2
+#  tstart='2001-01-01 1:30:00'
+#  tend=$tstart
+#  FCSTLEN=1800 
+#  TE=2
 
   if [ "$TYPE" == "hist" ] ; then
     TE=2
@@ -118,13 +136,11 @@ MEM_NP=${SCALE_NP}
 MEM=mean
 
 SMEM=0 # 
-#SMEM=1 # 
-#SMEM=320 # 
-#SMEM=252 # 
 EMEM=${SMEM} # mean
 
-SMEM=0
-EMEM=0
+#SMEM=1
+#EMEM=10
+
 
 
 #--SMEM--
@@ -139,7 +155,7 @@ WDIR=${LETKF_RUN}/../tmp_obssim_${EXP}_${SMEM}_${EMEM}
 OBSSIM_BIN="${LETKF_RUN}/../obs/obssim"
 RUNSH=$WDIR/OBSSIM.sh
 RUNCONF_COMMON=$WDIR/OBSSIM.conf_common
-SCALE_CONF=${LETKF_RUN}/config/${EXP}/config.nml.scale
+SCALE_CONF=${LETKF_RUN}/config/${REXP}/config.nml.scale
 TOPO=${OUTDIR}/const/topo
 
 
@@ -163,7 +179,6 @@ WDIR=${LETKF_RUN}/../tmp_obssim_${EXP}_${SMEM}_${EMEM}
 OBSSIM_BIN="${LETKF_RUN}/../obs/obssim"
 RUNSH=$WDIR/OBSSIM.sh
 RUNCONF_COMMON=$WDIR/OBSSIM.conf_common
-SCALE_CONF=${LETKF_RUN}/config/${EXP}/config.nml.scale
 TOPO=${OUTDIR}/const/topo
 
 # -- RTTOV_DIR --
@@ -235,6 +250,7 @@ cat << EOF >> $RUNCONF_COMMON
 &PARAM_LETKF_H08
  H08_RTTOV_COEF_PATH = "./"
  H08_RTTOV_CFRAC = ${H08_RTTOV_CFRAC},
+ H08_RTTOV_CFRAC_CNST = 0.1D-3, ! kg/m3
 /
 
 EOF

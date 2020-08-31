@@ -169,6 +169,7 @@ MODULE common_obs_scale
   REAL(r_size),SAVE :: MIN_RADAR_REF
   REAL(r_size),SAVE :: RADAR_REF_THRES
 
+
 CONTAINS
 
 !-----------------------------------------------------------------------
@@ -3399,12 +3400,15 @@ subroutine get_nobs_lt_grd(cfile,nn)
     case ('FP2D', 'LTP2D')
       nn = nlong * nlatg        ! lt2d
     end select
+ 
   else
     write(6,'(2A)') cfile,' does not exist -- skipped'
   end iF
 
+
   return
 end subroutine get_nobs_lt_grd
+
 
 subroutine read_obs_lt_grd(cfile,obs)
   use scale_grid, only: &
@@ -3436,6 +3440,12 @@ subroutine read_obs_lt_grd(cfile,obs)
   integer :: imin, imax
   integer :: jmin, jmax
   integer :: kk, ii, jj
+
+  real(r_size) :: yt, p_tmp 
+
+  real(r_size) :: eps_p, eps_n
+  real(r_size) :: y_p, y_n
+  real(r_size) :: y_pt, y_nt
 
 !  call obs_info_allocate(obs)
 
@@ -3570,7 +3580,28 @@ subroutine read_obs_lt_grd(cfile,obs)
            endif
         enddo
       endif
-      obs%dat(n) = max( real( lt2d(i,j), kind=r_size ) + err, 0.0 )
+
+      if ( USE_GT ) then
+        ! tentative
+        y_p = real( lt2d(i,j), kind=r_size ) + err
+        y_n = max( real( lt2d(i,j), kind=r_size ) - err, 0.0 )
+
+        call get_P( y_p, p_tmp )
+        call F_GT_inv( p_tmp, y_pt )
+        call get_P( y_n, p_tmp )
+        call F_GT_inv( p_tmp, y_nt )
+        
+        call get_P( real(lt2d(i,j), kind=r_size), p_tmp )
+        call F_GT_inv( p_tmp, yt )
+
+        eps_p = max( y_pt - yt, 0.1 )
+        eps_n = max( y_nt - yt, 0.1 )
+
+        obs%dat(n) = max( real( lt2d(i,j), kind=r_size ), 0.0 )
+        obs%err(n) = ( eps_p + eps_n) * 0.5
+      else
+        obs%dat(n) = max( real( lt2d(i,j), kind=r_size ) + err, 0.0 )
+      endif
     end select
 
     ! Thinning

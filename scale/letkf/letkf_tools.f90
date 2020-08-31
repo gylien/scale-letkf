@@ -1450,7 +1450,12 @@ subroutine obs_local_cal(ri, rj, rlev, rz, nvar, iob, ic, ndist, nrloc, nrdiag)
     else ! cloudy
       nrdiag = H08_OBSERR_RUN_CLD**2 / nrloc
     endif
+  elseif (  obtyp == 25) then ! LT
+    if ( USE_GT ) then
+      nrdiag = LT_GT_OERR**2 / nrloc
+    endif
   endif
+
 
   return
 end subroutine obs_local_cal

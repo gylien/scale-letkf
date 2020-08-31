@@ -145,6 +145,7 @@ SUBROUTINE set_letkf_obs
 
   real(r_size) :: sig_b
 
+  real(r_size) :: yt, p_tmp
 
   WRITE(6,'(A)') 'Hello from set_letkf_obs'
 
@@ -402,7 +403,7 @@ SUBROUTINE set_letkf_obs
 #ifdef H08
 !$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,i,iof,iidx,mem_ref,ch_num)
 #else
-!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,i,iof,iidx,mem_ref,sig_b)
+!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,i,iof,iidx,mem_ref,sig_b, yt, p_tmp)
 #endif
   do n = 1, obsda%nobs
     IF(obsda%qc(n) > 0) CYCLE
@@ -416,8 +417,10 @@ SUBROUTINE set_letkf_obs
     if (obs(iof)%elm(iidx) == id_fp3d_obs .or. obs(iof)%elm(iidx) == id_fp2d_obs) then
  
       if ( LT_TEST_SINGLE ) then
-        if ( abs( nint( obsda%ri(n) ) - LT_TEST_SINGLE_I ) >= 4  .or. &
-             abs( nint( obsda%rj(n) ) - LT_TEST_SINGLE_J ) >= 4 )  then
+!        if ( abs( nint( obsda%ri(n) ) - LT_TEST_SINGLE_I ) >= ( XY_THINNING_LT  )  .or. &
+!             abs( nint( obsda%rj(n) ) - LT_TEST_SINGLE_J ) >= ( XY_THINNING_LT  ) )  then
+        if ( ( abs( obs(iof)%lon(iidx) - LT_TEST_SINGLE_LON ) >= 1.0  )  .or. &
+             ( abs( obs(iof)%lat(iidx) - LT_TEST_SINGLE_LAT ) >= 1.0  ) ) then
           obsda%qc(n) = iqc_out_h
           cycle
         endif
@@ -425,7 +428,7 @@ SUBROUTINE set_letkf_obs
 
 
       ! Thinning 
-      if ( obs(iof)%dat(iidx) < LT_ON_THRS ) then
+      if ( obs(iof)%dat(iidx) < 0.0 ) then
         obsda%qc(n) = iqc_out_h
         cycle
       endif
@@ -441,15 +444,16 @@ SUBROUTINE set_letkf_obs
       ! obs: flash
         if (mem_ref < MIN_LT_MEMBER_OBSON) then
           obsda%qc(n) = iqc_ref_mem
-!          cycle
+          cycle
         endif
-      else if (obs(iof)%dat(iidx) == LT_ON_THRS ) then
+      else !if (obs(iof)%dat(iidx) == LT_ON_THRS ) then
       ! obs: no flash
         if (mem_ref < MIN_LT_MEMBER_OBSOFF) then
           obsda%qc(n) = iqc_ref_mem
           cycle
         endif
       endif
+
     endif
 
 !!!###### RADAR assimilation ######
@@ -552,12 +556,52 @@ SUBROUTINE set_letkf_obs
 #endif
 
 
+    if ( USE_GT .and. ( obs(iof)%elm(iidx) == id_fp3d_obs .or. obs(iof)%elm(iidx) == id_fp2d_obs) ) then
+      call get_P( obsda%ensval(1,n), p_tmp )
+      call F_GT_inv( p_tmp, yt )
+      obsda%val(n) = yt
+write(6,'(a,3f12.5)')"DEBUG-EOBS 1", obsda%ensval(1,n), p_tmp, yt
+      do i = 2, MEMBER
+        call get_P( obsda%ensval(i,n), p_tmp )
+        call F_GT_inv( p_tmp, yt )
+        obsda%val(n) = obsda%val(n) + yt
+write(6,'(a,i5,3f12.5)')"DEBUG-EOBS", i, obsda%ensval(i,n), p_tmp, yt
+      enddo
+      obsda%val(n) = obsda%val(n) / REAL(MEMBER,r_size)
 
-    obsda%val(n) = obsda%ensval(1,n)
-    DO i=2,MEMBER
-      obsda%val(n) = obsda%val(n) + obsda%ensval(i,n)
-    END DO
-    obsda%val(n) = obsda%val(n) / REAL(MEMBER,r_size)
+      do i = 1, MEMBER
+        call get_P( obsda%ensval(i,n), p_tmp )
+        call F_GT_inv( p_tmp, yt )
+        obsda%ensval(i,n) = yt - obsda%val(n) ! Hdx
+      enddo
+
+      call get_P( obs(iof)%dat(iidx), p_tmp )
+      call F_GT_inv( p_tmp, yt )
+      obsda%val(n) = ( yt + obs(iof)%err(iidx) ) - obsda%val(n) ! y-Hx
+
+write(6,'(a,5f10.2)')"DEBUG-OBS", obs(iof)%dat(iidx), obs(iof)%err(iidx), p_tmp, yt, obsda%val(n)
+      ! DEBUG
+      !! only POB
+      !if ( obsda%val(n) <= 0.0d0 ) then
+      ! only NOB
+!      if ( obsda%val(n) > 0.0d0 ) then
+!        obsda%qc(n) = iqc_obs_bad
+!      endif
+
+    else
+      obsda%val(n) = obsda%ensval(1,n)
+      DO i=2,MEMBER
+        obsda%val(n) = obsda%val(n) + obsda%ensval(i,n)
+      END DO
+      obsda%val(n) = obsda%val(n) / REAL(MEMBER,r_size)
+  
+      DO i=1,MEMBER
+        obsda%ensval(i,n) = obsda%ensval(i,n) - obsda%val(n) ! Hdx
+      END DO
+
+      obsda%val(n) = obs(iof)%dat(iidx) - obsda%val(n) ! y-Hx
+
+    endif
 
 
 #ifdef H08
@@ -570,10 +614,6 @@ SUBROUTINE set_letkf_obs
 #endif
 
 
-    DO i=1,MEMBER
-      obsda%ensval(i,n) = obsda%ensval(i,n) - obsda%val(n) ! Hdx
-    END DO
-    obsda%val(n) = obs(iof)%dat(iidx) - obsda%val(n) ! y-Hx
 
 
     sig_b = 0.0d0
@@ -654,6 +694,18 @@ SUBROUTINE set_letkf_obs
       if(ABS(obsda%val(n)) > GROSS_ERROR_LT * LT_OBSERR_GROSS) then
         obsda%qc(n) = iqc_gross_err
       endif
+
+      ! only NOB
+      if ( LT_NOB_ONLY ) then
+        if ( obsda%val(n) > 0.0d0 ) then
+          obsda%qc(n) = iqc_obs_bad
+        endif
+      elseif ( LT_POB_ONLY ) then
+        if ( obsda%val(n) < 0.0d0 ) then
+          obsda%qc(n) = iqc_obs_bad
+        endif
+      endif
+
     case default
       IF(ABS(obsda%val(n)) > GROSS_ERROR * obs(iof)%err(iidx)) THEN
         obsda%qc(n) = iqc_gross_err
@@ -706,17 +758,17 @@ SUBROUTINE set_letkf_obs
 
 if (myrank_a < nprocs_d ) then
       !write (6, '(2I6,2I6,6F9.2,2I4)') obs(iof)%elm(iidx), &
-      write (6, '(2I6,2f6.1,6F9.2,2I4)') obs(iof)%elm(iidx), &
-                                         obs(iof)%typ(iidx), &
+      write (6, '(1i6,2f6.1,f7.2,2f9.2, 3f7.1, 2i4)') obs(iof)%elm(iidx), &
+!                                         obs(iof)%typ(iidx), &
                                          obs(iof)%lon(iidx)*0.001, &
                                          obs(iof)%lat(iidx)*0.001, &
                                          !nint( obsda%ri(n) ), &
                                          !nint( obsda%rj(n) ), &
                                          obs(iof)%lev(iidx)*0.001, &
                                          obs(iof)%dat(iidx), &
+                                         obsda%val(n), &
                                          obsda%lev(n) * MEMBER / max(mem_ref,1) * 0.001, &
                                          obs(iof)%err(iidx), &
-                                         obsda%val(n), &
                                          sig_b, &
                                          mem_ref, &
                                          obsda%qc(n)

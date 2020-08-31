@@ -206,9 +206,13 @@ MODULE common_nml
 
   !--- PARAM_LETKF_LT
   character(4) :: LT_OBS_NANE = 'FP3D'
+  logical :: LT_NOB_ONLY = .false. ! Use only if O-B < 0
+  logical :: LT_POB_ONLY = .false. ! Use only if O-B < 0
   logical :: LT_TEST_SINGLE = .false. ! Sigle-observation experiment? 
   integer :: LT_TEST_SINGLE_I = 1 ! grid index for single obs test
   integer :: LT_TEST_SINGLE_J = 1 ! gird index for single obs test
+  real :: LT_TEST_SINGLE_LON = 175.0 
+  real :: LT_TEST_SINGLE_LAT = 183.0
   real(r_size) :: LT_OBSERR_GROSS = 1.0d0 ! obs error for gross-error check
   integer :: MIN_LT_MEMBER_OBSON = 1
   integer :: MIN_LT_MEMBER_OBSOFF = 1
@@ -219,6 +223,9 @@ MODULE common_nml
   real(r_size) :: LT_LOG_CONST = 1.0d0 ! constant for log transformation
   real(r_size) :: LT_LOG_OERR = 1.0d0 ! obs error for log transformation
   real :: LT_ON_THRS = 0.0 ! threashold for flash on/off
+  logical :: USE_GT = .false. ! Gaussian transformation
+  character(filelenmax) :: CDF_FP_FILENAME = '' ! CDF for flash point
+  real(r_size) :: LT_GT_OERR = 0.5d0 ! obs err for lt with gaussian transform
 
   !--- PARAM_LETKF_RADAR
   logical :: USE_RADAR_REF       = .true.
@@ -963,9 +970,13 @@ subroutine read_nml_letkf_lt
   integer :: ierr
 
   namelist /PARAM_LETKF_LT/ &
+    LT_NOB_ONLY, &
+    LT_POB_ONLY, &
     LT_TEST_SINGLE, &
     LT_TEST_SINGLE_I, &
     LT_TEST_SINGLE_J, &
+    LT_TEST_SINGLE_LON, &
+    LT_TEST_SINGLE_LAT, &
     LT_OBS_NANE, &
     LT_OBSERR_GROSS, &
     MIN_LT_MEMBER_OBSON, &
@@ -975,7 +986,10 @@ subroutine read_nml_letkf_lt
     LT_ZMAX, &
     LT_LOG, &
     LT_LOG_CONST, &
-    LT_LOG_OERR
+    LT_LOG_OERR, &
+    USE_GT, &
+    LT_GT_OERR, &
+    CDF_FP_FILENAME
 
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_LETKF_LT,iostat=ierr)

@@ -170,8 +170,8 @@ unset KMP_AFFINITY
 #export I_MPI_DEBUG=5
 
 export OMP_NUM_THREADS=1
-export I_MPI_PIN_DOMAIN=${NPIN}
-export I_MPI_PERHOST=${PPN}
+#export I_MPI_PIN_DOMAIN=${NPIN}
+#export I_MPI_PERHOST=${PPN}
 export KMP_HW_SUBSET=1t
 
 

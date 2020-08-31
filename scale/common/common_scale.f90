@@ -151,6 +151,10 @@ MODULE common_scale
 !  REAL(r_size),SAVE :: fcori(nlatsub)
 !!  REAL(r_size),SAVE :: wg(nlonsub,nlatsub)
 
+  real(r_size), allocatable, save :: count_CDF(:)
+  real(r_size), allocatable, save :: flash_CDF(:)
+
+
 CONTAINS
 !-----------------------------------------------------------------------
 ! Set the parameters
@@ -1546,6 +1550,85 @@ SUBROUTINE rij_g2l_auto(proc,ig,jg,il,jl)
   RETURN
 END SUBROUTINE rij_g2l_auto
 
+subroutine read_CDF( dimlen, count_CDF, flash_CDF )
+  use netcdf
+  use common_ncio
+  implicit none
 
+  integer :: ncid
+  integer :: dimlen
+  real(r_size), intent(out) :: count_CDF(dimlen)  
+  real(r_size), intent(out) :: flash_CDF(dimlen)  
+
+  call ncio_open( trim(CDF_FP_FILENAME), NF90_NOWRITE, ncid)
+
+  call ncio_read_1d_r8(ncid, "count", dimlen, 1, count_CDF )
+  call ncio_read_1d_r8(ncid, "flash", dimlen, 1, flash_CDF )
+
+  call ncio_close(ncid)
+
+  return
+end subroutine read_CDF
+
+subroutine get_CDF_len( dimlen )
+  use netcdf
+  use common_ncio
+  implicit none
+
+  integer :: ncid
+  integer, intent(out) :: dimlen
+  
+  call ncio_open( trim(CDF_FP_FILENAME), NF90_NOWRITE, ncid)
+
+  call ncio_read_dim(ncid, "flash", dimlen)
+
+  call ncio_close(ncid)
+
+  return
+end subroutine get_CDF_len
+
+subroutine get_P( y, p )
+  ! F(y) in Lien et al. 2018
+  implicit none
+
+  real(r_size), intent(in) :: y
+  real(r_size), intent(out) :: p
+  real(r_size) :: p0, pc
+  integer :: i, imax
+
+  imax = size(flash_CDF)
+
+  ! climatology
+  pc = count_CDF(1) / sum( count_CDF ) * 0.5d0
+  p0 = pc * 0.5d0
+
+  if ( y < flash_CDF(2) ) then
+    p = p0
+    return
+  else
+    do i = 3, imax
+      if ( flash_CDF(i-1) <= y .and. y < flash_CDF(i) ) then
+        p = ( sum( count_CDF(1:i-1) ) + count_CDF(i)*0.5d0 ) / sum( count_CDF )
+      endif
+    enddo
+  endif
+
+  p = min( p, 0.999999999d0)
+
+  return
+end subroutine get_P
+
+subroutine F_GT_inv( p, yt )
+  implicit none
+
+  real(r_size), intent(in) :: p
+  real(r_size), intent(out) :: yt
+  real(r_size) :: yt_tmp
+
+  call vderfinv( 1, 2.0d0*p - 1.0d0, yt_tmp )
+  yt = dsqrt(2.0d0) * yt_tmp 
+
+  return
+end subroutine F_GT_inv
 
 END MODULE common_scale

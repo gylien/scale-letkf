@@ -91,7 +91,6 @@ module common_mpi_scale
   integer,save :: MPI_COMM_a, nprocs_a, myrank_a
 
 
-
 !  character(9) scale_filename = 'file.0000'
 
 contains
@@ -1387,14 +1386,45 @@ subroutine read_obs_all_mpi(obs)
 
   type(obs_info), intent(out) :: obs(OBS_IN_NUM)
   integer :: iof, ierr
+  integer :: dimlen
 
-  REAL(r_dble) :: rrtimer00,rrtimer
-  CALL MPI_BARRIER(MPI_COMM_a,ierr)
+  real(r_dble) :: rrtimer00,rrtimer
+
+  call MPI_BARRIER(MPI_COMM_a,ierr)
   rrtimer00 = MPI_WTIME()
+
+
+  if ( USE_GT ) then
+
+    if ( myrank_a == 0 ) then
+      call get_CDF_len( dimlen )
+     
+      if (.not. allocated(count_CDF) ) allocate( count_CDF(dimlen) )
+      if (.not. allocated(flash_CDF) ) allocate( flash_CDF(dimlen) )
+
+      call read_CDF( dimlen, count_CDF, flash_CDF )
+
+    endif
+
+    call MPI_BCAST( dimlen, 1, MPI_INTEGER, 0, MPI_COMM_a, ierr)
+    if ( myrank_a /= 0 ) then
+      allocate( count_CDF(dimlen) )
+      allocate( flash_CDF(dimlen) )
+    endif
+
+    call MPI_BCAST( count_CDF, dimlen, MPI_r_size, 0, MPI_COMM_a, ierr)
+    call MPI_BCAST( flash_CDF, dimlen, MPI_r_size, 0, MPI_COMM_a, ierr)
+
+!    if ( myrank_a == 100 ) then
+!      write(6,'(a,i7, 2f8.2)')"DEBUG",myrank_a, maxval(flash_CDF), maxval(count_CDF) 
+!    endif
+
+  endif
+
 
   if (myrank_a == 0) then
     call read_obs_all(obs)
-  end if
+  endif
 
   CALL MPI_BARRIER(MPI_COMM_a,ierr)
   rrtimer = MPI_WTIME()  
