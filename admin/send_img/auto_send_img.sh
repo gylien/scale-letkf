@@ -13,7 +13,9 @@ nmax_fcst=60  ### 30 min
 
 fcstlen=1800
 
-limit_waitsec=300
+acceptable_intv=1800
+
+limit_waitsec=600
 
 startTimef=$1
 stopTimef=$2
@@ -38,6 +40,7 @@ function array2jsons(){
 
 
 targetTimef=$startTimef
+sentTimef=`date -ud "- 30 second $targetTimef" +"%Y-%m-%d %H:%M:%S"`
 
 nows=`date -u +%s`
 
@@ -60,20 +63,29 @@ while [ $iwaitsec -lt $limit_waitsec ] ;do
  
   ffile_prefix="fcst_dbz_"
   ffile_suffix="_FT`printf %04d $fcstlen`s_z01957m.png"
-  ffiles=`ls -x $SRCDIR/${ffile_prefix}*${ffile_suffix}`
+#  ffiles=`ls -x $SRCDIR/${ffile_prefix}*${ffile_suffix}`
 
-  testTimef=`date -ud "- 30 second $targetTimef" +"%Y-%m-%d %H:%M:%S"` 
+#  testTimef=`date -ud "- 30 second $targetTimef" +"%Y-%m-%d %H:%M:%S"` 
+
+  testTimef=$targetTimef
+  testTimef_end=`date -ud "$acceptable_intv second $testTimef" +"%Y-%m-%d %H:%M:%S"`
+  testTimestamp=`date -ud "$testTimef" +"%Y%m%d-%H%M%S"`
+  tests=`date -ud "${testTimef}" +%s`
+  ffile=${ffile_prefix}${testTimestamp}${ffile_suffix}
 
   iflag=0
-  for fitem in $ffiles;do
-    ffile=`basename $fitem`
-    len=${#ffile_prefix}
-    testtime=${ffile:${len}:15}
-    testTimef="${testtime:0:4}-${testtime:4:2}-${testtime:6:2} ${testtime:9:2}:${testtime:11:2}:${testtime:13:2}"
-    tests=`date -ud "${testTimef}" +%s`
-  if [ -f $SRCDIR/$ffile ] && [ $tests -ge `date -ud "$targetTimef" +%s` ] ; then
+
+  while [ `date -ud "$testTimef" +%s` -le `date -ud "$testTimef_end" +%s` ] ;do
+  if [ -f $SRCDIR/$ffile ] ; then
+#  for fitem in $ffiles;do
+#    ffile=`basename $fitem`
+#    len=${#ffile_prefix}
+#    testtime=${ffile:${len}:15}
+#    testTimef="${testtime:0:4}-${testtime:4:2}-${testtime:6:2} ${testtime:9:2}:${testtime:11:2}:${testtime:13:2}"
+#    tests=`date -ud "${testTimef}" +%s`
+#  if [ -f $SRCDIR/$ffile ] && [ $tests -ge `date -ud "$targetTimef" +%s` ] ; then
     iflag=1
-    timestamp=`date -ud "$testTimef" +"%Y%m%d-%H%M%S"`
+#    timestamp=`date -ud "$testTimef" +"%Y%m%d-%H%M%S"`
     indx=0
     list_flagforecast=()
     list_image_timestamp=()
@@ -150,7 +162,7 @@ EOS
   echo "$json" > dataformat.json
   
 #nowb=$nows
-#nows=`date -u +%s`
+nows=`date -u +%s`
 #echo 'make json : '`expr $nows - $nowb`
 
   chmod 664 *.png 
@@ -161,33 +173,47 @@ EOS
 
   echo "send" $timestampl "..." 
 
-  scp -p ${img_list} ${hostname}:${www_DATA}/raw/
-  scp -p ${json_list}  ${hostname}:${www_DATA}/json/
+  ssh ${hostname} "mkdir -p ${www_ARCHIVE}/${NowTime}" 2> /dev/null
 
-  ssh ${hostname} "mkdir -p ${www_ARCHIVE}/${NowTime}"
+  scp -p ${img_list} ${hostname}:${www_ARCHIVE}/${NowTime}/ 2> /dev/null
+  scp -p ${json_list} ${hostname}:${www_ARCHIVE}/${NowTime}/ 2> /dev/null
 
-  scp -p ${img_list} ${hostname}:${www_ARCHIVE}/${NowTime}/
-  scp -p ${json_list} ${hostname}:${www_ARCHIVE}/${NowTime}/
+  ssh ${hostname} "rm ${www_DATA}/raw/*" 2> /dev/null
+  ssh ${hostname} "cp ${www_ARCHIVE}/${NowTime}/*.png ${www_DATA}/raw/" 2> /dev/null
+#  ssh ${hostname} "rm ${www_DATA}/json/*" 2> /dev/null
+  ssh ${hostname} "cp ${www_ARCHIVE}/${NowTime}/*.json ${www_DATA}/json/" 2> /dev/null
 
-  ssh ${hostname} "echo ${NowTime} > ${www_ARCHIVE}/../latestInitUnixTime"
+#  scp -p ${img_list} ${hostname}:${www_DATA}/raw/
+#  scp -p ${json_list}  ${hostname}:${www_DATA}/json/
+
+  ssh ${hostname} "echo ${NowTime} > ${www_ARCHIVE}/../latestInitUnixTime" 2> /dev/null
 #  ssh ${hostname} "echo ${NowTime} > ${www_ARCHIVE}/../lastAcceptedUnixTime"
  iwaitsec=$limit_waitsec
 
-#nowb=$nows
-#nows=`date -u +%s`
-#echo 'send : '`expr $nows - $nowb`
+nowb=$nows
+nows=`date -u +%s`
+echo 'send : '`expr $nows - $nowb`
 
-  fi
+#  fi
 
-done ### ffile
+sentTimef=$testTimef
+
+fi ### ffile
+testTimef=`date -ud "30 second $testTimef" +"%Y-%m-%d %H:%M:%S"`
+  testTimestamp=`date -ud "$testTimef" +"%Y%m%d-%H%M%S"`
+  tests=`date -ud "${testTimef}" +%s`
+  ffile=${ffile_prefix}${testTimestamp}${ffile_suffix}
+
+done ### testTimef <= testTimef_end
 
 if [ $iflag == 0 ];then
   sleep 2
   iwaitsec=`expr $iwaitsec + 2`
 fi
+
 done ### iwaitsec < limit_waitsec
 
-targetTimef=`date -ud "30 second $testTimef" +"%Y-%m-%d %H:%M:%S"`
+targetTimef=`date -ud "30 second $sentTimef" +"%Y-%m-%d %H:%M:%S"`
 done ### while targetTimef < stopTimef
 
 echo "== finished =="
