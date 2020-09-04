@@ -9,10 +9,10 @@
 PRESET='OFP'
 OFP_MODE="regular-flat"
 #OFP_MODE="regular-cache"
-OFP_MODE="debug-flat"
+#OFP_MODE="debug-flat"
 
 
-EXP=2000m_DA_0723_FP_30min_LOC90km_X175km_Y183km
+EXP=2000m_DA_0723_FP_30min_LOC90km_LOC2D
 
 INIT_LOC_ENS=1 # 1: initialize with random bubble location and amplitude (Aksoy et al. 2009)
 
@@ -93,6 +93,7 @@ WINDOW_S=1800      # SCALE forecast time when assimilation window starts (second
 WINDOW_E=1800      # SCALE forecast time when assimilation window ends (second)
 LCYCLE=1800        # Length of a GFS-LETKF cycle (second)
 LTIMESLOT=1800      # Timeslot interval for 4D-LETKF (second)
+
 
 #===============================================================================
 # Parallelization settings

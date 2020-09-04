@@ -12,7 +12,7 @@ OFP_MODE="regular-flat"
 OFP_MODE="debug-flat"
 
 
-EXP=2000m_DA_0723_FP_30min_LOC90km_X175km_Y183km
+EXP=2000m_DA_0723_FP_30min_LOC90km_X175km_Y183km_LOG
 
 INIT_LOC_ENS=1 # 1: initialize with random bubble location and amplitude (Aksoy et al. 2009)
 

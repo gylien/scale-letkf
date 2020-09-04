@@ -82,6 +82,9 @@ MODULE common_obs_scale
   integer, parameter :: id_lt2d_obs = 5002
   integer, parameter :: id_fp3d_obs = 5003 ! flash point
   integer, parameter :: id_fp2d_obs = 5004 ! flash point
+  integer, parameter :: id_fp2d_obs_max = 5010 ! flash point (2d max)
+  integer, parameter :: id_fp2d_obs_lon = 5011 ! flash point (2d max)
+  integer, parameter :: id_fp2d_obs_lat = 5012 ! flash point (2d max)
   integer, parameter :: id_ltp3d_obs = 5005 ! LT path
   integer, parameter :: id_ltp2d_obs = 5006 ! LT path
 
@@ -215,7 +218,7 @@ function uid_obs(id_obs)
     uid_obs = 16
   case(id_fp3d_obs, id_lt3d_obs)
     uid_obs = 17
-  case(id_fp2d_obs, id_lt2d_obs)
+  case(id_fp2d_obs, id_lt2d_obs, id_fp2d_obs_max, id_fp2d_obs_lon, id_fp2d_obs_lat)
     uid_obs = 18
   case default
     uid_obs = -1     ! error
@@ -248,7 +251,7 @@ function uid_obs_varlocal(id_obs)
     uid_obs_varlocal = 8
   case(id_h08ir_obs)      ! H08
     uid_obs_varlocal = 9  ! H08
-  case(id_fp3d_obs, id_fp2d_obs, id_lt3d_obs, id_lt2d_obs)
+  case(id_fp3d_obs, id_fp2d_obs, id_lt3d_obs, id_lt2d_obs, id_fp2d_obs_max, id_fp2d_obs_lon, id_fp2d_obs_lat )
     uid_obs_varlocal = 10
   case default
     uid_obs_varlocal = -1 ! error
@@ -3182,7 +3185,7 @@ subroutine Trans_XtoY_LT(elm,ri,rj,rk,v3d,v2d,yobs,qc,lev,myrank)
     yobs = max( sum( v3d(ks:ke,is:ie,js:je,iv3dd_fp) ), 0.0_r_size )
 
     if ( LT_LOG ) then
-      yobs = log( LT_LOG_CONST + yobs )
+      yobs = dlog( LT_LOG_CONST + yobs )
     endif 
 
     tmp_fp = sum( v3d(ks,is:ie,js:je,iv3dd_fp) )
@@ -3447,6 +3450,11 @@ subroutine read_obs_lt_grd(cfile,obs)
   real(r_size) :: y_p, y_n
   real(r_size) :: y_pt, y_nt
 
+  ! indices for maximum location
+  integer :: max_i, max_j, max_k
+  integer :: max_n
+  real(r_size) :: max_lt
+
 !  call obs_info_allocate(obs)
 
 
@@ -3505,6 +3513,8 @@ subroutine read_obs_lt_grd(cfile,obs)
 !    endif
 !  endif
 
+  max_n = -1
+  max_lt = 0.0d0
   cnt = 0
   n = 0
   do k = 1, kmax_lt
@@ -3612,8 +3622,10 @@ subroutine read_obs_lt_grd(cfile,obs)
        ! obs%dat(n) < 0 will be discarded in letkf_obs.f90 
     endif
 
-    if ( LT_LOG .and.  obs%dat(n) > LT_LOG_CONST ) then
-      obs%dat(n) = log( obs%dat(n) )
+    if ( LT_LOG ) then
+      if ( obs%dat(n) >= 0.0d0 ) then
+        obs%dat(n) = dlog( obs%dat(n) + LT_LOG_CONST )
+      endif
       obs%err(n) = LT_LOG_OERR
     endif
 !    if ( LT_TEST_SINGLE ) then
@@ -3622,11 +3634,46 @@ subroutine read_obs_lt_grd(cfile,obs)
 !      endif
 !    endif
 
+    if ( obs%dat(n) > max_lt ) then
+      max_lt = obs%dat(n)
+      max_i = i
+      max_j = j
+      max_k = k
+      max_n = n
+    endif
   enddo
   enddo
   enddo
 
   write(6,'(a,3f7.1)')"DEBUG FP2D", maxval( obs%dat ), maxval( lt2d ), maxval( lt3d )
+
+  if ( LT_2DLOC ) then
+    if ( max_n > 0 ) then
+      do n = 1, 3
+
+        obs%lon(n) = GRID_CXG(max_i+IHALO)
+        obs%lat(n) = GRID_CYG(max_j+JHALO)
+        obs%lev(n) = GRID_CZ(max_k+KHALO)
+        obs%typ(n) = 25
+        obs%dif(n) = 0.0_r_size
+
+        if ( n == 3 ) then
+          obs%dat(n) = obs%lon(max_n) !+ err2d(max_i,max_j) * LT_2DLOC_OERR !debug
+          obs%elm(n) = id_fp2d_obs_lon
+          obs%err(n) = OBSERR_FP_LOC2D_LL
+        elseif ( n == 2 ) then
+          obs%dat(n) = obs%lat(max_n) !+ err2d(max_i,max_j) * LT_2DLOC_OERR
+          obs%elm(n) = id_fp2d_obs_lat
+          obs%err(n) = OBSERR_FP_LOC2D_LL
+        elseif ( n == 1 ) then
+          obs%dat(n) = obs%dat(max_n)
+          obs%elm(n) = id_fp2d_obs_max ! err was added in the above
+          obs%err(n) = OBSERR_FP_LOC2D_MAX
+        endif
+      enddo
+    endif
+    obs%dat(4:obs%nobs) = -999.0_r_size
+  endif
 
 !  write(6,'(a,i10)')"DEBUG000 Non-zero flash-point obs:",cnt
 

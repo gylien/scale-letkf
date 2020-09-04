@@ -144,6 +144,8 @@ SUBROUTINE obsope_cal(obs, obsda_return)
 
   logical :: USE_HIM8 = .false. ! initialize
 
+  real(r_size) :: fp_max, fp_max_lon, fp_max_lat
+
 !  CALL MPI_BARRIER(MPI_COMM_a,ierr)
   rrtimer00 = MPI_WTIME()
 
@@ -167,6 +169,7 @@ SUBROUTINE obsope_cal(obs, obsda_return)
     if (im >= 1 .and. im <= MEMBER) then
       write (6,'(A,I6.6,A,I4.4,A,I6.6)') 'MYRANK ',myrank,' is processing member ', &
             im, ', subdomain id #', proc2mem(2,it,myrank+1)
+
 
 !write(6,*) '%%%%%%', MPI_WTIME(), 0
 
@@ -192,6 +195,11 @@ SUBROUTINE obsope_cal(obs, obsda_return)
   WRITE(6,'(A,I3,A,I3,A,4x,F15.7)') '###### obsope_cal:read_ens_history_iter:',it,':',islot,':',rrtimer-rrtimer00
   rrtimer00=rrtimer
 
+
+
+        if ( LT_2DLOC ) then
+          call get_fpmax_loc2d( v3dg, fp_max, fp_max_lon, fp_max_lat ) 
+        endif
 
         do iof = 1, OBS_IN_NUM
 
@@ -312,8 +320,25 @@ SUBROUTINE obsope_cal(obs, obsda_return)
                 !!!!!!
 
                 case (4, 6) ! Lighting obs
-                  call Trans_XtoY_LT( obs(iof)%elm(n), ri(nn), rj(nn), rk, &
-                                      v3dg, v2dg, obsda%val(nn), obsda%qc(nn), obsda%lev(nn), myrank_d )
+                  if ( LT_2DLOC ) then
+                    obsda%lev(nn) = 0.0d0
+                    select case( obs(iof)%elm(n) )
+                    case( id_fp2d_obs_max ) 
+                      obsda%val(nn) = fp_max
+                      obsda%qc(nn) = iqc_good
+                    case( id_fp2d_obs_lon ) 
+                      obsda%val(nn) = fp_max_lon
+                      obsda%qc(nn) = iqc_good
+                    case( id_fp2d_obs_lat ) 
+                      obsda%val(nn) = fp_max_lat
+                      obsda%qc(nn) = iqc_good
+                    case default
+                      obsda%qc(nn) = iqc_obs_bad
+                    end select
+                  else
+                    call Trans_XtoY_LT( obs(iof)%elm(n), ri(nn), rj(nn), rk, &
+                                        v3dg, v2dg, obsda%val(nn), obsda%qc(nn), obsda%lev(nn), myrank_d )
+                  endif
 
                 end select
               end if
@@ -895,7 +920,66 @@ subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, stggrd)
   return
 end subroutine obssim_cal
 
+subroutine get_fpmax_loc2d( v3dgh, fp_max, fp_max_lon, fp_max_lat ) 
+  use scale_grid, only: &
+      GRID_CXG, GRID_CYG
+  use scale_grid_index, only: &
+      IHALO, JHALO, &
+      KS, KE
+  implicit none
 
+  integer :: proc_i, proc_j
+  integer :: ishift, jshift
+  real(r_size), intent(in) :: v3dgh(nlevh,nlonh,nlath,nv3dd)
+
+  real(r_size) :: fp2d(nlong,nlatg)
+
+  integer :: i, j 
+  integer :: ierr
+
+  real(r_size), intent(out) :: fp_max 
+  real(r_size), intent(out) :: fp_max_lon, fp_max_lat
+  integer :: fp_maxi, fp_maxj
+  real(r_size) :: fp_tmp
+
+
+  call rank_1d_2d(myrank_d, proc_i, proc_j)
+  ishift = proc_i * nlon
+  jshift = proc_j * nlat
+
+  fp2d(:,:) = 0.0d0
+  do j = 1, nlat
+  do i = 1, nlon
+    fp2d(i+ishift, j+jshift) = real( sum(v3dgh(KS:KE,IHALO+i,JHALO+j,iv3dd_fp) ), r_size)
+  enddo
+  enddo
+  call MPI_ALLREDUCE(MPI_IN_PLACE, fp2d, nlong*nlatg, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)
+
+  fp_max = -1.0d0
+  fp_maxi = int( nlong / 2 )
+  fp_maxj = int( nlatg / 2 )
+  do j = 3, nlatg - 1
+  do i = 3, nlong - 1
+    if ( mod( i, XY_THINNING_LT ) /= 0 .or. &
+         mod( j, XY_THINNING_LT ) /= 0 ) cycle
+
+    ! should be consistent with Trans_XtoY_LT ( reduce into 8-km x 8-km grid )
+    fp_tmp = sum( fp2d(i-2:i+1,j-2:j+1) )
+    if ( fp_tmp > fp_max ) then
+      fp_max = fp_tmp
+      fp_maxi = i
+      fp_maxj = j
+    endif
+  enddo
+  enddo
+
+  fp_max_lon = GRID_CXG( fp_maxi + IHALO )
+  fp_max_lat = GRID_CYG( fp_maxj + JHALO )
+
+  fp_max = max( fp_max, 0.0d0 )
+
+  return
+end subroutine get_fpmax_loc2d
 !=======================================================================
 
 END MODULE obsope_tools

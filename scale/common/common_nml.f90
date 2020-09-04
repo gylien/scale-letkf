@@ -222,7 +222,9 @@ MODULE common_nml
   logical :: LT_LOG = .false. ! Log transformation
   real(r_size) :: LT_LOG_CONST = 1.0d0 ! constant for log transformation
   real(r_size) :: LT_LOG_OERR = 1.0d0 ! obs error for log transformation
-  real :: LT_ON_THRS = 0.0 ! threashold for flash on/off
+  logical :: LT_2DLOC = .false. ! Assimilate maximum loc (2D)
+  real(r_size) :: LT_2DLOC_OERR = 40.0d3 ! obs error for 2d location (m)
+  real(r_size) :: LT_ON_THRS = 0.0d0 ! threashold for flash on/off
   logical :: USE_GT = .false. ! Gaussian transformation
   character(filelenmax) :: CDF_FP_FILENAME = '' ! CDF for flash point
   real(r_size) :: LT_GT_OERR = 0.5d0 ! obs err for lt with gaussian transform
@@ -323,6 +325,8 @@ MODULE common_nml
   real(r_size) :: OBSERR_FP_TRUE = 1.0d0
   real(r_size) :: OBSERR_FP_OBSON = 1.0d0  ! obs err for LETKF when obs has lightning
   real(r_size) :: OBSERR_FP_OBSOFF = 0.1d0  ! obs err for LETKF when obs has no lightning
+  real(r_size) :: OBSERR_FP_LOC2D_MAX = 1.0d0  ! intensity obs
+  real(r_size) :: OBSERR_FP_LOC2D_LL = 40.0d3  ! 2d location obs
 
   !--- PARAM_OBSSIM
   logical               :: OBSSIM_OBSOUT = .false.
@@ -840,6 +844,8 @@ subroutine read_nml_obs_error
     OBSERR_FP_OBSOFF, &
     OBSERR_FP_OBSON, &
     OBSERR_FP_TRUE, &
+    OBSERR_FP_LOC2D_MAX, &
+    OBSERR_FP_LOC2D_LL,  &
     OBSERR_FP
 
   rewind(IO_FID_CONF)
@@ -987,6 +993,8 @@ subroutine read_nml_letkf_lt
     LT_LOG, &
     LT_LOG_CONST, &
     LT_LOG_OERR, &
+    LT_2DLOC, &
+    LT_2DLOC_OERR, &
     USE_GT, &
     LT_GT_OERR, &
     CDF_FP_FILENAME
@@ -1002,7 +1010,7 @@ subroutine read_nml_letkf_lt
   endif
 
   if ( LT_LOG ) then
-    LT_ON_THRS = log( real(LT_LOG_CONST) + 0.0 )
+    LT_ON_THRS = dlog( real(LT_LOG_CONST) + 0.0d0 )
   endif
 
   write(6, nml=PARAM_LETKF_LT)

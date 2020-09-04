@@ -145,7 +145,7 @@ SUBROUTINE set_letkf_obs
 
   real(r_size) :: sig_b
 
-  real(r_size) :: yt, p_tmp
+  real(r_size) :: yt, p_tmp, ofac
 
   WRITE(6,'(A)') 'Hello from set_letkf_obs'
 
@@ -406,7 +406,7 @@ SUBROUTINE set_letkf_obs
 !$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,i,iof,iidx,mem_ref,sig_b, yt, p_tmp)
 #endif
   do n = 1, obsda%nobs
-    IF(obsda%qc(n) > 0) CYCLE
+    IF(obsda%qc(n) > 0) CYCLE ! debug
 
     iof = obsda%set(n)
     iidx = obsda%idx(n)
@@ -419,8 +419,9 @@ SUBROUTINE set_letkf_obs
       if ( LT_TEST_SINGLE ) then
 !        if ( abs( nint( obsda%ri(n) ) - LT_TEST_SINGLE_I ) >= ( XY_THINNING_LT  )  .or. &
 !             abs( nint( obsda%rj(n) ) - LT_TEST_SINGLE_J ) >= ( XY_THINNING_LT  ) )  then
-        if ( ( abs( obs(iof)%lon(iidx) - LT_TEST_SINGLE_LON ) >= 1.0  )  .or. &
-             ( abs( obs(iof)%lat(iidx) - LT_TEST_SINGLE_LAT ) >= 1.0  ) ) then
+!write(6,'(a,3f7.1,i5)') "LOC QC",obs(iof)%lon(iidx)*0.001,obs(iof)%lat(iidx)*0.001,  obs(iof)%dat(iidx), obsda%qc(n)
+        if ( ( abs( obs(iof)%lon(iidx) - LT_TEST_SINGLE_LON ) >= ( DX * XY_THINNING_LT *0.5  ) )  .or. &
+             ( abs( obs(iof)%lat(iidx) - LT_TEST_SINGLE_LAT ) >= ( DX * XY_THINNING_LT *0.5  ) ) ) then
           obsda%qc(n) = iqc_out_h
           cycle
         endif
@@ -428,9 +429,16 @@ SUBROUTINE set_letkf_obs
 
 
       ! Thinning 
-      if ( obs(iof)%dat(iidx) < 0.0 ) then
-        obsda%qc(n) = iqc_out_h
-        cycle
+      if ( LT_LOG ) then
+        if ( obs(iof)%dat(iidx) < -900.0d0 ) then
+          obsda%qc(n) = iqc_out_h
+          cycle
+        endif
+      else
+        if ( obs(iof)%dat(iidx) < 0.0 ) then
+          obsda%qc(n) = iqc_out_h
+          cycle
+        endif
       endif
 
       mem_ref = 0
@@ -756,6 +764,15 @@ write(6,'(a,5f10.2)')"DEBUG-OBS", obs(iof)%dat(iidx), obs(iof)%err(iidx), p_tmp,
 
       !write (6, '(2I6,2F7.1,5F10.3,2I4)') obs(iof)%elm(iidx), &
 
+      ofac = 1.0d0
+      select case ( obs(iof)%elm(iidx) )
+      case( id_fp2d_obs_lon, id_fp2d_obs_lat )
+        ofac = 1.d-3
+        mem_ref = 1
+      case( id_fp2d_obs_max )
+        mem_ref = 1
+      case default
+      end select
 if (myrank_a < nprocs_d ) then
       !write (6, '(2I6,2I6,6F9.2,2I4)') obs(iof)%elm(iidx), &
       write (6, '(1i6,2f6.1,f7.2,2f9.2, 3f7.1, 2i4)') obs(iof)%elm(iidx), &
@@ -765,8 +782,8 @@ if (myrank_a < nprocs_d ) then
                                          !nint( obsda%ri(n) ), &
                                          !nint( obsda%rj(n) ), &
                                          obs(iof)%lev(iidx)*0.001, &
-                                         obs(iof)%dat(iidx), &
-                                         obsda%val(n), &
+                                         obs(iof)%dat(iidx)*ofac, &
+                                         obsda%val(n)*ofac, &
                                          obsda%lev(n) * MEMBER / max(mem_ref,1) * 0.001, &
                                          obs(iof)%err(iidx), &
                                          sig_b, &

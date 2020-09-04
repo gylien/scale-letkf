@@ -12,7 +12,7 @@ OFP_MODE="regular-flat"
 OFP_MODE="debug-flat"
 
 
-EXP=2000m_DA_0723_FP_30min_LOC90km_X175km_Y183km
+EXP=2000m_DA_0723_FP_30min_LOC90km_X167km_Y223km
 
 INIT_LOC_ENS=1 # 1: initialize with random bubble location and amplitude (Aksoy et al. 2009)
 
@@ -94,6 +94,7 @@ WINDOW_E=1800      # SCALE forecast time when assimilation window ends (second)
 LCYCLE=1800        # Length of a GFS-LETKF cycle (second)
 LTIMESLOT=1800      # Timeslot interval for 4D-LETKF (second)
 
+
 #===============================================================================
 # Parallelization settings
 
@@ -101,8 +102,6 @@ MEMBER=320           # Ensemble size
 NNODES=321
 NNODES=1
 
-#MEMBER=20           # Ensemble size
-#NNODES=21
 
 
 PPN=64              # Number of processes per node
