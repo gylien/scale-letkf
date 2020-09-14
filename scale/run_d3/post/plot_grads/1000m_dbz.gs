@@ -23,6 +23,9 @@ outf = 'out/'name'_'tfilename
 'domain.gs'
 'set lev 1000'
 
+*** tori aezu
+plev=900
+
 *'d qc'
 *'d qi'
 
@@ -35,14 +38,14 @@ fbs=1.66
 fag=5.54e3
 fbg=1.70
 
-'rho= lev * 100 / 287.1 / t '
+'rho= 'plev' * 100 / 287.1 / t '
 
-'zr = 'far'* rho * qr'
-'zr = pow(zr,'fbr')'
-'zs = 'fas'* rho * qs'
-'zs = pow(zs,'fbs')'
-'zg = 'fag'* rho * qg'
-'zg = pow(zg,'fbg')'
+'zr = 1.0e3 * rho * qr'
+'zr = 'far'* pow(zr,'fbr')'
+'zs = 1.0e3 * rho * qs'
+'zs = 'fas'* pow(zs,'fbs')'
+'zg = 1.0e3 * rho * qg'
+'zg = 'fag'* pow(zg,'fbg')'
 'ref=10*log10(zr+zs+zg+1.01))'
 
 *'ref=calc_ref(rho,qr,qs,qg)'
@@ -66,7 +69,7 @@ fbg=1.70
 
 'set string 1 c 5'
 'set strsiz 0.09 0.12'
-'draw string 5.5 7.5 `11000m precip  [ Run: `0'trun'`1 | VT: `0'tstring'`1 ]'
+'draw string 5.5 7.5 `11000m radar ref (dbz) [ Run: `0'trun'`1 | VT: `0'tstring'`1 ]'
 
 '!rm -f 'outf'_tmp.png'
 'gxprint 'outf'_tmp.png'

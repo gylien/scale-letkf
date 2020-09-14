@@ -14,7 +14,7 @@ STIME=$1
 . config.main || exit $?
 . src/func_util.sh || exit $?
 
-RCSGRP=${RCSGRP:-"regular-flat"}
+RSCGRP=${RSCGRP:-"regular-flat"}
 GNAME=${GNAME:-`id -ng`}
 
 RUNDIR="${TMP}/../sno_grads_${STIME}"
@@ -151,7 +151,7 @@ jobsh="${RUNDIR}/job_sno.sh"
 
 cat << EOF >> $jobsh
 #!/bin/sh
-#PJM -L rscgrp=${RCSGRP}
+#PJM -L rscgrp=${RSCGRP}
 #PJM -L node=${SNO_NODE}
 #PJM -L elapse="00:30:00"
 #PJM --mpi proc=${NP_TOTAL}
@@ -201,7 +201,7 @@ job_end_check_PJM $jobid
 res=$?
 
 
-STIMEf="${STIME:0:4}-${STIME:4:2}-${STIME:6:2} ${STIME:0:2}"
+STIMEf="${STIME:0:4}-${STIME:4:2}-${STIME:6:2} ${STIME:8:2}"
 export LANG=en_us
 tstamp=`date -d "$STIMEf" +%H:%mZ%d%b%Y | tr '[a-z]' '[A-Z]'`
 
