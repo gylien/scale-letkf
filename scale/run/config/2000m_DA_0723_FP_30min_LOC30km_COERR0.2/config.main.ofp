@@ -12,7 +12,7 @@ OFP_MODE="regular-cache"
 #OFP_MODE="debug-flat"
 
 
-EXP=2000m_DA_0723_FP_30min_LOC30km
+EXP=2000m_DA_0723_FP_30min_LOC30km_COERR0.2
 
 INIT_LOC_ENS=1 # 1: initialize with random bubble location and amplitude (Aksoy et al. 2009)
 
@@ -99,7 +99,7 @@ LTIMESLOT=1800      # Timeslot interval for 4D-LETKF (second)
 
 MEMBER=320           # Ensemble size
 NNODES=321
-#NNODES=1
+NNODES=1
 
 #MEMBER=20           # Ensemble size
 #NNODES=21

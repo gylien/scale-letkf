@@ -859,6 +859,7 @@ subroutine read_ens_mpi(file,v3d,v2d)
   REAL(RP) :: v3dg(nlev,nlon,nlat,nv3d)
   REAL(RP) :: v2dg(nlon,nlat,nv2d)
   character(filelenmax) :: filename
+  character(filelenmax) :: hfilename
   integer :: it,im,mstart,mend
 
 
@@ -873,9 +874,11 @@ subroutine read_ens_mpi(file,v3d,v2d)
     im = proc2mem(1,it,myrank+1)
     if (im >= 1 .and. im <= MEMBER) then
       call file_member_replace(im, file, filename)
-!      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',proc2mem(2,it,myrank+1),'.nc'
-      call read_restart(filename,v3dg,v2dg)
+      call file_member_replace(im, HISTORY_IN_BASENAME, hfilename)
+      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',proc2mem(2,it,myrank+1),'.nc'
+      call read_restart(filename,v3dg,v2dg, hfilename=hfilename)
 
+      call write_grd_mpi_lt2d( filename, v2dg )
 
 !  CALL MPI_BARRIER(MPI_COMM_a,ierr)
   rrtimer = MPI_WTIME()
@@ -959,6 +962,7 @@ SUBROUTINE write_ens_mpi(file,v3d,v2d)
 
 
       call write_restart(filename,v3dg,v2dg)
+      call write_grd_mpi_lt2d( filename, v2dg )
 
 !  CALL MPI_BARRIER(MPI_COMM_a,ierr)
   rrtimer = MPI_WTIME()
@@ -1302,6 +1306,7 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
 
     if (WRITE_GRADS_MEAN) then
       call write_grd_mpi(trim(file_mean)//"_grads.dat", nv3d, nv2d, 1, v3dg, v2dg)
+      call write_grd_mpi_lt2d( trim(file_mean), v2dg )
     endif
 
     call state_trans_inv(v3dg)
@@ -2030,5 +2035,93 @@ subroutine write_grd_mpi(filename, nv3dgrd, nv2dgrd, step, v3d, v2d, obsout)
 
   return
 end subroutine write_grd_mpi
+
+subroutine write_grd_mpi_lt2d( filename, v2d )
+  use scale_grid, only: &
+      GRID_CXG, GRID_CYG, &
+      GRID_CZ, &
+      DX, DY
+  use scale_grid_index, only: &
+      IHALO, JHALO, KHALO
+
+  implicit none
+  character(*), intent(in) :: filename
+
+  real(r_size), intent(in) :: v2d(nlon,nlat)
+
+  integer :: proc_i, proc_j
+  integer :: ishift, jshift
+  real(r_sngl) :: v2dg(nlong,nlatg)
+  real(r_sngl), allocatable :: lt2d(:,:)
+
+  integer :: i, j
+  integer :: ii, jj
+  integer :: nx, ny
+
+  integer :: imin, imax
+  integer :: jmin, jmax
+
+  integer :: iunit, iolen
+  integer :: ierr
+
+  call rank_1d_2d(myrank_d, proc_i, proc_j)
+  ishift = proc_i * nlon
+  jshift = proc_j * nlat
+
+  v2dg(:,:) = 0.0
+  v2dg(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(v2d(:,:), r_sngl)
+  call MPI_ALLREDUCE(MPI_IN_PLACE, v2dg, nlong*nlatg, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr) 
+
+  nx = 0
+  do i = 1, nlong
+    if ( mod(i, XY_THINNING_LT ) /= 0 ) cycle
+    nx = nx + 1
+  enddo
+
+  do j = 1, nlatg
+    if ( mod(j, XY_THINNING_LT ) /= 0 ) cycle
+    ny = ny + 1
+  enddo
+
+  allocate( lt2d(nx,ny) )
+
+  jj = 0
+  do j = 1, nlatg
+    if ( mod(j, XY_THINNING_LT ) /= 0 ) cycle
+    jj = jj + 1
+
+    ii = 0
+    do i = 1, nlong
+      if ( mod(i, XY_THINNING_LT ) /= 0 ) cycle
+      ii = ii + 1
+
+      imin = i - 2
+      imax = i + 1
+      if (imin < 1) imin = 1
+      if (imax > nlong) imax = nlong
+  
+      jmin = j - 2
+      jmax = j + 1
+      if ( jmin < 1 ) jmin = 1
+      if ( jmax > nlatg ) jmax = nlatg
+
+      lt2d(ii,jj) = sum( v2dg(imin:imax,jmin:jmax))
+    enddo
+  enddo
+
+  if (myrank_d == 0) then
+    iunit = 55
+    inquire (iolength=iolen) iolen
+    open(iunit, file=trim(filename)//'_lt2d.dat', form='unformatted', access='direct', &
+         status='unknown', convert='little_endian', recl=nx*ny*iolen)
+
+    write(iunit, rec=1) lt2d
+    close( iunit)
+  endif
+
+  deallocate( lt2d )
+
+  return
+end subroutine write_grd_mpi_lt2d
 
 END MODULE common_mpi_scale

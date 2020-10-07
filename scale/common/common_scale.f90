@@ -524,7 +524,7 @@ end subroutine set_common_conf
 !-----------------------------------------------------------------------
 !
 !-----------------------------------------------------------------------
-SUBROUTINE read_restart(filename,v3dg,v2dg)
+SUBROUTINE read_restart(filename,v3dg,v2dg, hfilename)
   use netcdf, only: NF90_NOWRITE
   use scale_process, only: &
     PRC_myrank
@@ -534,7 +534,7 @@ SUBROUTINE read_restart(filename,v3dg,v2dg)
     PRC_HAS_S,  &
     PRC_HAS_N
   use scale_grid_index, only: &
-    IHALO, JHALO, &
+    IHALO, JHALO, KHALO, &
     IMAX, JMAX, KMAX, &
     IMAXB, JMAXB
   use common_mpi, only: myrank
@@ -549,6 +549,11 @@ SUBROUTINE read_restart(filename,v3dg,v2dg)
   integer :: is, ie, js, je
   real(RP) :: v3dgtmp(KMAX,IMAXB,JMAXB)
   real(RP) :: v2dgtmp(IMAXB,JMAXB)
+  integer :: k
+  character(*), optional, intent(in) :: hfilename
+
+  real(r_size) :: hv3dg(nlevh,nlonh,nlath,nv3dd)
+  real(r_size) :: hv2dg(nlonh,nlath,nv2dd)
 
   is = 1
   ie = IMAX
@@ -575,10 +580,16 @@ SUBROUTINE read_restart(filename,v3dg,v2dg)
     v3dg(:,:,:,iv3d) = v3dgtmp(:,is:ie,js:je)
   end do
 
+
   do iv2d = 1, nv2d
-    write(6,'(1x,A,A15)') '*** Read 2D var: ', trim(v2d_name(iv2d))
-    call ncio_read(ncid, trim(v2d_name(iv2d)), IMAXB, JMAXB, 1, v2dgtmp)
-    v2dg(:,:,iv2d) = v2dgtmp(is:ie,js:je)
+!    write(6,'(1x,A,A15)') '*** Read 2D var: ', trim(v2d_name(iv2d))
+!    call ncio_read(ncid, trim(v2d_name(iv2d)), IMAXB, JMAXB, 1, v2dgtmp)
+    ! FT=0: 1, FT=1: 2
+    call read_history( hfilename, 2, hv3dg, hv2dg )
+    v2dg(:,:,iv2d) =  0.0d0
+    do k = 1, KMAX
+      v2dg(:,:,iv2d) = v2dg(:,:,iv2d) + hv3dg(k+KHALO,:,:,iv3dd_fp) 
+    enddo
   end do
 
   call ncio_close(ncid)
@@ -719,14 +730,11 @@ SUBROUTINE write_restart(filename,v3dg,v2dg)
 !    call ncio_write(ncid, trim(v3d_name(iv3d)), KMAX, IMAXB, JMAXB, 1, v3dgtmp)  !
   end do
 
-  do iv2d = 1, nv2d
-!    write(6,'(1x,A,A15)') '*** Write 2D var: ', trim(v2d_name(iv2d))
-    call ncio_read (ncid, trim(v2d_name(iv2d)), IMAXB, JMAXB, 1, v2dgtmp)
-    v2dgtmp(is:ie,js:je) = v2dg(:,:,iv2d)
-    call ncio_write(ncid, trim(v2d_name(iv2d)), IMAXB, JMAXB, 1, v2dgtmp)
-!    call ncio_read (ncid, trim(v2d_name(iv2d)), IMAXB, JMAXB, 1, v2dgtmp)  !!! read and write again to work around the endian problem on the K computer
-!    call ncio_write(ncid, trim(v2d_name(iv2d)), IMAXB, JMAXB, 1, v2dgtmp)  !
-  end do
+!  do iv2d = 1, nv2d
+!    call ncio_read (ncid, trim(v2d_name(iv2d)), IMAXB, JMAXB, 1, v2dgtmp)
+!    v2dgtmp(is:ie,js:je) = v2dg(:,:,iv2d)
+!    call ncio_write(ncid, trim(v2d_name(iv2d)), IMAXB, JMAXB, 1, v2dgtmp)
+!  end do
 
   call ncio_close(ncid)
 

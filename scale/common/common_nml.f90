@@ -15,7 +15,7 @@ MODULE common_nml
 
   !----
   integer, parameter :: nv3d = 22    ! number of 3D state variables (in SCALE restart files)
-  integer, parameter :: nv2d = 0     ! number of 2D state variables (in SCALE restart files)
+  integer, parameter :: nv2d = 1     ! number of 2D state variables (in SCALE restart files)
   integer, parameter :: nid_obs = 18 ! number of variable types
   integer, parameter :: nobtype = 25 ! number of observation report types
   integer, parameter :: nch = 10     ! H08 Num of Himawari-8 (IR) channels

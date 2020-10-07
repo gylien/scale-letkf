@@ -12,7 +12,7 @@ OFP_MODE="regular-cache"
 #OFP_MODE="debug-flat"
 
 
-EXP=2000m_DA_0723_FP_30min_LOC30km
+EXP=2000m_DA_0723_Z20km
 
 INIT_LOC_ENS=1 # 1: initialize with random bubble location and amplitude (Aksoy et al. 2009)
 
@@ -43,7 +43,7 @@ DATA_BDY_WRF=
 DATA_BDY_NICAM=                                                      # Directory of the boundary data in NICAM format (not finished)
 DATA_BDY_GRADS=
 
-OBS="/work/hp150019/f22013/SCALE-LETKF/scale-LT/OUTPUT/2000m_NODA_0723_30min/20010101010000/fcst/mean/obs"
+OBS="/work/hp150019/f22013/SCALE-LETKF/scale-LT/OUTPUT/2000m_NODA_0723/20010101010000/fcst/mean/obs"
 OBSNCEP=
 
 #===============================================================================
@@ -83,26 +83,23 @@ LAND_FORMAT=99          # 0: SCALE init files (with exactly same domain settings
                         # 99: From the same file as used in generating the boundary conditions ($BDY_FORMAT)
 
 OBSNUM=1
-OBSNAME[1]=fp
-
+OBSNAME[1]=radar3d
 
 #===============================================================================
 # Cycling settings
 
-WINDOW_S=1800      # SCALE forecast time when assimilation window starts (second)
-WINDOW_E=1800      # SCALE forecast time when assimilation window ends (second)
-LCYCLE=1800        # Length of a GFS-LETKF cycle (second)
-LTIMESLOT=1800      # Timeslot interval for 4D-LETKF (second)
+WINDOW_S=300      # SCALE forecast time when assimilation window starts (second)
+WINDOW_E=300      # SCALE forecast time when assimilation window ends (second)
+LCYCLE=300        # Length of a GFS-LETKF cycle (second)
+LTIMESLOT=300      # Timeslot interval for 4D-LETKF (second)
 
 #===============================================================================
 # Parallelization settings
 
 MEMBER=320           # Ensemble size
+
 NNODES=321
 #NNODES=1
-
-#MEMBER=20           # Ensemble size
-#NNODES=21
 
 
 PPN=64              # Number of processes per node
