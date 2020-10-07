@@ -78,7 +78,7 @@ program obssim
 
       call read_restart(OBSSIM_RESTART_IN_BASENAME, v3dg, v2dg)
       call state_trans(v3dg)
-      call read_topo(OBSSIM_TOPO_IN_BASENAME, topog)
+      call read_topo(OBSSIM_TOPOGRAPHY_IN_BASENAME, topog)
       call state_to_history(v3dg, v2dg, topog, v3dgh, v2dgh)
 
       deallocate (v3dg, v2dg, topog)

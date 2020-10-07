@@ -104,7 +104,7 @@ MODULE common_nml
   character(filelenmax) :: ANAL_MDET_OUT_BASENAME = ''
   logical               :: ANAL_SPRD_OUT = .true.
   character(filelenmax) :: ANAL_SPRD_OUT_BASENAME = ''
-  character(filelenmax) :: LETKF_TOPO_IN_BASENAME = 'topo'  !!!!!! -- directly use the SCALE namelist --???? !!!!!!
+  character(filelenmax) :: LETKF_TOPOGRAPHY_IN_BASENAME = 'topo'  !!!!!! -- directly use the SCALE namelist --???? !!!!!!
 
   real(r_size) :: INFL_MUL = 1.0d0           ! >  0: globally constant covariance inflation
                                              ! <= 0: use 3D inflation field from 'INFL_MUL_IN_BASENAME' file
@@ -313,7 +313,7 @@ MODULE common_nml
   character(filelenmax) :: OBSSIM_IN_TYPE = 'history'
   character(filelenmax) :: OBSSIM_RESTART_IN_BASENAME = 'restart'
   character(filelenmax) :: OBSSIM_HISTORY_IN_BASENAME = 'history'
-  character(filelenmax) :: OBSSIM_TOPO_IN_BASENAME = 'topo'
+  character(filelenmax) :: OBSSIM_TOPOGRAPHY_IN_BASENAME = 'topo'
   integer               :: OBSSIM_TIME_START = 1
   integer               :: OBSSIM_TIME_END = 1
   character(filelenmax) :: OBSSIM_GRADS_OUT_NAME = ''
@@ -566,7 +566,7 @@ subroutine read_nml_letkf
     ANAL_MDET_OUT_BASENAME, &
     ANAL_SPRD_OUT, &
     ANAL_SPRD_OUT_BASENAME, &
-    LETKF_TOPO_IN_BASENAME, &
+    LETKF_TOPOGRAPHY_IN_BASENAME, &
     INFL_MUL, &
     INFL_MUL_MIN, &
     INFL_MUL_ADAPTIVE, &
@@ -989,7 +989,7 @@ subroutine read_nml_obssim
     OBSSIM_IN_TYPE, &
     OBSSIM_RESTART_IN_BASENAME, &
     OBSSIM_HISTORY_IN_BASENAME, &
-    OBSSIM_TOPO_IN_BASENAME, &
+    OBSSIM_TOPOGRAPHY_IN_BASENAME, &
     OBSSIM_TIME_START, &
     OBSSIM_TIME_END, &
     OBSSIM_GRADS_OUT_NAME, &

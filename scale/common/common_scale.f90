@@ -117,7 +117,7 @@ MODULE common_scale
   CHARACTER(vname_max),PARAMETER :: height3d_name = 'height' ! (in SCALE restart files)
   CHARACTER(vname_max),PARAMETER :: lon2d_name = 'lon'       ! (in SCALE restart files)
   CHARACTER(vname_max),PARAMETER :: lat2d_name = 'lat'       ! (in SCALE restart files)
-  CHARACTER(vname_max),PARAMETER :: topo2d_name = 'TOPO'     ! (in SCALE topo files)
+  CHARACTER(vname_max),PARAMETER :: topo2d_name = 'topo'     ! (in SCALE topo files)
 
   ! 
   !--- grid settings
@@ -932,6 +932,8 @@ subroutine read_history(filename,step,v3dg,v2dg)
   use scale_comm_cartesC, only: &
       COMM_vars8, &
       COMM_wait
+  use scale_atmos_grid_cartesC_metric, only: &
+      ROTC => ATMOS_GRID_CARTESC_METRIC_ROTC
   use common_mpi, only: myrank
   implicit none
 
@@ -945,7 +947,9 @@ subroutine read_history(filename,step,v3dg,v2dg)
   character(len=12) :: filesuffix = '.pe000000.nc'
   real(RP) :: var3D(nlon,nlat,nlev)
   real(RP) :: var2D(nlon,nlat)
-
+  real(RP) :: utmp, vtmp
+  integer :: step_
+ 
   write (filesuffix(4:9),'(I6.6)') PRC_myrank
   write (6,'(A,I6.6,2A)') 'MYRANK ',myrank,' is reading a file ',trim(filename) // filesuffix
 
@@ -955,16 +959,19 @@ subroutine read_history(filename,step,v3dg,v2dg)
     if (LOG_LEVEL >= 1) then
       write(6,'(1x,A,A15)') '*** Read 3D var: ', trim(v3dd_name(iv3d))
     end if
+
     if (v3dd_hastime(iv3d)) then
-      call FILE_read( filename,              & ! [IN]
-                      trim(v3dd_name(iv3d)), & ! [IN]
-                      var3D,                 & ! [OUT]
-                      step=step              ) ! [IN]
+      step_ = step
     else
-      call FILE_read( filename,              & ! [IN]
-                      trim(v3dd_name(iv3d)), & ! [IN]
-                      var3D                  ) ! [OUT]
-    end if
+      step_ = 1
+    endif
+
+    call FILE_read( filename,              & ! [IN]
+                    trim(v3dd_name(iv3d)), & ! [IN]
+                    var3D,                 & ! [OUT]
+                    rankid=PRC_myrank,     & ! [IN]
+                    step=step_             ) ! [IN]
+
     forall (i=1:nlon, j=1:nlat, k=1:nlev) v3dg_RP(k+KHALO,i+IHALO,j+JHALO,iv3d) = var3D(i,j,k) ! use FORALL to change order of dimensions
   end do
 
@@ -974,18 +981,38 @@ subroutine read_history(filename,step,v3dg,v2dg)
     if (LOG_LEVEL >= 1) then
       write(6,'(1x,A,A15)') '*** Read 2D var: ', trim(v2dd_name(iv2d))
     end if
+
     if (v2dd_hastime(iv2d)) then
-      call FILE_read( filename,              & ! [IN]
-                      trim(v2dd_name(iv2d)), & ! [IN]
-                      var2D,                 & ! [OUT]
-                      step=step              ) ! [IN]
+      step_ = step
     else
-      call FILE_read( filename,              & ! [IN]
-                      trim(v2dd_name(iv2d)), & ! [IN]
-                      var2D                  ) ! [OUT]
-    end if
+      step_ = 1
+    endif
+
+    call FILE_read( filename,              & ! [IN]
+                    trim(v2dd_name(iv2d)), & ! [IN]
+                    var2D,                 & ! [OUT]
+                    rankid=PRC_myrank,     & ! [IN]
+                    step=step_             ) ! [IN]
+
     v2dg_RP(IS:IE,JS:JE,iv2d) = var2D(:,:)
   end do
+
+  ! Rotate U/V (model coord. wind) and obtain Umet/Vmet (true zonal/meridional wind)
+  !-------------
+  if ( trim( v3dd_name(iv3dd_u) ) == "U" .and. &
+       trim( v3dd_name(iv3dd_v) ) == "V" ) then
+    do j = JS, JE
+    do i = IS, IE
+      do k = KS, KE
+        utmp = v3dg_RP(k,i,j,iv3dd_u)
+        vtmp = v3dg_RP(k,i,j,iv3dd_v)
+      
+        v3dg_RP(k,i,j,iv3dd_u) = utmp * ROTC(i,j,1) - vtmp * ROTC(i,j,2)
+        v3dg_RP(k,i,j,iv3dd_v) = utmp * ROTC(i,j,2) + vtmp * ROTC(i,j,1)
+      enddo
+    enddo
+    enddo
+  endif
 
   ! Communicate halo
   !-------------
@@ -1333,6 +1360,8 @@ subroutine state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
   use scale_comm_cartesC, only: &
       COMM_vars8, &
       COMM_wait
+  use scale_atmos_grid_cartesC_metric, only: &
+      ROTC => ATMOS_GRID_CARTESC_METRIC_ROTC
   implicit none
 
   real(RP), intent(in) :: v3dg(nlev,nlon,nlat,nv3d)
@@ -1344,7 +1373,9 @@ subroutine state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
   real(RP) :: v2dgh_RP(nlonh,nlath,nv2dd)
 
   real(r_size) :: height(nlev,nlon,nlat)
-  integer :: i, j, iv3d, iv2d
+  integer :: i, j, k, iv3d, iv2d
+
+  real(RP) :: utmp, vtmp
 
   ! Variables that can be directly copied
   !---------------------------------------------------------
@@ -1360,6 +1391,20 @@ subroutine state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
   v3dgh_RP(KS:KE,IS:IE,JS:JE,iv3dd_qi) = v3dg(:,:,:,iv3d_qi)
   v3dgh_RP(KS:KE,IS:IE,JS:JE,iv3dd_qs) = v3dg(:,:,:,iv3d_qs)
   v3dgh_RP(KS:KE,IS:IE,JS:JE,iv3dd_qg) = v3dg(:,:,:,iv3d_qg)
+
+  ! Rotate U/V (model coord. wind) and obtain Umet/Vmet (true zonal/meridional wind)
+  !-------------
+  do j = JS, JE
+  do i = IS, IE
+    do k = KS, KE
+      utmp = v3dgh_RP(k,i,j,iv3d_u)
+      vtmp = v3dgh_RP(k,i,j,iv3d_v)
+    
+      v3dgh_RP(k,i,j,iv3d_u) = utmp * ROTC(i,j,1) - vtmp * ROTC(i,j,2)
+      v3dgh_RP(k,i,j,iv3d_v) = utmp * ROTC(i,j,2) + vtmp * ROTC(i,j,1)
+    enddo
+  enddo
+  enddo
 
   ! RH
   !---------------------------------------------------------
@@ -1767,7 +1812,7 @@ end subroutine rij_l2g
 subroutine rij_rank(ig, jg, rank)
   use scale_prc_cartesC, only: &
       PRC_NUM_X, PRC_NUM_Y
-#ifdef DEBUG
+#ifdef LETKF_DEBUG
   use scale_atmos_grid_cartesC_index, only: &
       IHALO, JHALO, &
       IA, JA, IS, JS
@@ -1801,7 +1846,7 @@ subroutine rij_rank(ig, jg, rank)
   rank_j = ceiling((jg-real(JHALO,r_size)-0.5d0) / real(nlat,r_size)) - 1
   call rank_2d_1d(rank_i, rank_j, rank)
 
-#ifdef DEBUG
+#ifdef LETKF_DEBUG
   if (PRC_myrank == rank) then
     if (ig < (GRID_CX(1) - GRID_CXG(1)) / DX + 1.0d0 .or. &
         ig > (GRID_CX(IA) - GRID_CXG(1)) / DX + 1.0d0 .or. &
@@ -1832,7 +1877,7 @@ end subroutine rij_rank
 subroutine rij_rank_g2l(ig, jg, rank, il, jl)
   use scale_prc_cartesC, only: &
       PRC_NUM_X, PRC_NUM_Y
-#ifdef DEBUG
+#ifdef LETKF_DEBUG
   use scale_atmos_grid_cartesC_index, only: &
       IHALO, JHALO, &
       IA, JA, IS, JS
@@ -1872,7 +1917,7 @@ subroutine rij_rank_g2l(ig, jg, rank, il, jl)
   jl = jg - real(rank_j * nlat, r_size)
   call rank_2d_1d(rank_i, rank_j, rank)
 
-#ifdef DEBUG
+#ifdef LETKF_DEBUG
   if (PRC_myrank == rank) then
     if (ig < (GRID_CX(1) - GRID_CXG(1)) / DX + 1.0d0 .or. &
         ig > (GRID_CX(IA) - GRID_CXG(1)) / DX + 1.0d0 .or. &

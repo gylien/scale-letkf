@@ -26,7 +26,7 @@ program scaleles_ens
      PRC_UNIVERSAL_setup, &
      PRC_GLOBAL_setup, &
      PRC_MPIfinish, &
-     PRC_MPIsplit, &
+     PRC_MPIsplit_nest, &
      PRC_UNIVERSAL_myrank, &
      PRC_DOMAIN_nlim
   use mod_rm_driver
@@ -64,6 +64,7 @@ program scaleles_ens
 
   call PRC_UNIVERSAL_setup( universal_comm,   & ! [IN]
                             universal_nprocs, & ! [OUT]
+                            universal_myrank, & ! [OUT]
                             universal_master  ) ! [OUT]
   universal_myrank = PRC_UNIVERSAL_myrank
   nprocs = universal_nprocs
@@ -143,17 +144,15 @@ program scaleles_ens
 
     !--- split for nesting
     ! communicator split for nesting domains
-    call PRC_MPIsplit( global_comm,      & ! [IN]
-                       NUM_DOMAIN,       & ! [IN]
-                       PRC_DOMAINS(:),   & ! [IN]
-                       confname_domains(:), & ! [IN]
-                       .false.,          & ! [IN]
-                       .false.,          & ! [IN] flag bulk_split
-                       COLOR_REORDER,    & ! [IN]
-                       local_comm,       & ! [OUT]
-                       intercomm_parent, & ! [OUT]
-                       intercomm_child,  & ! [OUT]
-                       confname_mydom    ) ! [OUT]
+    call PRC_MPIsplit_nest( global_comm,      & ! [IN]
+                           NUM_DOMAIN,       & ! [IN]
+                           PRC_DOMAINS(:),   & ! [IN]
+                           .false.,          & ! [IN]
+                           COLOR_REORDER,    & ! [IN]
+                           local_comm,       & ! [OUT]
+                           idom,             & ! [OUT]
+                           intercomm_parent, & ! [OUT]
+                           intercomm_child   ) ! [OUT]
 
     if (MEMBER_ITER == 0) then
       its = 1
@@ -166,7 +165,7 @@ program scaleles_ens
     do it = its, ite
       im = myrank_to_mem(it)
       if (im >= 1 .and. im <= MEMBER_RUN) then
-        confname = confname_mydom
+        confname = confname_domains(idom)
         if (CONF_FILES_SEQNUM) then
           call filename_replace_mem(confname, im)
         else

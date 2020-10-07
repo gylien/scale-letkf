@@ -262,8 +262,6 @@ end subroutine set_common_obs_scale
 !  1: staggered grid
 !-----------------------------------------------------------------------
 SUBROUTINE Trans_XtoY(elm,ri,rj,rk,lon,lat,v3d,v2d,yobs,qc,stggrd)
-  use scale_mapprojection, only: &
-      MAPPROJECTION_rotcoef
   IMPLICIT NONE
   INTEGER,INTENT(IN) :: elm
   REAL(r_size),INTENT(IN) :: ri,rj,rk
@@ -274,8 +272,6 @@ SUBROUTINE Trans_XtoY(elm,ri,rj,rk,lon,lat,v3d,v2d,yobs,qc,stggrd)
   INTEGER,INTENT(OUT) :: qc
   INTEGER,INTENT(IN),OPTIONAL :: stggrd
   REAL(r_size) :: u,v,t,q,topo
-  real(RP) :: lon_RP(1,1), lat_RP(1,1)
-  REAL(RP) :: rotc_RP(2)
 
   INTEGER :: stggrd_ = 0
   if (present(stggrd)) stggrd_ = stggrd
@@ -292,14 +288,10 @@ SUBROUTINE Trans_XtoY(elm,ri,rj,rk,lon,lat,v3d,v2d,yobs,qc,stggrd)
       CALL itpl_3d(v3d(:,:,:,iv3dd_u),rk,ri,rj,u)
       CALL itpl_3d(v3d(:,:,:,iv3dd_v),rk,ri,rj,v)
     end if
-    lon_RP = real(lon*deg2rad, kind=RP)
-    lat_RP = real(lat*deg2rad, kind=RP)
-    call MAPPROJECTION_rotcoef( 1, 1, 1, 1, 1, 1, &
-                                lon_RP, lat_RP, rotc_RP )
     if (elm == id_u_obs) then
-      yobs = u * real(rotc_RP(1), r_size) - v * real(rotc_RP(2), r_size)
+      yobs = u
     else
-      yobs = u * real(rotc_RP(2), r_size) + v * real(rotc_RP(1), r_size)
+      yobs = v
     end if
   CASE(id_t_obs)  ! T
     CALL itpl_3d(v3d(:,:,:,iv3dd_t),rk,ri,rj,yobs)
@@ -344,9 +336,6 @@ END SUBROUTINE Trans_XtoY
 ! 
 !-----------------------------------------------------------------------
 SUBROUTINE Trans_XtoY_radar(elm,radar_lon,radar_lat,radar_z,ri,rj,rk,lon,lat,lev,v3d,v2d,yobs,qc,stggrd)
-  use scale_mapprojection, only: &
-      MAPPROJECTION_rotcoef
-!  USE common_mpi
   IMPLICIT NONE
   INTEGER,INTENT(IN) :: elm
   REAL(r_size),INTENT(IN) :: ri,rj,rk,radar_lon,radar_lat,radar_z !!!!! Use only, ri, rj, rk eventually... (radar_lon,lat,z in ri,rj,rk)
@@ -396,15 +385,6 @@ SUBROUTINE Trans_XtoY_radar(elm,radar_lon,radar_lat,radar_z,ri,rj,rk,lon,lat,lev
   CALL itpl_3d(v3d(:,:,:,iv3dd_qg),rk,ri,rj,qgr)
 !
 
-  utmp = ur
-  vtmp = vr
-
-  lon_RP = real(lon*deg2rad, kind=RP)
-  lat_RP = real(lat*deg2rad, kind=RP)
-  call MAPPROJECTION_rotcoef( 1, 1, 1, 1, 1, 1, &
-                              lon_RP, lat_RP, rotc_RP)
-  ur = utmp * real(rotc_RP(1), kind=r_size) - vtmp * real(rotc_RP(2), kind=r_size)
-  vr = utmp * real(rotc_RP(2), kind=r_size) + vtmp * real(rotc_RP(1), kind=r_size)
 
 !  rrtimer = MPI_WTIME()
 !  WRITE(6,'(A,F18.10)') '###### Trans_XtoY_radar:itpl_3d:',rrtimer-rrtimer00
@@ -1409,8 +1389,6 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
   real(r_size),allocatable :: ohx(:)
   integer,allocatable :: oqc(:)
 
-  integer :: OMP_GET_NUM_THREADS, omp_chunk
-
 !  REAL(r_size) :: timer
 !  INTEGER :: ierr
 
@@ -1455,7 +1433,7 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
   allocate (ohx(nnobs))
   allocate (oqc(nnobs))
 
-#ifdef DEBUG
+#ifdef LETKF_DEBUG
   if (step < 0 .or. step > 2) then
     write (6, *) '[Error] monit_obs: step should be 0, 1, or 2.'
     stop
@@ -1476,9 +1454,7 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
 !  obs_idx_TCY = -1
 !  obs_idx_TCP = -1
 
-!$OMP PARALLEL PRIVATE(n,nn,iset,iidx,ril,rjl,rk,rkz,omp_chunk)
-  omp_chunk = min(4, max(1, (nnobs-1) / OMP_GET_NUM_THREADS() + 1))
-!$OMP DO SCHEDULE(DYNAMIC,omp_chunk)
+!$OMP PARALLEL PRIVATE(n,nn,iset,iidx,ril,rjl,rk,rkz)
   do n = 1, nnobs
 
     if (use_key) then
@@ -1493,7 +1469,7 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
     if (step == 1) then
       obsdep_set(n) = iset
       obsdep_idx(n) = iidx
-#ifdef DEBUG
+#ifdef LETKF_DEBUG
     else if (step == 2) then
       if (obsdep_set(n) /= iset) then
         write (6, *) "[Error] 'set' for y_b and y_a are inconsistent!"
@@ -1506,7 +1482,7 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
 #endif
     end if
 
-#ifdef DEBUG
+#ifdef LETKF_DEBUG
     if (obsda_sort%qc(nn) /= iqc_good) then
       write (6, *) "[Error] The QC value of this observation provided for monitoring is not good: ", &
                    obsda_sort%qc(nn)
@@ -1533,7 +1509,7 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
 !!!!!!#endif
 
     call rij_g2l(PRC_myrank, obs(iset)%ri(iidx), obs(iset)%rj(iidx), ril, rjl)
-#ifdef DEBUG
+#ifdef LETKF_DEBUG
     if (PRC_myrank /= obs(iset)%rank(iidx) .or. obs(iset)%rank(iidx) == -1) then
       write (6, *) "[Error] This observation provided for monitoring does not reside in my rank: ", &
                    PRC_myrank, obs(iset)%rank(iidx), obs(iset)%ri(iidx), obs(iset)%rj(iidx), ril, rjl
@@ -1650,7 +1626,7 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
       if(oelm(n) /= id_H08IR_obs)cycle
 
       call rij_g2l(PRC_myrank, obs(iset)%ri(iidx), obs(iset)%rj(iidx), ril, rjl)
-#ifdef DEBUG
+#ifdef LETKF_DEBUG
       if (PRC_myrank /= obs(iset)%rank(iidx) .or. obs(iset)%rank(iidx) == -1) then
         write (6, *) "[Error] This observation provided for monitoring does not reside in my rank: ", &
                      PRC_myrank, obs(iset)%rank(iidx), obs(iset)%ri(iidx), obs(iset)%rj(iidx), ril, rjl

@@ -20,20 +20,17 @@ tstart='2018-06-30 0:00:00'
 tstart='2018-06-28 0:00:00'
 tstart='2018-07-01 0:00:00'
 
-tstart='2018-07-07 0:00:00'
-#tstart='2018-07-06 0:00:00'
-#tstart='2018-07-05 0:00:00'
-tstart='2018-07-02 0:00:00'
+tstart='2018-07-05 0:00:00'
 tend=$tstart
 
 #. config/${SEXP}/config.main.ofp || exit $?
 . config.main
-EXP=BAIU2018_5.3.6
+#EXP=BAIU2018_5.3.6
 EXP=${SEXP}
 RUNDIR="${TMP}_sno"
 
 
-SCALEDIR=/work/hp150019/share/honda/SCALE-LETKF/scale-5.3.6/scale-LETKF-5.3.6
+SCALEDIR=/work/hp150019/share/honda/SCALE-LETKF/scale-5.4.0/scale
 #PPN=$PPN # Process per node
 
 TYPE=fcst
@@ -64,8 +61,12 @@ SNO_MEMBERS=5
 SNO_MEMBERS=50
 SNO_MEM_L="mean "$(seq -f %04g ${SNO_MEMBERS})
 
-#SNO_MEMBERS=0
-#SNO_MEM_L="mean "
+SNO_MEMBERS=0
+SNO_MEM_L="mean "
+
+SNO_MEM_L=" mean 0001 0002 0003 "
+SNO_MEMBERS=4
+
 
 # Convert variables (Other variables will NOT be included in converted files)
 #VARS='"Umet", "Vmet", "W", "T", "QV", "QHYD", "PRES", "RAIN", "MSLP"'
@@ -87,7 +88,7 @@ if [ "$TYPE" != "fcst" ] && [ "$TYPE" != "hist" ] ; then
   PLEV=F
 fi
 
-VARS="'Gprs', 'MSLP', 'Tprs', 'Uprs', 'Vprs', 'QVprs', 'QHYDprs', 'DENSprs', 'PREC'"
+VARS="'Gprs', 'MSLP', 'Tprs', 'Uprs', 'Vprs', 'QVprs', 'QHYDprs', 'DENSprs',"
 
 TOPO=0 # Process topography file? # 1: Yes, 0: No
 if (( TOPO > 0 )) ; then

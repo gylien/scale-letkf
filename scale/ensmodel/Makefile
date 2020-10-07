@@ -19,8 +19,6 @@ INCS    = $(SCALE_INC) $(NETCDF_INC) -I$(SCALE_RM_OBJDIR)
 
 LIBS    = $(SCALE_LIB) $(NETCDF_LIB) $(LAPACK_LIB)
 
-SCALE_RM_OBJS = $(shell ls $(SCALE_RM_OBJDIR)/*.o | grep -v "scale-rm.o\|scale-rm_pp.o\|scale-rm_init.o")
-
 ifeq ($(H08),T)
 COMMON_OBJS += $(COMMON_DIR)/scale_H08_fwd.o
 LIBS    += $(RT_INCLUDE) $(RT_LDFLAGS)

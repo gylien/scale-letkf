@@ -64,6 +64,7 @@ cp ${LETKF_DIR}/letkf ${TMPROOT}/letkf
 
 cp -r ${SCALEDIR}/scale-rm/test/data/rad ${TMPROOT}/dat/rad
 cp -r ${SCALEDIR}/scale-rm/test/data/land ${TMPROOT}/dat/land
+cp -r ${SCALEDIR}/scale-rm/test/data/urban ${TMPROOT}/dat/urban
 
 #-------------------------------------------------------------------------------
 # time-variant outputs
@@ -548,7 +549,7 @@ if ((PNETCDF_BDY_SCALE == 1)); then
   local mem_np_bdy_=1
 else
   local mem_np_bdy_=$((DATA_BDY_SCALE_PRC_NUM_X*DATA_BDY_SCALE_PRC_NUM_Y))
-  if (( mem_np_bdy_ < 1 )) ; then
+  if (( mem_np_bdy_ < 1 )) && (( BDY_FORMAT < 4 )) ; then
     echo "[Error] $0: Specify DATA_BDY_SCALE_PRC_NUM_X/Y" >&2
     exit 1
   fi
@@ -772,7 +773,7 @@ while ((time <= ETIME)); do
           conf_file_src=$SCRP_DIR/config.nml.scale_init.d$d
         fi
 
-        RESTART_OUT_POSTFIX_TIMELABEL_TF=".false."
+        RESTART_OUT_POSTFIX_TIMELABEL_TF=".true."
         mkdir -p ${OUTDIR[$d]}/$time/log/scale_init
         mkdir -p ${OUTDIR[$d]}/$time/bdy/$mem_bdy
 
@@ -783,7 +784,7 @@ while ((time <= ETIME)); do
                 -e "/!--RESTART_OUTPUT--/a RESTART_OUTPUT = ${RESTART_OUTPUT}," \
                 -e "/!--RESTART_OUT_BASENAME--/a RESTART_OUT_BASENAME = \"${OUTDIR[$d]}/$time/bdy/${mem_bdy}/init_bdy\"," \
                 -e "/!--RESTART_OUT_POSTFIX_TIMELABEL--/a RESTART_OUT_POSTFIX_TIMELABEL = ${RESTART_OUT_POSTFIX_TIMELABEL_TF}," \
-                -e "/!--TOPO_IN_BASENAME--/a TOPO_IN_BASENAME = \"${INDIR[$d]}/const/topo/topo\"," \
+                -e "/!--TOPOGRAPHY_IN_BASENAME--/a TOPOGRAPHY_IN_BASENAME = \"${INDIR[$d]}/const/topo/topo\"," \
                 -e "/!--LANDUSE_IN_BASENAME--/a LANDUSE_IN_BASENAME = \"${INDIR[$d]}/const/landuse/landuse\"," \
                 -e "/!--LAND_PROPERTY_IN_FILENAME--/a LAND_PROPERTY_IN_FILENAME = \"${TMPROOT_CONSTDB}/dat/land/param.bucket.conf\",")"
         if ((BDY_FORMAT == 1)); then
@@ -808,7 +809,8 @@ while ((time <= ETIME)); do
 
       done # [ d in $(seq $DOMNUM) ]
 
-      if ((BDY_FORMAT == 4 && (BDY_ENS == 0 || m == 1))); then
+      #if ((BDY_FORMAT == 4 && (BDY_ENS == 0 || m == 1))); then
+      if ((BDY_FORMAT == 4 )); then
         conf_file="$TMP/${mem_bdy}/gradsbdy.conf"
         if ((nbdy <= 1)); then
           bdy_no_suffix="_$(printf %05d 0)"
@@ -867,8 +869,8 @@ while ((time <= ETIME)); do
 #        RESTART_IN_BASENAME="${name_m[$m]}/anal.d${dfmt}"
 #      fi
       RESTART_IN_BASENAME="${INDIR[$d]}/$time/anal/${name_m[$m]}/init"
-      RESTART_IN_POSTFIX_TIMELABEL_TF=".false."
-      RESTART_OUT_POSTFIX_TIMELABEL_TF=".false."
+      RESTART_IN_POSTFIX_TIMELABEL_TF=".true."
+      RESTART_OUT_POSTFIX_TIMELABEL_TF=".true."
 
 #      if ((loop == 1 )); then
 #        RESTART_IN_POSTFIX_TIMELABEL_TF=".false."
@@ -936,7 +938,7 @@ while ((time <= ETIME)); do
               -e "/!--RESTART_OUTPUT--/a RESTART_OUTPUT = .true.," \
               -e "/!--RESTART_OUT_BASENAME--/a RESTART_OUT_BASENAME = \"${OUTDIR[$d]}/${atime}/anal/${name_m[$m]}/init\"," \
               -e "/!--RESTART_OUT_POSTFIX_TIMELABEL--/a RESTART_OUT_POSTFIX_TIMELABEL = ${RESTART_OUT_POSTFIX_TIMELABEL_TF}," \
-              -e "/!--TOPO_IN_BASENAME--/a TOPO_IN_BASENAME = \"${INDIR[$d]}/const/topo/topo\"," \
+              -e "/!--TOPOGRAPHY_IN_BASENAME--/a TOPOGRAPHY_IN_BASENAME = \"${INDIR[$d]}/const/topo/topo\"," \
               -e "/!--LANDUSE_IN_BASENAME--/a LANDUSE_IN_BASENAME = \"${INDIR[$d]}/const/landuse/landuse\"," \
               -e "/!--FILE_HISTORY_DEFAULT_BASENAME--/a FILE_HISTORY_DEFAULT_BASENAME = \"${OUTDIR[$d]}/$time/hist/${name_m[$m]}/history\"," \
               -e "/!--FILE_HISTORY_DEFAULT_TINTERVAL--/a FILE_HISTORY_DEFAULT_TINTERVAL = ${CYCLEFOUT}.D0," \
@@ -944,6 +946,7 @@ while ((time <= ETIME)); do
               -e "/!--LAND_PROPERTY_IN_FILENAME--/a LAND_PROPERTY_IN_FILENAME = \"${TMPROOT_CONSTDB}/dat/land/param.bucket.conf\"," \
               -e "/!--DOMAIN_CATALOGUE_FNAME--/a DOMAIN_CATALOGUE_FNAME = \"latlon_domain_catalogue.d${dfmt}.txt\"," \
               -e "/!--DOMAIN_CATALOGUE_OUTPUT--/a DOMAIN_CATALOGUE_OUTPUT = ${DOMAIN_CATALOGUE_OUTPUT}," \
+              -e "/!--URBAN_DYN_KUSAKA01_PARAM_IN_FILENAME--/a  URBAN_DYN_KUSAKA01_PARAM_IN_FILENAME = \"${TMPROOT_CONSTDB}/dat/urban/param.kusaka01.dat\"," \
               -e "/!--ATMOS_PHY_RD_MSTRN_GASPARA_IN_FILENAME--/a ATMOS_PHY_RD_MSTRN_GASPARA_IN_FILENAME = \"${TMPROOT_CONSTDB}/dat/rad/PARAG.29\"," \
               -e "/!--ATMOS_PHY_RD_MSTRN_AEROPARA_IN_FILENAME--/a ATMOS_PHY_RD_MSTRN_AEROPARA_IN_FILENAME = \"${TMPROOT_CONSTDB}/dat/rad/PARAPC.29\"," \
               -e "/!--ATMOS_PHY_RD_MSTRN_HYGROPARA_IN_FILENAME--/a ATMOS_PHY_RD_MSTRN_HYGROPARA_IN_FILENAME = \"${TMPROOT_CONSTDB}/dat/rad/VARDATA.RM29\"," \
@@ -980,13 +983,13 @@ while ((time <= ETIME)); do
         if ((OCEAN_INPUT == 1)); then
           if ((OCEAN_FORMAT == 99)); then
             conf="$(echo "$conf" | \
-                sed -e "/!--OCEAN_RESTART_IN_BASENAME--/a OCEAN_RESTART_IN_BASENAME = \"${INDIR[$d]}/$time/bdy/${mem_bdy}/init_bdy\",")"
+                sed -e "/!--OCEAN_RESTART_IN_BASENAME--/a OCEAN_RESTART_IN_BASENAME = \"${INDIR[$d]}/$time/bdy/${mem_bdy}/init_bdy_$(datetime_scale $time)\",")"
           fi
         fi
         if ((LAND_INPUT == 1)); then
           if ((LAND_FORMAT == 99)); then
             conf="$(echo "$conf" | \
-                sed -e "/!--LAND_RESTART_IN_BASENAME--/a LAND_RESTART_IN_BASENAME = \"${INDIR[$d]}/$time/bdy/${mem_bdy}/init_bdy\",")"
+                sed -e "/!--LAND_RESTART_IN_BASENAME--/a LAND_RESTART_IN_BASENAME = \"${INDIR[$d]}/$time/bdy/${mem_bdy}/init_bdy_$(datetime_scale $time)\",")"
           fi
         fi
         echo "$conf" >> ${conf_file}
@@ -1041,15 +1044,23 @@ while ((time <= ETIME)); do
 
     if ((d == 1)); then
       conf_file_src=$SCRP_DIR/config.nml.letkf
-      conf_file_src2=$SCRP_DIR/config.nml.scale
+#      conf_file_src2=$SCRP_DIR/config.nml.scale
       conf_file="$TMP/letkf_${atime}.conf"
     else
       conf_file_src=$SCRP_DIR/config.nml.letkf.d$d
-      conf_file_src2=$SCRP_DIR/config.nml.scale.d$d
+      #conf_file_src2=$SCRP_DIR/config.nml.scale.d$d
       conf_file="$TMP/letkf.d${dfmt}_${atime}.conf"
     fi
+    conf_file_src2="$TMP/${name_m[$m]}/run.d${dfmt}_${time}.conf"
 
     mkdir -p ${OUTDIR[$d]}/$atime/log/letkf
+    mkdir -p ${OUTDIR[$d]}/$atime/obs
+
+    OBSDEP_OUT_TF=".false."
+    if (( OBSOUT_OPT < 4 )) ; then
+      OBSDEP_OUT_TF=".true."
+      OBSDEP_OUT_BASENAME="${OUTDIR[$d]}/$atime/obs/obsdep"
+    fi
 
     cat $SCRP_DIR/config.nml.ensmodel | \
         sed -e "/!--MEMBER--/a MEMBER = $MEMBER," \
@@ -1073,24 +1084,28 @@ while ((time <= ETIME)); do
             -e "/!--SLOT_BASE--/a SLOT_BASE = $slot_b," \
             -e "/!--SLOT_TINTERVAL--/a SLOT_TINTERVAL = ${LTIMESLOT}.D0," \
             -e "/!--OBSDA_IN--/a OBSDA_IN = .false.," \
-            -e "/!--GUES_IN_BASENAME--/a GUES_IN_BASENAME = \"${OUTDIR[$d]}/$atime/anal/<member>/init\"," \
-            -e "/!--GUES_MEAN_INOUT_BASENAME--/a GUES_MEAN_INOUT_BASENAME = \"${OUTDIR[$d]}/$atime/gues/mean/init\"," \
-            -e "/!--GUES_SPRD_OUT_BASENAME--/a GUES_SPRD_OUT_BASENAME = \"${OUTDIR[$d]}/$atime/gues/sprd/init\"," \
+            -e "/!--GUES_IN_BASENAME--/a GUES_IN_BASENAME = \"${OUTDIR[$d]}/$atime/anal/<member>/init_$(datetime_scale $atime)\"," \
+            -e "/!--GUES_MEAN_INOUT_BASENAME--/a GUES_MEAN_INOUT_BASENAME = \"${OUTDIR[$d]}/$atime/gues/mean/init_$(datetime_scale $atime)\"," \
+            -e "/!--GUES_SPRD_OUT_BASENAME--/a GUES_SPRD_OUT_BASENAME = \"${OUTDIR[$d]}/$atime/gues/sprd/init_$(datetime_scale $atime)\"," \
             -e "/!--GUES_SPRD_OUT--/a GUES_SPRD_OUT = ${SPRD_OUT_TF}," \
-            -e "/!--ANAL_OUT_BASENAME--/a ANAL_OUT_BASENAME = \"${OUTDIR[$d]}/$atime/anal/<member>/init\"," \
+            -e "/!--ANAL_OUT_BASENAME--/a ANAL_OUT_BASENAME = \"${OUTDIR[$d]}/$atime/anal/<member>/init_$(datetime_scale $atime)\"," \
             -e "/!--ANAL_SPRD_OUT--/a ANAL_SPRD_OUT = ${SPRD_OUT_TF}," \
-            -e "/!--LETKF_TOPO_IN_BASENAME--/a LETKF_TOPO_IN_BASENAME = \"${INDIR[$d]}/const/topo/topo\"," \
+            -e "/!--LETKF_TOPOGRAPHY_IN_BASENAME--/a LETKF_TOPOGRAPHY_IN_BASENAME = \"${INDIR[$d]}/const/topo/topo\"," \
             -e "/!--INFL_ADD_IN_BASENAME--/a INFL_ADD_IN_BASENAME = \"<member>/addi.d${dfmt}\"," \
             -e "/!--RELAX_SPREAD_OUT--/a RELAX_SPREAD_OUT = ${RTPS_INFL_OUT_TF}," \
             -e "/!--RELAX_SPREAD_OUT_BASENAME--/a RELAX_SPREAD_OUT_BASENAME = \"rtpsinfl.d${dfmt}_$(datetime_scale $atime).nc\"," \
             -e "/!--NOBS_OUT--/a NOBS_OUT = ${NOBS_OUT_TF}," \
             -e "/!--NOBS_OUT_BASENAME--/a NOBS_OUT_BASENAME = \"nobs.d${dfmt}_$(datetime_scale $atime).nc\"," \
+            -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME =  \"${OUTDIR[$d]}/$atime/log/letkf/${name_m[$m]}_LOG\"," \
+            -e "/!--OBSDEP_OUT--/a OBSDEP_OUT = ${OBSDEP_OUT_TF}," \
+            -e "/!--OBSDEP_OUT_BASENAME--/a OBSDEP_OUT_BASENAME = \"${OBSDEP_OUT_BASENAME}\"," \
         >> ${conf_file}
 
     # Most of these parameters are not important for letkf
-    cat $conf_file_src2 | \
-        sed -e "/!--FILE_AGGREGATE--/a FILE_AGGREGATE = ${FILE_AGGREGATE}," \
-        >> ${conf_file}
+    cat $conf_file_src2  >> ${conf_file}
+#    cat $conf_file_src2 | \
+#        sed -e "/!--FILE_AGGREGATE--/a FILE_AGGREGATE = ${FILE_AGGREGATE}," \
+#        >> ${conf_file}
 
 #    if ((stage_config == 1)); then
 #      echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> ${STAGING_DIR}/${STGINLIST}

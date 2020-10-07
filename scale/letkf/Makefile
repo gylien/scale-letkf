@@ -39,7 +39,7 @@ all:	$(PROGS)
 
 letkf:	letkf.o $(OBJS) $(COMMON_DIR) $(OBS_DIR)
 	$(FC) $(FOPTS) $(FMCMODEL) -o letkf letkf.o \
-	$(COMMON_OBJS) $(OBS_OBJS) $(OBJS) $(LIBS)
+	$(COMMON_OBJS) $(OBS_OBJS) $(OBJS) $(SCALE_RM_OBJS) $(LIBS)
 
 letkf.o:	letkf.f90 $(OBJS) $(COMMON_DIR) $(OBS_DIR)
 	$(FC) $(FOPTS) -c $< -I$(COMMON_DIR) -I$(OBS_DIR) $(INCS)

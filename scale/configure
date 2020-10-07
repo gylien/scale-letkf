@@ -1,7 +1,10 @@
 TOPDIR    = ../../..
-SCALE_INC = -I$(TOPDIR)/include
-SCALE_LIB = -L$(TOPDIR)/lib -lscale
-SCALE_RM_OBJDIR = $(TOPDIR)/scale-rm/src/.libs
+SCALE_INC = -I$(TOPDIR)/include$(POSTFIX)
+SCALE_LIB = -L$(TOPDIR)/lib -lscale$(POSTFIX)
+SCALE_RM_OBJDIR = $(TOPDIR)/scale-rm/src/.libs$(POSTFIX)
+
+SCALE_RM_OBJS = $(shell ls $(SCALE_RM_OBJDIR)/*.o | grep -v "scale-rm.o\|scale-rm_pp.o\|scale-rm_init.o")
+
 
 include $(TOPDIR)/sysdep/Makedef.$(SCALE_SYS)
 
@@ -36,6 +39,10 @@ endif
 
 ifeq ($(LETKF_SINGLE_FP),T)
 FOPTS     += -DSINGLELETKF
+endif
+
+ifeq ($(LETKF_DEBUG),T)
+FOPTS     += -DLETKF_DEBUG
 endif
 
 ifeq ($(H08),T)

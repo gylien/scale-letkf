@@ -91,10 +91,7 @@ SUBROUTINE set_letkf_obs
   integer :: ityp,ielm,ielm_u,ictype
   real(r_size) :: target_grdspc
 
-#ifdef H08
   REAL(r_size):: ch_num ! H08
-!  REAL(r_size),allocatable :: hx_sprd(:) ! H08
-#endif
   integer :: myp_i,myp_j
   integer :: ip_i,ip_j
 
@@ -139,8 +136,6 @@ SUBROUTINE set_letkf_obs
   type(obs_da_value) :: obsda_ext
 
   logical :: ctype_use(nid_obs,nobtype)
-
-  integer :: OMP_GET_NUM_THREADS, omp_chunk
 
 !  character(len=timer_name_width) :: timer_str
 
@@ -205,7 +200,7 @@ SUBROUTINE set_letkf_obs
         if (it == 1) then
           obsda%set(n1:n2) = obsda_ext%set
           obsda%idx(n1:n2) = obsda_ext%idx
-#ifdef DEBUG
+#ifdef LETKF_DEBUG
         else
           if (maxval(abs(obsda%set(n1:n2) - obsda_ext%set)) > 0) then
             write (6,'(A)') '[Error] obsda%set are inconsistent among the ensemble'
@@ -257,10 +252,8 @@ SUBROUTINE set_letkf_obs
   !-----------------------------------------------------------------------------
 
   ctype_use(:,:) = .false.
-!$OMP PARALLEL PRIVATE(iof,n,omp_chunk) REDUCTION(.or.:ctype_use)
+!$OMP PARALLEL PRIVATE(iof,n) REDUCTION(.or.:ctype_use)
   do iof = 1, OBS_IN_NUM
-    omp_chunk = min(10, max(1, (obs(iof)%nobs-1) / OMP_GET_NUM_THREADS() + 1))
-!$OMP DO SCHEDULE(DYNAMIC,omp_chunk)
     do n = 1, obs(iof)%nobs
       select case (obs(iof)%elm(n))
       case (id_radar_ref_obs)
@@ -342,13 +335,7 @@ SUBROUTINE set_letkf_obs
 
   allocate(tmpelm(obsda%nobs))
 
-#ifdef H08
 !$OMP PARALLEL PRIVATE(n,i,iof,iidx,mem_ref,ch_num)
-#else
-!$OMP PARALLEL PRIVATE(n,i,iof,iidx,mem_ref)
-#endif
-  omp_chunk = min(10, max(1, (obsda%nobs-1) / OMP_GET_NUM_THREADS() + 1))
-!$OMP DO SCHEDULE(DYNAMIC,omp_chunk)
   do n = 1, obsda%nobs
     IF(obsda%qc(n) > 0) CYCLE
 
@@ -829,7 +816,7 @@ SUBROUTINE set_letkf_obs
       obsgrd(ictype)%tot(:) = obsgrd(ictype)%ac(obsgrd(ictype)%ngrd_i,obsgrd(ictype)%ngrd_j,:) &
                             - obsgrd(ictype-1)%ac(obsgrd(ictype-1)%ngrd_i,obsgrd(ictype-1)%ngrd_j,:)
     end if
-#ifdef DEBUG
+#ifdef LETKF_DEBUG
     if (obsgrd(ictype)%tot(myrank_d) /= obsgrd(ictype)%tot_sub(i_after_qc)) then
       write (6, '(A)') '[Error] Observation counts are inconsistent !!!'
       stop 99
@@ -844,7 +831,7 @@ SUBROUTINE set_letkf_obs
 
   call mpi_timer('set_letkf_obs:bucket_sort_info_allreduce:', 2)
 
-#ifdef DEBUG
+#ifdef LETKF_DEBUG
   if (nctype > 0) then
     if (obsgrd(nctype)%ac(obsgrd(nctype)%ngrd_i,obsgrd(nctype)%ngrd_j,myrank_d) /= nobs_sub(i_after_qc)) then
       write (6, '(A)') '[Error] Observation counts are inconsistent !!!'
@@ -1074,7 +1061,7 @@ SUBROUTINE set_letkf_obs
         ns_bufr = dspr(ip+1) + obsgrd(ictype)%ac(imin2-1,j,ip) + 1
         ne_bufr = dspr(ip+1) + obsgrd(ictype)%ac(imax2  ,j,ip)
 
-#ifdef DEBUG
+#ifdef LETKF_DEBUG
         if (ne_ext - ns_ext /= ne_bufr - ns_bufr) then
           write (6, '(A)') '[Error] observation grid indices have errors !!!'
           write (6, *) ictype, ip, j, imin1, imax1, jmin1, jmax1, imin2, imax2, jmin2, jmax2, ishift, jshift, &
