@@ -180,11 +180,6 @@ else
   IO_LOG_DIR="${SCPCALL}_scale_init"
 fi
 
-mkdir -p $TMPOUT/${STIME}/bdy
-if ((PNETCDF != 1)); then
-  mkdir -p $TMPOUT/${STIME}/bdy/${MEM_BDY}
-fi
-
 #===============================================================================
 
 cat $TMPDAT/conf/config.nml.scale_init | \
